@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: dartcommons
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/dartcommons}
+    username: ${DB_USERNAME:dartcommons}
+    password: ${DB_PASSWORD:dartcommons}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # CLAUDE.md 6-3: DDL은 Flyway만. validate/none 고정 (create/update 금지)
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # 빈 DB에 V1부터 적용. 기존 운영 DB 도입 시에만 baseline 사용
+    baseline-on-migrate: false
+
+  cache:
+    type: caffeine
+
+# API 문서 (springdoc-openapi)
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui
+
+# 운영 모니터링 (Actuator) — 최소 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    org.flywaydb: INFO
+    com.dartcommons: DEBUG

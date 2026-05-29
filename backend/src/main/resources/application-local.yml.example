@@ -1,0 +1,31 @@
+# =============================================================
+# 로컬 개발용 시크릿 오버라이드 템플릿
+# 사용법:
+#   1) 이 파일을 application-local.yml 로 복사 (확장자에서 .example 제거)
+#   2) 실제 값 채우기 (application-local.yml 은 .gitignore 로 커밋 차단됨)
+#   3) local 프로파일로 실행:  SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+#      (또는 아래 값들을 환경변수로 직접 주입해도 됨)
+#
+# 주의: API 키/비밀번호/암호화 키는 절대 application.yml 본체나 코드에 하드코딩 금지
+#       (CLAUDE.md 7장)
+# =============================================================
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dartcommons
+    username: dartcommons
+    password: dartcommons
+
+# --- 아래는 기능 구현 단계에서 사용 (현재 코어 스캐폴드에는 미연동) ---
+dartcommons:
+  # 외부 OpenAPI 키 (api_spec.md 3장)
+  dart-api-key: "발급키"
+  krx-api-key: "발급키"
+  public-data-api-key: "발급키"
+  # 알림/인증 (통합기획서 9장, 10장)
+  kakao-client-id: "발급키"
+  # LLM (LangChain4j — 실서비스 단계)
+  openai-api-key: "발급키"
+  # anthropic-api-key: "발급키"
+  # 보안 (Security/JWT, 금융 PII 암호화 — CLAUDE.md 6-3, 7장)
+  jwt-secret: "최소-32바이트-랜덤-시크릿"
+  aes-encryption-key: "AES-256 키(별도 KMS 권장)"
