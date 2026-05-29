@@ -1,0 +1,23 @@
+# 로컬 개발용 PostgreSQL
+# 사용: docker compose up -d   (Docker 설치 필요)
+# 기본값은 backend/src/main/resources/application.yml 의 datasource 기본값과 일치
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dartcommons-postgres
+    environment:
+      POSTGRES_DB: dartcommons
+      POSTGRES_USER: dartcommons
+      POSTGRES_PASSWORD: dartcommons
+    ports:
+      - "5432:5432"
+    volumes:
+      - dartcommons_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dartcommons -d dartcommons"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dartcommons_pgdata:
