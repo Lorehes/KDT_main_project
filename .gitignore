@@ -1,0 +1,109 @@
+# =============================================================
+# DartCommons — root .gitignore (초안)
+# 3분할(backend/frontend/scripts) + Obsidian Vault + 시크릿
+# 규칙: .env / 시크릿 / API 키 절대 커밋 금지 (CLAUDE.md 7장)
+# 주의: .gitignore 는 줄 끝(인라인) 주석 미지원 → 주석은 항상 별도 줄
+# =============================================================
+
+# ----- 시크릿 / 환경변수 (최우선) -----
+.env
+.env.*
+# 예시 템플릿은 커밋 허용
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.keystore
+secrets/
+# Spring 로컬/시크릿 프로파일
+**/application-local.yml
+**/application-local.yaml
+**/application-secret*.yml
+**/application-secret*.yaml
+
+# ----- OS (macOS / Windows) -----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ----- IDE / 에디터 -----
+.idea/
+*.iml
+.vscode/*
+# 팀 공유용만 허용(필요 시)
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# ----- Obsidian Vault (개인 설정) -----
+.obsidian/
+
+# ----- Claude Code -----
+# 루트/하위 모든 CLAUDE.md
+CLAUDE.md
+# 스킬·에이전트·로컬 설정 전체
+.claude/
+
+# =============================================================
+# Backend — Java 21 / Spring Boot / Gradle (Groovy DSL)
+# =============================================================
+backend/.gradle/
+backend/build/
+backend/out/
+backend/bin/
+# 래퍼 jar 는 커밋 유지
+!backend/gradle/wrapper/gradle-wrapper.jar
+*.class
+*.log
+hs_err_pid*
+replay_pid*
+
+# =============================================================
+# Frontend — Next.js 15 / TypeScript / pnpm
+# =============================================================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.turbo/
+frontend/*.tsbuildinfo
+# 자동 생성 (create-next-app 기본 무시)
+frontend/next-env.d.ts
+# 디버그 로그
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# =============================================================
+# Scripts — Python (운영자용 일회성)
+# =============================================================
+scripts/**/__pycache__/
+scripts/**/*.py[cod]
+scripts/**/.venv/
+scripts/**/venv/
+scripts/**/.ipynb_checkpoints/
+scripts/**/.pytest_cache/
+scripts/**/.mypy_cache/
+scripts/**/.ruff_cache/
+
+# =============================================================
+# 데이터 / 임시 산출물 (용량·민감 → 커밋 금지)
+# 커밋해야 할 시드 CSV 가 생기면 !path/to/seed.csv 로 예외 추가
+# =============================================================
+data/
+*.csv
+*.parquet
+*.sqlite
+# 로컬 Chroma 영속 디렉터리
+chroma/
