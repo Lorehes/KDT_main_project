@@ -48,7 +48,26 @@ management:
 server:
   port: ${SERVER_PORT:8080}
 
+dartcommons:
+  dart:
+    base-url: https://opendart.fss.or.kr/api
+    api-key: ${DART_API_KEY}
+    timeout-ms: 10000
+    max-retries: 3
+
 logging:
   level:
     org.flywaydb: INFO
     com.dartcommons: DEBUG
+
+---
+# prod 프로파일: Swagger UI / API Docs 비활성화 (외부 노출 방지)
+spring:
+  config:
+    activate:
+      on-profile: prod
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
