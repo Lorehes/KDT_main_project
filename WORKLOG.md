@@ -155,6 +155,40 @@ curl -X POST -u admin:<password> \
 
 ### 미완료 (다음 작업)
 - KRX 운영 실측 (사용자 환경에서 1회 검증 후 `KrxClient.parseResponse()` 필드명 조정)
-- 비동기 백필 (현재 동기 — 큰 범위는 HTTP 타임아웃 위험, `@Async` + jobId 진행률 조회)
 - KRX 일별 시세 + Stage 3 5일 반응 (별도 Spec)
-- analysis 도메인 (Stage 2~5 LLM 분석) 도입 시 `DisclosureCollectedEvent` 소비자 작성
+- user 도메인 + JWT (`/admin/**` Basic 가드 교체) — 별도 Spec
+- analysis 도메인 (Stage 2~5 LLM 분석) — 별도 Spec, `DisclosureCollectedEvent` 소비자
+
+---
+
+## 2026-06-02 | 비동기 백필 잡
+
+**Spec**: (없음 — 단일 PR 단순 작업)
+
+### 완료
+- **V12 `backfill_jobs`** 마이그레이션 (status CHECK enum, chunks_total/done, fetched/saved, timestamps, error_message)
+- **`BackfillJob` 엔티티** + `BackfillJobRepository` (UUID jobId 외부 키)
+- **`BackfillJobService`** — `createJob()` PENDING 생성, `@Async runAsync()` 별도 스레드 실행, `Propagation.REQUIRES_NEW`로 청크당 진행률 갱신
+- **`DisclosureBackfillService`** — `ChunkProgressListener` 콜백 추가 (오버로드로 기존 시그니처 유지), `calculateChunks()` 정적 메서드
+- **컨트롤러 비동기 엔드포인트** — `POST /admin/disclosures/backfill/jobs` 202 + jobId, `GET .../jobs/{id}` 상태 조회 (NotFound 404)
+- **`SchedulingConfig`에 `@EnableAsync`** 추가
+- 통합 테스트 **21/21 통과** (기존 14 + BackfillJobService 3 + BackfillJobController 4)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **TaskExecutor 빈 미설정** — Spring 기본 `SimpleAsyncTaskExecutor`(매 호출 새 스레드). 운영 부하 클 경우 `ThreadPoolTaskExecutor` 빈 추가로 동시 잡 수 제한.
+- **잡 cleanup/중단 미구현** — 후속 작업 (운영 정책 결정 후).
+- **동시 백필 중복 방지 없음** — 같은 범위 두 번 호출 시 두 잡 생성. `rcept_no` 멱등으로 데이터 안전성은 보장.
+- **`runAsync` 호출은 컨트롤러에서 직접** — `createJob` 끝나자마자 트리거. PENDING→RUNNING 사이에 짧은 갭 존재(허용 범위).
+
+### 운영 사용 흐름 (3년치 백필 비동기)
+```bash
+# 1. 잡 생성 — 즉시 202 + jobId
+curl -X POST -u admin:<password> \
+  "http://localhost:8080/admin/disclosures/backfill/jobs?from=2023-06-01&to=2026-06-01&emitEvents=false"
+# → {"jobId":"...", "status":"PENDING", ...}
+
+# 2. 진행률 조회 — 5분마다 폴링
+curl -u admin:<password> \
+  "http://localhost:8080/admin/disclosures/backfill/jobs/<jobId>"
+# → {"status":"RUNNING", "chunksDone":7, "chunksTotal":13, "saved":35000, ...}
+```

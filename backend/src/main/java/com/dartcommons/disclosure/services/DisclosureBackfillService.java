@@ -64,13 +64,16 @@ public class DisclosureBackfillService {
 
     /**
      * 임의 날짜 범위를 90일 청크로 분할해 순차 백필.
+     * 청크 완료 시점에 listener(있을 경우) 호출 — 비동기 잡 진행률 업데이트용.
      *
      * @param from 시작일 (inclusive)
      * @param to 종료일 (inclusive)
      * @param emitEvents 분석 도메인 이벤트 발행 여부 — 백필은 일반적으로 false 권장
+     * @param listener 청크 완료 콜백 (nullable) — 비동기 잡 진행률 갱신용
      * @return 전체 저장된 공시 건수
      */
-    public BackfillResult backfill(LocalDate from, LocalDate to, boolean emitEvents) {
+    public BackfillResult backfill(LocalDate from, LocalDate to, boolean emitEvents,
+                                   ChunkProgressListener listener) {
         if (from.isAfter(to)) {
             throw new IllegalArgumentException("from(" + from + ") must be <= to(" + to + ")");
         }
@@ -91,16 +94,27 @@ public class DisclosureBackfillService {
             if (windowEnd.isAfter(to)) windowEnd = to;
 
             chunks++;
+            int chunkFetched = 0;
+            int chunkSaved = 0;
             try {
                 List<RawDisclosureItem> items = dartClient.fetchList(windowStart, windowEnd);
-                totalFetched += items.size();
+                chunkFetched = items.size();
+                totalFetched += chunkFetched;
 
-                int saved = self.persistChunked(items, coveredCodes, emitEvents);
-                totalSaved += saved;
+                chunkSaved = self.persistChunked(items, coveredCodes, emitEvents);
+                totalSaved += chunkSaved;
                 log.info("Backfill window {}~{}: fetched={}, saved={} (cumulative saved={})",
-                        windowStart, windowEnd, items.size(), saved, totalSaved);
+                        windowStart, windowEnd, chunkFetched, chunkSaved, totalSaved);
             } catch (Exception e) {
                 log.error("Backfill window {}~{} failed — 계속 진행", windowStart, windowEnd, e);
+            }
+
+            if (listener != null) {
+                try {
+                    listener.onChunkComplete(chunkFetched, chunkSaved);
+                } catch (Exception e) {
+                    log.warn("Chunk progress listener 실패 — 백필은 계속: {}", e.getMessage());
+                }
             }
 
             windowStart = windowEnd.plusDays(1);
@@ -108,6 +122,25 @@ public class DisclosureBackfillService {
 
         log.info("Backfill done: chunks={}, fetched={}, saved={}", chunks, totalFetched, totalSaved);
         return new BackfillResult(from, to, chunks, totalFetched, totalSaved);
+    }
+
+    /** 기존 시그니처 — listener 없이 위임. 동기 컨트롤러 호출용. */
+    public BackfillResult backfill(LocalDate from, LocalDate to, boolean emitEvents) {
+        return backfill(from, to, emitEvents, null);
+    }
+
+    /**
+     * 임의 날짜 범위에 대해 윈도우(90일) 청크 수를 미리 계산.
+     * 비동기 잡 시작 시 chunksTotal 초기화에 사용.
+     */
+    public static int calculateChunks(LocalDate from, LocalDate to) {
+        long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
+        return (int) Math.ceil((double) days / WINDOW_DAYS);
+    }
+
+    @FunctionalInterface
+    public interface ChunkProgressListener {
+        void onChunkComplete(int fetched, int saved);
     }
 
     /**
