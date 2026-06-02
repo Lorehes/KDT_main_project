@@ -1,16 +1,19 @@
 # 로컬 개발용 PostgreSQL
 # 사용: docker compose up -d   (Docker 설치 필요)
-# 기본값은 backend/src/main/resources/application.yml 의 datasource 기본값과 일치
+# 호스트 포트 5433 매핑 — 다른 프로젝트(5432 점유) 충돌 회피.
+# 백엔드 접속은 .env의 DB_URL=jdbc:postgresql://localhost:5433/dartcommons 사용.
 services:
   postgres:
     image: postgres:16-alpine
     container_name: dartcommons-postgres
+    # 환경변수는 프로젝트 루트 .env가 자동 로드됨 (docker compose 표준).
+    # POSTGRES_PASSWORD = .env의 DB_PASSWORD 값으로 일치.
     environment:
-      POSTGRES_DB: dartcommons
-      POSTGRES_USER: dartcommons
-      POSTGRES_PASSWORD: dartcommons
+      POSTGRES_DB: ${DB_NAME:-dartcommons}
+      POSTGRES_USER: ${DB_USERNAME:-dartcommons}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dartcommons}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - dartcommons_pgdata:/var/lib/postgresql/data
     healthcheck:

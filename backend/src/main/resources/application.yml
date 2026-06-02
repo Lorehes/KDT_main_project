@@ -3,7 +3,9 @@ spring:
     name: dartcommons
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/dartcommons}
+    # 기본 포트 5433 — docker-compose.yml과 정합 (다른 프로젝트 5432 점유 회피).
+    # .env의 DB_URL이 build.gradle bootRun task로 자동 로드됨.
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/dartcommons}
     username: ${DB_USERNAME:dartcommons}
     password: ${DB_PASSWORD:dartcommons}
     driver-class-name: org.postgresql.Driver

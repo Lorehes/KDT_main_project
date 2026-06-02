@@ -192,3 +192,24 @@ curl -u admin:<password> \
   "http://localhost:8080/admin/disclosures/backfill/jobs/<jobId>"
 # → {"status":"RUNNING", "chunksDone":7, "chunksTotal":13, "saved":35000, ...}
 ```
+
+---
+
+## 2026-06-03 | 운영 환경 부팅 + 백필 완료 + OTHER 룰 보강
+
+**산출**:
+- **운영 배포**: docker-compose 포트 5433 분리, `.env` 자동 로드(build.gradle bootRun task), `application.yml` 기본값 5433, `docker-compose.yml`에 `${DB_PASSWORD}` 매핑
+- **첫 부팅**: Flyway V1~V12 자동 적용 + V10 시드로 stocks 341건
+- **3년치 백필**: `POST /admin/disclosures/backfill/jobs` 비동기 진입점 사용 — 13 청크 × 3.7시간 → **fetched 756,410건, saved 91,965건**
+- **자동 폴링 검증**: `@Scheduled` 1분 폴링이 신규 공시 실시간 적재 중
+- **DisclosureTypeClassifier 룰 16종 보강**: OTHER 61%(56,054건) → 8%(7,302건). **87% 회수**
+- `scripts/data_collection/reclassify_other.sql` 일괄 재분류 적용
+
+### 결정 (코드에 안 드러나는 사항)
+- **포트 분리**: 다른 프로젝트(`gc-postgres` 5432) 충돌 회피. DartCommons는 5433 고정.
+- **백필 비동기 채택**: 동기 호출은 3.7시간 → HTTP 타임아웃 위험. `@Async` + jobId + 진행률 영속화.
+- **OTHER 8% 잔여는 의도적 비유지**: M1 Stage 2 LLM이 OTHER도 처리 예정 → 룰 보강 비용 대비 가치 낮음. diminishing returns.
+- **분류 결과 분포**: EXECUTIVE_SHARE 15.5k가 1위 (임원·주요주주 거래 정상). 증권사 5개가 종목 TOP 5 (운용/매매 공시 빈번).
+
+### 다음 세션 가장 큰 가치 — M1 Stage 2 LLM
+9.2만 건 데이터에 호재/악재 라벨 부여. `/dc-plan analysis-stage2-llm`부터 시작.

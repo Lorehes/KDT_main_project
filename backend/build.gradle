@@ -50,3 +50,28 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// bootRun 시 프로젝트 루트의 .env를 자동 로드 (Spring Boot은 .env를 직접 안 읽음)
+// .env 파일은 gitignore — 로컬 개발용 환경변수.
+tasks.named('bootRun') {
+	def envFile = rootProject.file('../.env')
+	if (envFile.exists()) {
+		envFile.eachLine { line ->
+			line = line.trim()
+			if (line && !line.startsWith('#') && line.contains('=')) {
+				def idx = line.indexOf('=')
+				def key = line.substring(0, idx).trim()
+				def value = line.substring(idx + 1).trim()
+				// 양쪽 따옴표 제거 (있을 경우)
+				if ((value.startsWith('"') && value.endsWith('"')) ||
+					(value.startsWith("'") && value.endsWith("'"))) {
+					value = value.substring(1, value.length() - 1)
+				}
+				if (key) environment key, value
+			}
+		}
+		logger.lifecycle ".env 로드 완료: ${envFile.absolutePath}"
+	} else {
+		logger.warn ".env 파일 없음: ${envFile.absolutePath} — 환경변수가 주입되지 않을 수 있음"
+	}
+}
