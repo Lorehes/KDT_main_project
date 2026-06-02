@@ -1,0 +1,4 @@
+# scripts/data_collection — 의존성
+# Python 3.11+ 권장
+pykrx>=1.0.45
+requests>=2.31.0

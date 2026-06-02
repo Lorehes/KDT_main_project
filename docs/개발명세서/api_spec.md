@@ -292,7 +292,8 @@ updated: 2026-05-30
 | 용도 | 엔드포인트 | 핵심 파라미터 | 호출 주기 |
 |------|------|------|------|
 | 신규 공시 폴링 | `list.json` | `crtfc_key`, `bgn_de`, `end_de`, `page_no`, `page_count`, `pblntf_ty`(공시유형), `corp_code`(선택) | **@Scheduled 1분** |
-| 고유번호 매핑 | `corpCode.xml` | `crtfc_key` (zip 다운로드) | 분기/초기 1회 |
+| 과거 공시 백필 | `list.json` | 동일 (`bgn_de`~`end_de` 90일 청크 분할) | 운영자 트리거 1회 `POST /admin/disclosures/backfill` |
+| 고유번호 매핑 | `corpCode.xml` | `crtfc_key` (zip 다운로드 → StAX 스트리밍 파싱) | 분기/초기 1회 (`StockMasterSyncJob` 또는 `seed_stocks.py`) |
 | 공시 원문 | `document.xml` | `crtfc_key`, `rcept_no` | 신규 공시 시 |
 | 기업개황 | `company.json` | `crtfc_key`, `corp_code` | 종목 등록/갱신 |
 | 정기보고서 재무(Stage 5) | `fnlttSinglAcnt.json` 등 | `crtfc_key`, `corp_code`, `bsns_year`, `reprt_code` | 분기 배치 |
@@ -317,15 +318,36 @@ updated: 2026-05-30
 
 > `pblntf_ty`(공시 유형) 코드 화이트리스트로 커버 대상 1차 필터([[feature_structure]] Stage 1). 종목 커버리지(코스피200+코스닥150, §3.1)는 `stocks` 마스터 조인으로 2차 필터.
 
-### 3.2 KRX OpenAPI (주가) — `KRX_API_KEY`
+### 3.2 KRX 정보데이터시스템 (`data.krx.co.kr`) — 공개 데이터(인증 불필요)
 
-기준: 한국거래소 데이터 서비스(`data.krx.co.kr`). **정확한 서비스 경로·파라미터는 발급 키의 API 가이드 기준으로 확정 필요(현재 미확정 — 부트스트랩 시 채움).**
+기준: KRX 정보데이터시스템(`data.krx.co.kr`). 공개 페이지의 데이터 셀 API(`bldAttendant/getJsonData.cmd`)를 사용. `KRX_API_KEY`는 일부 유료 API 한정이며 공개 데이터는 미필요.
 
-| 용도 | 데이터 | 호출 주기 |
-|------|------|------|
-| 일별 시세(종가/등락률) | 종목별 일별 매매정보 | **일 1회 배치** |
-| 종목 기본정보 | 종목 마스터(시장/섹터) → `stocks` 갱신 | 분기 1회 |
-| 공시 후 5일 반응 | 일별 시세 시계열에서 산출(Stage 3 결합) | 분석 시 조회 |
+| 용도 | bld(데이터 ID) | 폼 파라미터 | 호출 주기 | 호출 위치 |
+|------|---------------|-----------|---------|---------|
+| 종목 기본정보(전종목 market/sector) | `dbms/MDC/STAT/standard/MDCSTAT01901` | `mktId=ALL`, `trdDd=YYYYMMDD` | 분기 1회 | `KrxClient.fetchAllBasicInfo()` ← `StockMasterSyncJob` |
+| 인덱스 구성종목(코스피200/코스닥150) | (pykrx `get_index_portfolio_deposit_file`) | 인덱스 코드 KOSPI200=1028, KOSDAQ150=2203 | 분기 1회(리밸런싱) | `scripts/data_collection/seed_stocks.py` |
+| 일별 시세(종가/등락률) | (미확정 — 후속 Spec) | — | 일 1회 배치 | (미구현) |
+| 공시 후 5일 반응 | 일별 시세 시계열에서 산출(Stage 3 결합) | — | 분석 시 조회 | (미구현) |
+
+> **검증 필요**: KRX 공개 데이터 API는 비공식 인터페이스로 사전 공지 없이 변경 가능. `KrxClient` 구현은 pykrx(검증된 라이브러리) 패턴 기반이지만, 운영 환경에서 1회 실측 검증 후 응답 필드명 변동 시 `KrxClient.parseResponse()`의 키만 갱신. 시드 산출(인덱스 구성종목)은 pykrx에 위임해 안정성 확보.
+
+**호출 형식**:
+```
+POST http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd
+Content-Type: application/x-www-form-urlencoded
+
+bld=dbms/MDC/STAT/standard/MDCSTAT01901&mktId=ALL&trdDd=20260601&share=1&money=1&csvxls_isNo=false
+```
+
+**예상 응답(검증 필요)**:
+```json
+{
+  "OutBlock_1": [
+    { "ISU_SRT_CD": "005930", "ISU_ABBRV": "삼성전자", "MKT_NM": "KOSPI", "IDX_IND_NM": "전기·전자", ... },
+    ...
+  ]
+}
+```
 
 > 주가 시계열은 핵심 5테이블 밖이며, 필요 시 `stock_prices` 보조 테이블 추가를 검토한다([[db_schema]] §4 주석). Stage 3의 "과거 5일 주가 반응"은 KRX 배치 적재분에서 계산.
 

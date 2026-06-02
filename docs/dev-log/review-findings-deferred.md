@@ -12,32 +12,7 @@ updated: 2026-06-02
 
 ## 변경 이력
 - 2026-06-02: [HIGH] N+1 stocks 커버리지 쿼리 **해결** — `[[stocks-master-seed]]` 카드 #6/#10에서 `Stock` 엔티티 + `StockRepository.findAllStockCodes()` 도입, `DisclosureCollectionService.collect()`가 배치 진입 시 1회 Set 로드.
-
----
-
-## [HIGH] Thread.sleep 블로킹 재시도 (DartClient)
-
-**파일**: `DartClient.java` — `fetchPageWithRetry()` 메서드  
-**문제**: `Thread.sleep(delayMs)`가 스케줄러 스레드를 블로킹. 재시도 최대 3회 × 최대 30초 = 90초 블로킹 가능.  
-`fixedDelay` 방식이라 deadlock은 없으나, 스레드 풀이 단일 스레드면 다른 스케줄 작업 지연.
-
-**해결 방안**:
-```groovy
-// build.gradle에 추가
-implementation 'org.springframework.retry:spring-retry'
-implementation 'org.springframework:spring-aspects'
-```
-```java
-@Retryable(
-    retryFor = RestClientException.class,
-    maxAttempts = 3,
-    backoff = @Backoff(delay = 2000, multiplier = 2, maxDelay = 30000)
-)
-DartListResponse fetchPage(LocalDate bgnDe, LocalDate endDe, int pageNo) { ... }
-```
-`fetchPageWithRetry()` 메서드 제거 후 `fetchPage()`에 직접 `@Retryable` 적용.
-
-**선행 조건**: `spring-retry` + `spring-aspects` 의존성 추가 결정 (팀 합의 필요)
+- 2026-06-02: [HIGH] `Thread.sleep` 블로킹 재시도 **해결** — `spring-retry` + `spring-aspects` 의존성 추가, `DartClient.fetchPageWithRetry` 메서드 제거 후 `DartPageFetcher.fetchPage`에 `@Retryable` 적용. `KrxClient.fetchAllBasicInfo`도 동일 어노테이션 패턴. `SchedulingConfig`에 `@EnableRetry` 추가.
 
 ---
 
