@@ -67,22 +67,159 @@ class StockSeed:
 # 1) KRX 인덱스 구성종목 조회
 # ---------------------------------------------------------------------------
 
+def _extract_tickers(result) -> List[str]:
+    """
+    pykrx get_index_portfolio_deposit_file 반환 형태 차이 흡수.
+    - Index/list: 그대로 list화
+    - DataFrame: 인덱스(보통 종목코드)에서 추출
+    """
+    if result is None:
+        return []
+    if hasattr(result, "index") and hasattr(result, "columns"):
+        idx_list = [str(x) for x in result.index.tolist()]
+        if idx_list and all(len(c) == 6 and c.isdigit() for c in idx_list[:5]):
+            return idx_list
+        for col in result.columns:
+            if str(col).lower() in ("종목코드", "ticker", "stock_code", "isu_srt_cd"):
+                return [str(x) for x in result[col].tolist()]
+        return idx_list
+    try:
+        return [str(x) for x in list(result)]
+    except Exception:
+        return []
+
+
+def fetch_top_n_via_fdr(market: str, top_n: int, market_label: str) -> List[tuple[str, str]]:
+    """
+    [목적] FinanceDataReader로 시가총액 상위 N개 종목 조회 — pykrx 실패 시 폴백.
+    [이유] FinanceDataReader는 KRX 외 다양한 소스를 사용해 KRX 서버 변경에 덜 민감.
+    [수정 시 고려사항] FDR 버전에 따라 컬럼명 차이 — Code/Symbol, Marcap/시가총액 양쪽 대응.
+    """
+    try:
+        import FinanceDataReader as fdr
+    except ImportError:
+        print(f"[ERROR] FinanceDataReader 미설치 — pip install finance-datareader", file=sys.stderr)
+        return []
+
+    try:
+        df = fdr.StockListing(market)  # 'KOSPI' 또는 'KOSDAQ'
+    except Exception as e:
+        print(f"[ERROR] FDR {market} 조회 실패: {e}", file=sys.stderr)
+        return []
+
+    if df is None or len(df) == 0:
+        print(f"[ERROR] FDR {market} 응답 0건", file=sys.stderr)
+        return []
+
+    # 시가총액 컬럼 탐색
+    cap_col = next((c for c in ("Marcap", "시가총액", "MarketCap") if c in df.columns), None)
+    code_col = next((c for c in ("Code", "Symbol", "종목코드") if c in df.columns), None)
+    name_col = next((c for c in ("Name", "종목명") if c in df.columns), None)
+
+    if not code_col or not name_col:
+        print(f"[ERROR] FDR {market} 응답 컬럼 인식 실패. 컬럼: {df.columns.tolist()}", file=sys.stderr)
+        return []
+
+    if cap_col:
+        df = df.dropna(subset=[cap_col]).sort_values(cap_col, ascending=False).head(top_n)
+    else:
+        df = df.head(top_n)
+        print(f"[WARN] FDR {market} 시가총액 컬럼 없음 — 임의 상위 {top_n}개", file=sys.stderr)
+
+    out: List[tuple[str, str]] = []
+    for _, row in df.iterrows():
+        code = str(row[code_col]).strip().zfill(6)
+        if len(code) != 6 or not code.isdigit():
+            continue
+        name = str(row[name_col]).strip()
+        out.append((code, name))
+    print(f"[INFO] {market_label} FDR 상위 {len(out)}건 (시가총액 폴백)")
+    return out
+
+
+def fetch_top_n_by_market_cap(date: str, market: str, top_n: int, market_label: str) -> List[tuple[str, str]]:
+    """
+    [목적] 시가총액 상위 N개를 코스피200/코스닥150의 근사 폴백으로 사용.
+    [이유] pykrx의 인덱스 API(get_index_portfolio_deposit_file)가 작동 안 할 때
+           가장 안정적인 대안 — get_market_cap_by_ticker는 광범위 호환.
+           실제 인덱스와 약 95%+ 일치(분기 리밸런싱 시 일시 차이).
+    [수정 시 고려사항] 정확한 인덱스 구성이 필요하면 KRX 정보데이터시스템에서 수동 CSV 다운로드 후
+                     --csv-input 옵션으로 입력(후속 도입 예정).
+    """
+    from datetime import timedelta
+    candidate_date = date
+    df = None
+    for offset in range(0, 10):
+        try_date_obj = datetime.strptime(date, "%Y%m%d")
+        candidate_date = (try_date_obj - timedelta(days=offset)).strftime("%Y%m%d")
+        try:
+            df = krx_stock.get_market_cap_by_ticker(candidate_date, market=market)
+            if df is not None and len(df) > 0:
+                break
+        except Exception as e:
+            print(f"[WARN] {market} 시총 조회 실패 ({candidate_date}): {e}", file=sys.stderr)
+            continue
+
+    if df is None or len(df) == 0:
+        print(f"[ERROR] {market_label} 시총 조회 0건 — KRX 서버/pykrx 상태 점검 필요", file=sys.stderr)
+        return []
+
+    # 시가총액 내림차순 상위 N개
+    cap_col = "시가총액" if "시가총액" in df.columns else df.columns[0]
+    df = df.sort_values(cap_col, ascending=False).head(top_n)
+    out: List[tuple[str, str]] = []
+    for code in df.index.tolist():
+        code_str = str(code).zfill(6)
+        try:
+            name = krx_stock.get_market_ticker_name(code_str)
+            out.append((code_str, name))
+        except Exception:
+            continue
+    print(f"[INFO] {market_label} 시총 상위 {len(out)}건 (폴백, 기준일자 {candidate_date})")
+    return out
+
+
 def fetch_index_components(date: str, index_code: str, market_label: str) -> List[tuple[str, str]]:
     """
     [목적] 특정 인덱스(KOSPI200/KOSDAQ150)의 구성종목을 (stock_code, corp_name) 리스트로 반환.
     [이유] 종목 커버리지(통합기획서 §3.1) 확정.
+           반환 형태 차이(Index vs DataFrame)와 비영업일(빈 응답) 모두 대응.
     """
-    df = krx_stock.get_index_portfolio_deposit_file(date, index_code)
-    # pykrx는 종목코드 리스트만 반환 — 종목명은 별도 조회
-    tickers: List[str] = list(df) if df is not None else []
+    # 비영업일/장 시작 전 대비 — 빈 응답이면 직전 영업일들로 후퇴 시도
+    candidate_date = date
+    tickers: List[str] = []
+    for offset in range(0, 10):  # 최대 10일 후퇴
+        try_date_obj = datetime.strptime(date, "%Y%m%d")
+        from datetime import timedelta
+        candidate_date = (try_date_obj - timedelta(days=offset)).strftime("%Y%m%d")
+        try:
+            result = krx_stock.get_index_portfolio_deposit_file(candidate_date, index_code)
+        except Exception as e:
+            print(f"[WARN] KRX 인덱스 조회 실패 ({candidate_date}, {index_code}): {e}", file=sys.stderr)
+            continue
+        tickers = _extract_tickers(result)
+        if tickers:
+            if offset > 0:
+                print(f"[INFO] {market_label} — 기준일자 {date} 빈 응답, {candidate_date}로 후퇴", file=sys.stderr)
+            break
+
+    if not tickers:
+        print(f"[ERROR] {market_label} 인덱스({index_code}) 구성종목 0건 — pykrx 응답 확인 필요. "
+              f"진단: python -c \"from pykrx import stock; r=stock.get_index_portfolio_deposit_file('{date}','{index_code}'); print(type(r), r)\"",
+              file=sys.stderr)
+        return []
+
     out: List[tuple[str, str]] = []
     for code in tickers:
+        # 6자리 종목코드만 — 컬럼명 등 잘못된 추출 방어
+        if not (len(code) == 6 and code.isdigit()):
+            continue
         try:
             name = krx_stock.get_market_ticker_name(code)
             out.append((code, name))
         except Exception as e:
             print(f"[WARN] KRX 종목명 조회 실패 stock_code={code}: {e}", file=sys.stderr)
-    print(f"[INFO] {market_label} 인덱스({index_code}) 구성종목 {len(out)}건 수집")
+    print(f"[INFO] {market_label} 인덱스({index_code}) 구성종목 {len(out)}건 수집 (기준일자 {candidate_date})")
     return out
 
 
@@ -224,6 +361,8 @@ def parse_args() -> argparse.Namespace:
                    help="KRX 인덱스 기준일자 (YYYYMMDD). 기본: 오늘")
     p.add_argument("--output", default=str(default_out),
                    help="출력 SQL 경로 (기본: backend/.../db/migration/V10__seed_stocks.sql)")
+    p.add_argument("--source", choices=["index", "marketcap", "fdr"], default="index",
+                   help="종목 출처: index=pykrx 인덱스(엄격) / marketcap=pykrx 시총 폴백 / fdr=FinanceDataReader(가장 안정)")
     return p.parse_args()
 
 
@@ -234,11 +373,30 @@ def main() -> int:
         print("[ERROR] DART_API_KEY 환경변수 미설정", file=sys.stderr)
         return 2
 
-    print(f"[INFO] 기준일자: {args.date}")
+    print(f"[INFO] 기준일자: {args.date}, source={args.source}")
 
-    # 1. KRX 인덱스 구성
-    kospi200 = fetch_index_components(args.date, KOSPI200_INDEX, "KOSPI200")
-    kosdaq150 = fetch_index_components(args.date, KOSDAQ150_INDEX, "KOSDAQ150")
+    # 1. KRX 종목 수집 — 단계적 폴백: index → marketcap → fdr
+    if args.source == "fdr":
+        kospi200 = fetch_top_n_via_fdr("KOSPI", 200, "KOSPI200")
+        kosdaq150 = fetch_top_n_via_fdr("KOSDAQ", 150, "KOSDAQ150")
+    elif args.source == "marketcap":
+        kospi200 = fetch_top_n_by_market_cap(args.date, "KOSPI", 200, "KOSPI200")
+        kosdaq150 = fetch_top_n_by_market_cap(args.date, "KOSDAQ", 150, "KOSDAQ150")
+        if not kospi200 and not kosdaq150:
+            print("[WARN] pykrx 시총 폴백 실패 — FinanceDataReader로 자동 전환", file=sys.stderr)
+            kospi200 = fetch_top_n_via_fdr("KOSPI", 200, "KOSPI200")
+            kosdaq150 = fetch_top_n_via_fdr("KOSDAQ", 150, "KOSDAQ150")
+    else:  # index
+        kospi200 = fetch_index_components(args.date, KOSPI200_INDEX, "KOSPI200")
+        kosdaq150 = fetch_index_components(args.date, KOSDAQ150_INDEX, "KOSDAQ150")
+        if not kospi200 and not kosdaq150:
+            print("[WARN] 인덱스 API 양쪽 실패 — pykrx 시총 폴백 시도", file=sys.stderr)
+            kospi200 = fetch_top_n_by_market_cap(args.date, "KOSPI", 200, "KOSPI200")
+            kosdaq150 = fetch_top_n_by_market_cap(args.date, "KOSDAQ", 150, "KOSDAQ150")
+        if not kospi200 and not kosdaq150:
+            print("[WARN] pykrx 전체 실패 — FinanceDataReader로 최종 폴백", file=sys.stderr)
+            kospi200 = fetch_top_n_via_fdr("KOSPI", 200, "KOSPI200")
+            kosdaq150 = fetch_top_n_via_fdr("KOSDAQ", 150, "KOSDAQ150")
 
     # 2. 업종 정보
     all_codes = [c for c, _ in kospi200 + kosdaq150]
