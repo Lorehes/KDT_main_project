@@ -1,10 +1,10 @@
 package com.dartcommons.disclosure;
 
 import com.dartcommons.TestcontainersConfiguration;
+import com.dartcommons.disclosure.dto.RawDisclosureItem;
 import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
 import com.dartcommons.disclosure.services.DisclosureCollectionService;
-import com.dartcommons.infrastructure.dart.dto.DartListResponse;
 import com.dartcommons.shared.event.DisclosureCollectedEvent;
 import com.dartcommons.stocks.entities.Stock;
 import com.dartcommons.stocks.repositories.StockRepository;
@@ -71,7 +71,7 @@ class DisclosureCollectionIntegrationTest {
     @DisplayName("커버 종목 공시 1건이 정상 저장되고 이벤트가 발행된다")
     @Transactional
     void collect_coveredStock_savedAndEventPublished() {
-        List<DartListResponse.Item> items = List.of(item("20260601000001", "005930", "삼성전자", "유상증자결정"));
+        List<RawDisclosureItem> items = List.of(item("20260601000001", "005930", "삼성전자", "유상증자결정"));
 
         int saved = collectionService.collect(items);
 
@@ -87,7 +87,7 @@ class DisclosureCollectionIntegrationTest {
     @Test
     @DisplayName("동일 rcept_no는 두 번째 호출에서 skip된다 (멱등)")
     void collect_duplicateRceptNo_skipped() {
-        List<DartListResponse.Item> items = List.of(item("20260601000002", "005930", "삼성전자", "사업보고서"));
+        List<RawDisclosureItem> items = List.of(item("20260601000002", "005930", "삼성전자", "사업보고서"));
 
         collectionService.collect(items);
         int secondSaved = collectionService.collect(items);
@@ -99,7 +99,7 @@ class DisclosureCollectionIntegrationTest {
     @Test
     @DisplayName("미커버 종목(stocks 없음)은 skip된다")
     void collect_uncoveredStock_skipped() {
-        List<DartListResponse.Item> items = List.of(item("20260601000003", "999999", "미등록회사", "단일판매ㆍ공급계약체결"));
+        List<RawDisclosureItem> items = List.of(item("20260601000003", "999999", "미등록회사", "단일판매ㆍ공급계약체결"));
 
         int saved = collectionService.collect(items);
 
@@ -111,7 +111,7 @@ class DisclosureCollectionIntegrationTest {
     @Test
     @DisplayName("비상장(stock_code 공백)은 커버필터에서 skip된다")
     void collect_blankStockCode_skipped() {
-        List<DartListResponse.Item> items = List.of(item("20260601000004", null, "비상장법인", "반기보고서"));
+        List<RawDisclosureItem> items = List.of(item("20260601000004", null, "비상장법인", "반기보고서"));
 
         int saved = collectionService.collect(items);
 
@@ -122,7 +122,7 @@ class DisclosureCollectionIntegrationTest {
     @DisplayName("분류 미매칭 공시는 OTHER 타입으로 저장된다")
     @Transactional
     void collect_unknownReportNm_savedAsOther() {
-        List<DartListResponse.Item> items = List.of(item("20260601000005", "005930", "삼성전자", "알수없는공시유형"));
+        List<RawDisclosureItem> items = List.of(item("20260601000005", "005930", "삼성전자", "알수없는공시유형"));
 
         collectionService.collect(items);
 
@@ -134,7 +134,7 @@ class DisclosureCollectionIntegrationTest {
     @DisplayName("혼합 배치(커버/미커버/중복)에서 커버만 저장된다")
     @Transactional
     void collect_mixedBatch_onlyCoveredSaved() {
-        List<DartListResponse.Item> items = List.of(
+        List<RawDisclosureItem> items = List.of(
                 item("20260601000010", "005930", "삼성전자", "유상증자결정"),  // 커버, 신규
                 item("20260601000011", "999999", "미커버회사", "합병"),         // 미커버
                 item("20260601000010", "005930", "삼성전자", "유상증자결정")    // 중복
@@ -148,17 +148,14 @@ class DisclosureCollectionIntegrationTest {
 
     // ---- 픽스처 헬퍼 ----
 
-    private DartListResponse.Item item(String rceptNo, String stockCode, String corpName, String reportNm) {
-        return new DartListResponse.Item(
-                "Y",               // corpCls
-                corpName,
-                "00126380",        // corpCode (삼성전자)
-                stockCode != null ? stockCode : "      ",
-                reportNm,
+    private RawDisclosureItem item(String rceptNo, String stockCode, String corpName, String reportNm) {
+        return new RawDisclosureItem(
                 rceptNo,
-                corpName,          // flrNm
-                "20260601",        // rceptDt
-                ""                 // rm
+                "00126380",        // corpCode (삼성전자)
+                stockCode,         // 도메인 DTO는 정규화된 null/값
+                corpName,
+                reportNm,
+                "20260601"         // rceptDt
         );
     }
 

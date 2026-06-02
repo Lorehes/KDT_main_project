@@ -1,5 +1,7 @@
 package com.dartcommons.infrastructure.krx;
 
+import com.dartcommons.shared.util.HostWhitelist;
+import com.dartcommons.shared.util.SecretMasker;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,6 +52,7 @@ public class KrxClient {
     private final ObjectMapper objectMapper;
 
     public KrxClient(KrxApiProperties props) {
+        HostWhitelist.verify(props.baseUrl(), "KrxClient");
         this.props = props;
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(props.timeoutMs()))
@@ -91,7 +94,7 @@ public class KrxClient {
             }
             return parseResponse(body);
         } catch (Exception e) {
-            log.error("KRX fetchAllBasicInfo 실패 — corp_code만 갱신됩니다: {}", e.getMessage());
+            log.error("KRX fetchAllBasicInfo 실패 — corp_code만 갱신됩니다: {}", SecretMasker.mask(e.getMessage()));
             return Map.of();
         }
     }

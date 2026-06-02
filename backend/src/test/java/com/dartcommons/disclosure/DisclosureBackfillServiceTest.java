@@ -1,11 +1,11 @@
 package com.dartcommons.disclosure;
 
 import com.dartcommons.TestcontainersConfiguration;
+import com.dartcommons.disclosure.dto.RawDisclosureItem;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
 import com.dartcommons.disclosure.services.DisclosureBackfillService;
 import com.dartcommons.disclosure.services.DisclosureBackfillService.BackfillResult;
 import com.dartcommons.infrastructure.dart.DartClient;
-import com.dartcommons.infrastructure.dart.dto.DartListResponse;
 import com.dartcommons.stocks.entities.Stock;
 import com.dartcommons.stocks.repositories.StockRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,7 +79,7 @@ class DisclosureBackfillServiceTest {
     @Test
     @DisplayName("커버 종목만 저장 + 미커버는 skip")
     void backfill_filtersCoverage() {
-        List<DartListResponse.Item> items = List.of(
+        List<RawDisclosureItem> items = List.of(
                 item("20240101000001", "005930", "삼성전자", "유상증자결정"),
                 item("20240101000002", "999999", "미커버", "합병")
         );
@@ -97,7 +97,7 @@ class DisclosureBackfillServiceTest {
     @DisplayName("청크 크기(500) 초과 배치도 정확히 saveAll로 적재된다")
     void backfill_chunkedSaveAll() {
         // 600건 항목 — 청크 크기 500 초과 → 2회 flush
-        List<DartListResponse.Item> items = new ArrayList<>();
+        List<RawDisclosureItem> items = new ArrayList<>();
         for (int i = 0; i < 600; i++) {
             items.add(item(String.format("2024010100%04d", i), "005930", "삼성전자", "유상증자결정"));
         }
@@ -113,7 +113,7 @@ class DisclosureBackfillServiceTest {
     @Test
     @DisplayName("재실행 시 멱등 — 이미 저장된 공시는 skip")
     void backfill_idempotent() {
-        List<DartListResponse.Item> items = List.of(
+        List<RawDisclosureItem> items = List.of(
                 item("20240101000010", "005930", "삼성전자", "유상증자결정")
         );
         when(dartClient.fetchList(any(), any())).thenReturn(items, List.of());
@@ -128,9 +128,7 @@ class DisclosureBackfillServiceTest {
         assertThat(disclosureRepository.count()).isEqualTo(1);
     }
 
-    private DartListResponse.Item item(String rceptNo, String stockCode, String corpName, String reportNm) {
-        return new DartListResponse.Item(
-                "Y", corpName, "00126380", stockCode, reportNm, rceptNo, corpName, "20240101", ""
-        );
+    private RawDisclosureItem item(String rceptNo, String stockCode, String corpName, String reportNm) {
+        return new RawDisclosureItem(rceptNo, "00126380", stockCode, corpName, reportNm, "20240101");
     }
 }

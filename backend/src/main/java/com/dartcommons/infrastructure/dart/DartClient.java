@@ -1,6 +1,9 @@
 package com.dartcommons.infrastructure.dart;
 
+import com.dartcommons.disclosure.dto.RawDisclosureItem;
 import com.dartcommons.infrastructure.dart.dto.DartListResponse;
+import com.dartcommons.shared.util.HostWhitelist;
+import com.dartcommons.shared.util.SecretMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.retry.annotation.Backoff;
@@ -47,10 +50,11 @@ public class DartClient {
 
     /**
      * 날짜 범위 내 전체 공시 목록을 페이지네이션해서 반환한다.
+     * 반환 타입은 도메인-친화 {@link RawDisclosureItem} — disclosure 도메인이 infra DTO에 의존하지 않도록 변환.
      * status=013(데이터없음)은 빈 리스트, 그 외 비정상 status는 DartApiException throw.
      */
-    public List<DartListResponse.Item> fetchList(LocalDate bgnDe, LocalDate endDe) {
-        List<DartListResponse.Item> result = new ArrayList<>();
+    public List<RawDisclosureItem> fetchList(LocalDate bgnDe, LocalDate endDe) {
+        List<RawDisclosureItem> result = new ArrayList<>();
         int pageNo = 1;
 
         while (true) {
@@ -73,7 +77,11 @@ public class DartClient {
 
             List<DartListResponse.Item> items = response.safeList();
             if (items.isEmpty()) break;
-            result.addAll(items);
+
+            // infra DTO → 도메인 DTO 변환은 infrastructure 책임
+            for (DartListResponse.Item item : items) {
+                result.add(toDomain(item));
+            }
 
             // 반환된 항목이 PAGE_SIZE 미만이면 마지막 페이지 — totalCount 신뢰보다 안전
             if (items.size() < PAGE_SIZE) break;
@@ -81,6 +89,21 @@ public class DartClient {
         }
 
         return result;
+    }
+
+    /**
+     * DART 응답 항목 → 도메인-친화 RawDisclosureItem 변환.
+     * stockCode는 공백/null 정규화 — 비상장 공시는 null로 통일.
+     */
+    private static RawDisclosureItem toDomain(DartListResponse.Item item) {
+        return new RawDisclosureItem(
+                item.rceptNo(),
+                item.corpCode(),
+                item.stockCodeOrNull(),
+                item.corpName(),
+                item.reportNm(),
+                item.rceptDt()
+        );
     }
 
     /*
@@ -100,6 +123,7 @@ public class DartClient {
         private final DartApiProperties props;
 
         DartPageFetcher(DartApiProperties props) {
+            HostWhitelist.verify(props.baseUrl(), "DartClient");
             this.props = props;
             HttpClient httpClient = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofMillis(props.timeoutMs()))
@@ -124,17 +148,22 @@ public class DartClient {
         )
         public DartListResponse fetchPage(LocalDate bgnDe, LocalDate endDe, int pageNo) {
             log.debug("DART fetchPage attempt: bgnDe={}, endDe={}, pageNo={}", bgnDe, endDe, pageNo);
-            return restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/list.json")
-                            .queryParam("crtfc_key", props.apiKey())
-                            .queryParam("bgn_de", bgnDe.format(YYYYMMDD))
-                            .queryParam("end_de", endDe.format(YYYYMMDD))
-                            .queryParam("page_no", pageNo)
-                            .queryParam("page_count", PAGE_SIZE)
-                            .build())
-                    .retrieve()
-                    .body(DartListResponse.class);
+            try {
+                return restClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/list.json")
+                                .queryParam("crtfc_key", props.apiKey())
+                                .queryParam("bgn_de", bgnDe.format(YYYYMMDD))
+                                .queryParam("end_de", endDe.format(YYYYMMDD))
+                                .queryParam("page_no", pageNo)
+                                .queryParam("page_count", PAGE_SIZE)
+                                .build())
+                        .retrieve()
+                        .body(DartListResponse.class);
+            } catch (RestClientException e) {
+                // 예외 메시지에 URL 쿼리스트링(crtfc_key=...) 포함 가능 — 마스킹 후 재throw
+                throw new RestClientException(SecretMasker.mask(e.getMessage()));
+            }
         }
     }
 }

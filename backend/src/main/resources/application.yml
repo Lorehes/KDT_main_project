@@ -65,6 +65,10 @@ dartcommons:
     api-key: ${KRX_API_KEY}
     timeout-ms: 10000
     max-retries: 3
+  # /admin/** HTTP Basic 인증 (MVP 단순 가드)
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD}
 
 logging:
   level:

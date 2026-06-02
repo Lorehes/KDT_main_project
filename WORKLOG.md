@@ -120,3 +120,41 @@ curl -X POST "http://localhost:8080/admin/disclosures/backfill?from=2023-06-01&t
 - `BackfillController` 인증 가드 (Spring Security 도입 시점)
 - 비동기 백필 (현재 동기 — 큰 범위는 HTTP 타임아웃 위험)
 - KRX 일별 시세 + Stage 3 5일 반응 (Spec 분리)
+
+---
+
+## 2026-06-02 | deferred 전건 해결 + 보안 게이트
+
+**Spec**: 모든 deferred 항목 마무리 (`review-findings-deferred.md` status: open → resolved)
+
+### 완료
+- **LOW**: `SecretMasker` 유틸 + 외부 클라이언트 예외 메시지 마스킹 (`crtfc_key=...` → `***`)
+- **MEDIUM**: `HostWhitelist` 유틸 + `DartClient`/`DartCorpCodeClient`/`KrxClient` 생성자에서 `baseUrl` 호스트 검증 (prod: `opendart.fss.or.kr`, `data.krx.co.kr` / test: localhost)
+- **MEDIUM**: V11 `system_configs` 마이그레이션 + `SystemConfig` 엔티티/`SystemConfigRepository`. `DisclosurePollingJob` `AtomicReference` → DB 영속화 + 재기동 복원
+- **HIGH**: `disclosure/dto/RawDisclosureItem` 도메인 DTO 도입. `DartClient.fetchList()` 반환 타입 변경, `DisclosureCollectionService`/`DisclosureBackfillService`/`DisclosurePollingJob` 모두 `RawDisclosureItem`만 의존. 변환 책임은 infrastructure(`DartClient.toDomain`)
+- **보안 게이트**: `spring-boot-starter-security` + `SecurityConfig`(HTTP Basic `/admin/**` 인증). `AdminAuthProperties`(env 주입). in-memory user. `AdminAuthIntegrationTest` 3건(401·401·200) 통과
+- 통합 테스트 **14/14 통과** (Application 1 + Disclosure 6 + Backfill 4 + AdminAuth 3)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **DTO 리팩토링 범위**: `DartListResponse.Item`은 infrastructure 내부에 그대로 보존(역직렬화용). 도메인이 가져가는 형태만 `RawDisclosureItem`으로 분리. infrastructure가 변환 책임.
+- **SSRF 화이트리스트**: profile-gated 대신 단일 화이트리스트 + test 호스트 함께 보유 — 단순함 우선. 운영에서 test 호스트 시도 시 부팅 실패는 의도된 빠른 실패.
+- **`system_configs`는 shared/config에 위치**: 다른 도메인 잡 상태도 공유 가능. `config_key` 네이밍 컨벤션 `<domain>.<key>` 권장.
+- **Spring Security MVP**: in-memory user 1명(`admin`) + HTTP Basic + STATELESS. JWT는 user 도메인 도입 시점에 교체. `/admin/**` 외에는 permitAll 유지(공시 통역 사용자 라우트와 충돌 없음).
+- **`ADMIN_PASSWORD` 미설정 시**: Spring placeholder 미해결로 그대로 문자열 binding → @NotBlank 통과 → 인증은 항상 실패(literal 비교). 운영에선 강한 무작위 env 주입 필수.
+
+### 운영 사용 흐름 (변경)
+```bash
+# 환경변수 추가
+export ADMIN_USERNAME=admin
+export ADMIN_PASSWORD=<strong-random-32+chars>
+
+# 백필 호출 — HTTP Basic 인증 필수
+curl -X POST -u admin:<password> \
+  "http://localhost:8080/admin/disclosures/backfill?from=2023-06-01&to=2026-06-01&emitEvents=false"
+```
+
+### 미완료 (다음 작업)
+- KRX 운영 실측 (사용자 환경에서 1회 검증 후 `KrxClient.parseResponse()` 필드명 조정)
+- 비동기 백필 (현재 동기 — 큰 범위는 HTTP 타임아웃 위험, `@Async` + jobId 진행률 조회)
+- KRX 일별 시세 + Stage 3 5일 반응 (별도 Spec)
+- analysis 도메인 (Stage 2~5 LLM 분석) 도입 시 `DisclosureCollectedEvent` 소비자 작성

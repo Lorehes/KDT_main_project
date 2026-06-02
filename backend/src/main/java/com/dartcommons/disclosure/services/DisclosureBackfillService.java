@@ -1,9 +1,9 @@
 package com.dartcommons.disclosure.services;
 
+import com.dartcommons.disclosure.dto.RawDisclosureItem;
 import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
 import com.dartcommons.infrastructure.dart.DartClient;
-import com.dartcommons.infrastructure.dart.dto.DartListResponse;
 import com.dartcommons.shared.event.DisclosureCollectedEvent;
 import com.dartcommons.stocks.repositories.StockRepository;
 import lombok.RequiredArgsConstructor;
@@ -92,7 +92,7 @@ public class DisclosureBackfillService {
 
             chunks++;
             try {
-                List<DartListResponse.Item> items = dartClient.fetchList(windowStart, windowEnd);
+                List<RawDisclosureItem> items = dartClient.fetchList(windowStart, windowEnd);
                 totalFetched += items.size();
 
                 int saved = self.persistChunked(items, coveredCodes, emitEvents);
@@ -115,15 +115,15 @@ public class DisclosureBackfillService {
      * 각 청크는 독립 트랜잭션 — 한 청크 실패가 전체를 롤백하지 않음.
      */
     @Transactional
-    public int persistChunked(List<DartListResponse.Item> items, Set<String> coveredCodes, boolean emitEvents) {
+    public int persistChunked(List<RawDisclosureItem> items, Set<String> coveredCodes, boolean emitEvents) {
         if (items.isEmpty()) return 0;
 
         List<Disclosure> buffer = new ArrayList<>(CHUNK_SIZE);
         Set<String> seenInBatch = new HashSet<>();
         int saved = 0;
 
-        for (DartListResponse.Item item : items) {
-            String stockCode = item.stockCodeOrNull();
+        for (RawDisclosureItem item : items) {
+            String stockCode = item.stockCode();
             if (stockCode == null || !coveredCodes.contains(stockCode)) continue;
             if (!seenInBatch.add(item.rceptNo())) continue;  // 배치 내 중복 skip
             if (disclosureRepository.existsByRceptNo(item.rceptNo())) continue;  // 기존 적재분 skip
@@ -155,7 +155,7 @@ public class DisclosureBackfillService {
         }
     }
 
-    private Disclosure buildEntity(DartListResponse.Item item, String stockCode) {
+    private Disclosure buildEntity(RawDisclosureItem item, String stockCode) {
         return Disclosure.builder()
                 .rceptNo(item.rceptNo())
                 .corpCode(item.corpCode())

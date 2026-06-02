@@ -1,5 +1,7 @@
 package com.dartcommons.infrastructure.dart;
 
+import com.dartcommons.shared.util.HostWhitelist;
+import com.dartcommons.shared.util.SecretMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -38,6 +40,7 @@ public class DartCorpCodeClient {
     private final DartApiProperties props;
 
     public DartCorpCodeClient(DartApiProperties props) {
+        HostWhitelist.verify(props.baseUrl(), "DartCorpCodeClient");
         this.props = props;
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(props.timeoutMs()))
@@ -83,7 +86,7 @@ public class DartCorpCodeClient {
                 break;
             }
         } catch (Exception e) {
-            throw new DartApiException("PARSE", "corpCode.xml parse error: " + e.getMessage());
+            throw new DartApiException("PARSE", "corpCode.xml parse error: " + SecretMasker.mask(e.getMessage()));
         }
 
         log.info("DART corpCode.xml fetch done: listed={}", result.size());
