@@ -54,6 +54,13 @@ dartcommons:
     api-key: ${DART_API_KEY}
     timeout-ms: 10000
     max-retries: 3
+  # KRX OpenAPI — 종목 기본정보 / 일별시세 (stocks-master-seed Spec).
+  # base-url/엔드포인트는 KRX 가이드 실측(카드 #1) 확정 후 갱신.
+  krx:
+    base-url: ${KRX_BASE_URL:https://data.krx.co.kr}
+    api-key: ${KRX_API_KEY}
+    timeout-ms: 10000
+    max-retries: 3
 
 logging:
   level:

@@ -2,31 +2,16 @@
 type: dev-log
 status: open
 created: 2026-06-01
-updated: 2026-06-01
+updated: 2026-06-02
 ---
 
 # 코드 리뷰 보류 항목 (disclosure-collection-pipeline)
 
-> `/dc-review-code` 리뷰(2026-06-01)에서 발견된 항목 중 현재 세션에서 즉시 수정 불가한 항목.
+> `/dc-review-code` 리뷰(2026-06-01)에서 발견된 항목 중 즉시 수정 불가했던 항목.
 > 선행 Spec 완료, 의존성 추가, 아키텍처 변경이 필요한 항목들.
 
----
-
-## [HIGH] N+1 stocks 커버리지 쿼리
-
-**파일**: `DisclosureCollectionService.java` — `isCovered()` 메서드  
-**문제**: 공시 항목 1건마다 `SELECT COUNT(*) FROM stocks WHERE stock_code = ?` 쿼리 발생.  
-배치 100건 수신 시 최대 100회 DB 왕복.
-
-**해결 방안**:
-1. `stocks-master-seed` Spec 완료 후 `Stock` 엔티티 + `StockRepository` 생성
-2. `collect()` 진입 시 전체 커버 종목 코드를 Set으로 한 번에 로드:
-   ```java
-   Set<String> coveredCodes = stockRepository.findAllStockCodes(); // SELECT stock_code FROM stocks
-   ```
-3. `isCovered(stockCode, coveredCodes)` 로 Set 조회 — DB 쿼리 0회
-
-**선행 조건**: `[[stocks-master-seed]]` Spec Approved + 구현 완료
+## 변경 이력
+- 2026-06-02: [HIGH] N+1 stocks 커버리지 쿼리 **해결** — `[[stocks-master-seed]]` 카드 #6/#10에서 `Stock` 엔티티 + `StockRepository.findAllStockCodes()` 도입, `DisclosureCollectionService.collect()`가 배치 진입 시 1회 Set 로드.
 
 ---
 

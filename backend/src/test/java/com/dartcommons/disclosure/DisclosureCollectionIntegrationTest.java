@@ -6,6 +6,8 @@ import com.dartcommons.disclosure.repositories.DisclosureRepository;
 import com.dartcommons.disclosure.services.DisclosureCollectionService;
 import com.dartcommons.infrastructure.dart.dto.DartListResponse;
 import com.dartcommons.shared.event.DisclosureCollectedEvent;
+import com.dartcommons.stocks.entities.Stock;
+import com.dartcommons.stocks.repositories.StockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,7 +17,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.EventListener;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,15 +30,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  * [목적] DisclosureCollectionService의 멱등·커버필터·이벤트 발행을 Testcontainers 실 PostgreSQL로 검증.
  * [이유] Mock DB 금지(CLAUDE.md §6-6) — 실제 UNIQUE 제약, FK, 인덱스 동작을 검증.
  *       DartClient는 테스트 대상이 아니라 DartListResponse.Item 픽스처로 직접 주입.
- * [사이드 임팩트] stocks 테이블에 픽스처를 INSERT해야 커버 필터가 통과됨(stocks-master-seed 선행 가정).
- * [수정 시 고려사항] stocks-master-seed Spec 완료 후 픽스처 INSERT를 시드 스크립트로 대체 가능.
+ *       stocks-master-seed Spec 카드 #10 회귀로 픽스처가 JdbcTemplate INSERT → StockRepository.save로 전환됨.
+ * [사이드 임팩트] Stock 엔티티가 V2 스키마와 정합하지 않으면 save 시점에 부팅/매핑 오류로 노출 — ddl-auto: validate 보조 검증.
+ * [수정 시 고려사항] V10 시드 마이그레이션 도입 후에도 본 테스트는 fixture 격리 유지(테스트는 deleteAll 후 재적재).
  *                  DART API 실제 호출 테스트는 별도 @Tag("dart-live") 테스트로 분리 권장.
  */
 @SpringBootTest
 @Import({TestcontainersConfiguration.class, DisclosureCollectionIntegrationTest.TestConfig.class})
 @TestPropertySource(properties = {
         "dartcommons.dart.api-key=test-key",
-        "dartcommons.dart.base-url=http://localhost"
+        "dartcommons.dart.base-url=http://localhost",
+        "dartcommons.krx.api-key=test-key",
+        "dartcommons.krx.base-url=http://localhost"
 })
 class DisclosureCollectionIntegrationTest {
 
@@ -45,19 +49,22 @@ class DisclosureCollectionIntegrationTest {
 
     @Autowired private DisclosureCollectionService collectionService;
     @Autowired private DisclosureRepository disclosureRepository;
-    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private StockRepository stockRepository;
     @Autowired private TestEventCaptor eventCaptor;
 
     @BeforeEach
     void setUp() {
         disclosureRepository.deleteAll();
-        jdbcTemplate.execute("DELETE FROM stocks");
+        stockRepository.deleteAll();
         eventCaptor.clear();
 
-        // stocks 픽스처 — 커버 종목 필터 통과를 위해 필요
-        jdbcTemplate.update(
-                "INSERT INTO stocks(stock_code, corp_code, corp_name, market) VALUES(?,?,?,?)",
-                "005930", "00126380", "삼성전자", "KOSPI");
+        // stocks 픽스처 — 커버 종목 필터 통과를 위해 필요 (엔티티 직접 저장)
+        stockRepository.save(Stock.builder()
+                .stockCode("005930")
+                .corpCode("00126380")
+                .corpName("삼성전자")
+                .market("KOSPI")
+                .build());
     }
 
     @Test
