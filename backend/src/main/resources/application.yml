@@ -76,7 +76,7 @@ dartcommons:
   llm:
     provider: ${LLM_PROVIDER:mock}
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    model: ${LLM_MODEL:qwen2.5:7b-instruct}
+    model: ${LLM_MODEL:qwen3:4b}
     timeout-ms: ${LLM_TIMEOUT_MS:60000}
     max-retries: ${LLM_MAX_RETRIES:2}
     # 결정 2: 0.6 미만 → is_withheld=true (판단 보류).

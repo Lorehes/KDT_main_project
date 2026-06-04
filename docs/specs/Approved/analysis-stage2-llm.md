@@ -343,7 +343,7 @@ AnalysisResponse {
 | 1 | 백필 잡 테이블 | **신규 V13 `analysis_jobs`** | V12는 `from_date NOT NULL` — analysis 백필은 disclosure ID 범위 + 필터 의미라 시맨틱 충돌. job_type 추가 + 컬럼 nullable 변경 시 기존 행 의미 깨짐 |
 | 2 | 신뢰도 임계치 기본값 | **0.6** (SystemConfig 키 `analysis.stage2.confidence_threshold`로 런타임 조정 가능) | Free 노출 보수성과 `is_withheld` 비율(목표 ≤30%, Spec §7 G4)의 균형. 0.5는 너무 관대(절반 가까이 통과), 0.7은 과보수(보류율 폭증). 운영 보정 가능 구조로 안전망 |
 | 3 | 워커 풀 분리 | **분리: `analysisExecutor`(폴링 트리거용, core 2 / max 4) + `analysisBackfillExecutor`(백필용, core 1 / max 2)** | Ollama 단일 인스턴스 RPS 한계 — 백필이 폴링 트리거 큐를 막으면 SLO(30초) 위반. 풀 분리로 우선순위 격리 |
-| 4 | MVP 모델 | **`qwen2.5:7b-instruct`** 기본, wave 2 smoke test에서 `gemma2:9b`와 비교 후 최종 확정 | 한국어 정확도 + JSON 모드 안정성(LangChain4j AiServices 친화). 본 Spec은 후보만 고정, 실제 결정은 wave 2 결과 데이터 첨부 시. `application.yml`에서 모델명만 환경변수 교체 가능 구조 |
+| 4 | MVP 모델 | **`qwen3:4b` 확정** (2026-06-05 wave 2 smoke test) — 초기 후보 `qwen2.5:7b-instruct`는 기획서 §6.3 "Qwen 3.5" 명세 + ollama registry 실재 버전(qwen3:4b 4.0B Q4_K_M) 정합으로 교체 | 5건 비교: qwen3는 모두 NEUTRAL 보수적(잘못된 단정 0건). gemma3:4b는 클로봇 유상증자(통상 악재) → POSITIVE 오분류 + summary "주가에 긍정적 영향" 자본시장법 위반 위험. qwen3 평균 3.1초로 더 빠름. 모델 정확도 한계는 Stage 3 RAG + Stage 4 2차 분석으로 보강(본 Spec §8 범위 외). 상세: `docs/dev-log/analysis-stage2-smoke.md` |
 | 5 | Free 응답 범위 | **summary 3줄 그대로 노출** | 통합기획서 §6.1(Stage 2 "3줄 요약") = SSOT. §8.1(Free "한 줄 요약")은 BM 카피의 단순화 — 마케팅 영역과 분리. 단, summary 글자수 cap 240자(3 × 80)로 LLM 횡설수설 방지 |
 | 6 | 백필 트리거 UI | **MVP는 cURL만** (`POST /admin/analysis/backfill` HTTP Basic) | M4 frontend Spec 합류 시점에 admin 페이지 검토. 본 Spec 범위는 백엔드 API + 운영 가이드 doc 한정 |
 
@@ -411,7 +411,7 @@ CREATE INDEX idx_analysis_jobs_status_created ON analysis_jobs (status, created_
 ### 5. 외부 계약 영향
 
 - **신규 외부 호출**: Ollama HTTP API (`/api/generate` 또는 `/api/chat`, LangChain4j 어댑터 경유)
-  - 환경변수: `OLLAMA_BASE_URL`(기본 `http://localhost:11434`), `LLM_MODEL`(기본 `qwen2.5:7b-instruct`), `LLM_TIMEOUT_MS`(기본 60000)
+  - 환경변수: `OLLAMA_BASE_URL`(기본 `http://localhost:11434`), `LLM_MODEL`(기본 `qwen3:4b`), `LLM_TIMEOUT_MS`(기본 60000)
   - 타임아웃: 60s (LLM 응답 가변성 — DART 10s보다 큼)
   - 재시도: 2회 (CLAUDE.md §4 정책 — 지수 백오프). 단 재시도는 **네트워크/타임아웃만**, JSON 파싱 실패는 별도 1회 재호출(Stage2Analyzer 책임)
 - **변경 없음**: DART, KRX, 카카오 — 본 Spec 범위 밖
