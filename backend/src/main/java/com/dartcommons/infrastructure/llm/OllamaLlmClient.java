@@ -63,10 +63,15 @@ public class OllamaLlmClient implements LlmClient {
                 .build();
     }
 
+    /*
+     * maxAttempts=3 = 초기 호출 + 2회 재시도 (LlmProperties.maxRetries 기본 2와 정합).
+     * SpEL bean 참조(#{@llmProperties.maxRetries()+1})는 Spring Boot @ConfigurationProperties 빈명 규칙 차이로
+     * 'llmProperties' 이름 해석 실패함이 운영 확인됨(2026-06-05). 상수로 고정하고 변경 시 함께 갱신.
+     */
     @Override
     @Retryable(
             retryFor = RestClientException.class,
-            maxAttemptsExpression = "#{@llmProperties.maxRetries() + 1}",
+            maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 8_000)
     )
     public Stage2Output classifyStage2(String prompt) {

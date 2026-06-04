@@ -78,9 +78,13 @@ public class AnalysisBackfillService {
 
         try {
             int analyzedCum = 0;
-            while (true) {
+            int failedCum = 0;
+            int safetyCap = (chunksTotal + 1) * 2; // 무한 루프 방지: 예상 청크 수의 2배 상한
+            // 워터마크: 청크 처리 후 마지막 id 다음부터 다시 조회 — LLM 영구 실패한 disclosure로 인한 무한 루프 차단.
+            Long watermark = job.getDisclosureIdFrom();
+            for (int processed = 0; processed < safetyCap; processed++) {
                 List<Long> ids = resultRepo.findUnanalyzedDisclosureIds(
-                        job.getDisclosureIdFrom(), job.getDisclosureIdTo(),
+                        watermark, job.getDisclosureIdTo(),
                         PageRequest.of(0, chunkSize));
                 if (ids.isEmpty()) break;
 
@@ -97,12 +101,23 @@ public class AnalysisBackfillService {
                     }
                 }
                 analyzedCum += analyzed;
+                failedCum += failed;
                 recordProgress(jobId, analyzed, failed);
-                log.debug("Analysis backfill chunk done: jobId={} ids={}~{} analyzed={} failed={} cum={}/{}",
-                        jobId, ids.get(0), ids.get(ids.size() - 1), analyzed, failed, analyzedCum, total);
+                // 다음 청크는 이번 청크의 마지막 id+1 부터 — 실패한 disclosure가 다시 조회되지 않도록.
+                watermark = ids.get(ids.size() - 1) + 1;
+                log.debug("Analysis backfill chunk done: jobId={} ids={}~{} analyzed={} failed={} cum={}/{} watermark={}",
+                        jobId, ids.get(0), ids.get(ids.size() - 1), analyzed, failed,
+                        analyzedCum, total, watermark);
+                // 청크가 모두 실패 + 전체 청크 누적 실패율 ≥80%면 즉시 중단 (안전망)
+                if (failedCum > 50 && analyzedCum == 0) {
+                    throw new IllegalStateException(
+                            "Analysis backfill 조기 중단: 50건 이상 시도 후 분석 성공 0건. " +
+                            "LLM provider 설정 또는 Ollama 가용성 확인 필요.");
+                }
             }
             succeedJob(jobId);
-            log.info("Analysis backfill job done: jobId={} analyzed={}", jobId, analyzedCum);
+            log.info("Analysis backfill job done: jobId={} analyzed={} failed={}",
+                    jobId, analyzedCum, failedCum);
         } catch (Exception e) {
             failJob(jobId, e.getMessage());
             log.error("Analysis backfill job failed: jobId={}", jobId, e);
