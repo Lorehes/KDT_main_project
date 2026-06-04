@@ -2,12 +2,19 @@
 # 사용: docker compose up -d   (Docker 설치 필요)
 # 호스트 포트 5433 매핑 — 다른 프로젝트(5432 점유) 충돌 회피.
 # 백엔드 접속은 .env의 DB_URL=jdbc:postgresql://localhost:5433/dartcommons 사용.
+#
+# [데이터 위치]
+# bind mount: ${PG_DATA_DIR:-~/data/dartcommons-pg}
+# named volume 대신 사용자 홈의 일반 디렉토리를 마운트한다.
+# 2026-06-04 데이터 손실 사고(Docker Desktop "Clean / Purge data" 추정)로
+# named volume 통째 삭제 → 91,965건 소실. bind mount는 Docker 관리 외부라
+# Docker reset/clean 영향을 받지 않는다 (docs/운영가이드.md 참고).
+#
+# 정기 백업: scripts/data_protection/backup_db.sh (crontab 등록 권장)
 services:
   postgres:
     image: postgres:16-alpine
     container_name: dartcommons-postgres
-    # 환경변수는 프로젝트 루트 .env가 자동 로드됨 (docker compose 표준).
-    # POSTGRES_PASSWORD = .env의 DB_PASSWORD 값으로 일치.
     environment:
       POSTGRES_DB: ${DB_NAME:-dartcommons}
       POSTGRES_USER: ${DB_USERNAME:-dartcommons}
@@ -15,12 +22,11 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - dartcommons_pgdata:/var/lib/postgresql/data
+      # bind mount — Docker Desktop reset/clean의 영향을 받지 않는 호스트 디렉토리.
+      # PG_DATA_DIR 환경변수로 위치 변경 가능. 기본: ~/data/dartcommons-pg
+      - ${PG_DATA_DIR:-${HOME}/data/dartcommons-pg}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dartcommons -d dartcommons"]
       interval: 5s
       timeout: 5s
       retries: 5
-
-volumes:
-  dartcommons_pgdata:
