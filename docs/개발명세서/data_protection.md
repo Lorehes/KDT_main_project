@@ -48,10 +48,19 @@ bash scripts/data_protection/backup_db.sh
 # 출력: ~/data/dartcommons-backups/dartcommons_YYYYMMDD_HHMMSS.sql.gz
 ```
 
-### crontab 등록 (일 1회 새벽 3시)
+### 미러 복사 (다중 위치 보관)
+
+`--mirror <path>` 옵션 또는 환경변수 `BACKUP_MIRROR_DIR`로 추가 위치 1개에 동일 백업본을 복제한다. 미러 위치에도 동일한 보관 정책(기본 14개)이 적용된다.
+
+```bash
+# 레포 내 Data/에 미러 (gitignore의 `data/` 규칙으로 자동 제외, macOS 대소문자 미구분)
+bash scripts/data_protection/backup_db.sh --mirror /Users/jin/Documents/Dev/KDT_mainPJ/Data
+```
+
+### crontab 등록 (일 1회 새벽 3시, 미러 포함)
 
 ```cron
-0 3 * * * /bin/bash /Users/jin/Documents/Dev/KDT_mainPJ/scripts/data_protection/backup_db.sh >> ~/data/dartcommons-backups/cron.log 2>&1
+0 3 * * * /bin/bash /Users/jin/Documents/Dev/KDT_mainPJ/scripts/data_protection/backup_db.sh --mirror /Users/jin/Documents/Dev/KDT_mainPJ/Data >> ~/data/dartcommons-backups/cron.log 2>&1
 ```
 
 설치:
