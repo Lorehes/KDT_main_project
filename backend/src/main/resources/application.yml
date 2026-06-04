@@ -71,6 +71,17 @@ dartcommons:
   admin:
     username: ${ADMIN_USERNAME:admin}
     password: ${ADMIN_PASSWORD}
+  # LLM provider — analysis Stage 2 (analysis-stage2-llm Spec)
+  # provider=mock 은 통합 테스트/로컬 검증용. 운영은 ollama (wave 2 구현 후 교체).
+  llm:
+    provider: ${LLM_PROVIDER:mock}
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model: ${LLM_MODEL:qwen2.5:7b-instruct}
+    timeout-ms: ${LLM_TIMEOUT_MS:60000}
+    max-retries: ${LLM_MAX_RETRIES:2}
+    # 결정 2: 0.6 미만 → is_withheld=true (판단 보류).
+    # 운영 조정은 SystemConfig 키 analysis.stage2.confidence_threshold 후속 검토.
+    confidence-threshold: ${LLM_CONFIDENCE_THRESHOLD:0.6}
 
 logging:
   level:
