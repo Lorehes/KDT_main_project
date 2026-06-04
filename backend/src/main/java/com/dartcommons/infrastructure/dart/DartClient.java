@@ -41,6 +41,14 @@ public class DartClient {
     private static final Logger log = LoggerFactory.getLogger(DartClient.class);
     private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final int PAGE_SIZE = 100;
+    /*
+     * DART list.json은 page_no가 total_page 를 초과해도 상태 000과 함께 마지막 페이지를 반복 반환하는
+     * 케이스가 관측됨(2026-06-04 backfill 청크 12에서 pageNo=10,000+ stuck). total_page를 종료 조건의
+     * 1순위로 쓰고, 그래도 미상의 응답 패턴 대비 절대 상한 가드를 둔다.
+     * 일 한도/메모리 보호 차원에서 단일 호출은 최대 PAGE_SIZE * MAX_PAGES = 300,000 항목.
+     * MAX_PAGES=3000은 분기/연차 보고서 시즌(2~5월) 관측치 totalPage≈1153 기반 3배 여유로 산정.
+     */
+    private static final int MAX_PAGES = 3_000;
 
     private final DartPageFetcher pageFetcher;
 
@@ -83,8 +91,17 @@ public class DartClient {
                 result.add(toDomain(item));
             }
 
-            // 반환된 항목이 PAGE_SIZE 미만이면 마지막 페이지 — totalCount 신뢰보다 안전
+            // 종료 조건 1순위: DART가 명시한 total_page에 도달 (응답에 포함됨, 가장 신뢰)
+            Integer totalPage = response.totalPage();
+            if (totalPage != null && pageNo >= totalPage) break;
+            // 종료 조건 2순위: 페이지 크기 미만 (totalPage 누락 응답 대비)
             if (items.size() < PAGE_SIZE) break;
+            // 절대 상한 가드: DART의 알 수 없는 응답 패턴으로 무한 루프 방지
+            if (pageNo >= MAX_PAGES) {
+                log.warn("DART pagination hit MAX_PAGES={}: bgnDe={}, endDe={}, totalPage={} — 종료 강제",
+                        MAX_PAGES, bgnDe, endDe, totalPage);
+                break;
+            }
             pageNo++;
         }
 

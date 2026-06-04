@@ -20,6 +20,7 @@ public record DartListResponse(
         @JsonProperty("total_count") Integer totalCount,
         @JsonProperty("page_no") Integer pageNo,
         @JsonProperty("page_count") Integer pageCount,
+        @JsonProperty("total_page") Integer totalPage,
         @JsonProperty("list") List<Item> list
 ) {
 
