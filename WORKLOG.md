@@ -195,6 +195,44 @@ curl -u admin:<password> \
 
 ---
 
+## 2026-06-07 | M2 user-auth-jwt-oauth2 Wave 1 — JWT + AES-256 + 사용자 도메인 인프라
+
+**Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 1)
+
+### 완료
+- **build.gradle** — jjwt-api 0.12.6 (impl/jackson runtimeOnly) 추가
+- **application.yml** — `dartcommons.jwt.*` / `dartcommons.crypto.*` 프로퍼티 추가
+- **V14** `refresh_tokens` 마이그레이션 — `token_hash VARCHAR(64)` SHA-256 only, ON DELETE CASCADE
+- **JwtProperties** + **CryptoProperties** — `@ConfigurationProperties` record + `@Validated` (미설정 시 부팅 즉시 실패)
+- **JwtTokenProvider** — access token(HMAC-SHA256), raw refresh token(SecureRandom base64 48B), hashRefreshToken(SHA-256 hex), parseClaims
+- **AesGcmEncryptor** — AES-256-GCM, IV 12B SecureRandom 매 호출 신규, `GeneralSecurityException` catch, null-safe
+- **UserEntity** (OAuthProvider/Tier/NotifyChannel/NotifyFrequency/NotifyTypeFilter enum, soft delete, V1+V7 매핑)
+- **PortfolioEntity** (avgBuyPriceEnc/quantityEnc BYTEA AES-256)
+- **ConsentLogEntity** (ConsentType enum, INSERT-only)
+- **RefreshTokenEntity** (token_hash SHA-256 전용, isExpired())
+- **4 Repository** — UserRepository(soft-delete 쿼리), PortfolioRepository(userId 스코프+stock_code 역조회), ConsentLogRepository(findLatestByUserIdAndType), RefreshTokenRepository(deleteExpiredTokens @Transactional)
+- **UserDetailsServiceImpl** — Spring Security 확장 포인트 (현재 미사용, form login 대비)
+- **JwtAuthenticationFilter** — Bearer 토큰 추출 → 서명 검증 → SecurityContext principal=userId(Long). DB 조회 없음.
+- **SecurityConfig 듀얼 체인** — @Order(1) /admin/** HTTP Basic, @Order(2) JWT Bearer + **401 AuthenticationEntryPoint** 추가(미인증→401, 미인가→403 구분)
+- **src/test/resources/application.yml** — 테스트 전용 더미 JWT/AES 값
+- 리뷰 수정 4건: SecurityConfig 401 EP, RefreshTokenRepository @Transactional, JwtProperties @Size(min=32), AesGcmEncryptor GeneralSecurityException
+
+### 결정 (코드에 드러나지 않는 사항)
+- **refresh token = SHA-256 해시만 DB 저장** — raw 토큰 미보관. DB 유출 시 원본 재사용 불가.
+- **AES-GCM IV = 매 암호화 신규 생성** — 동일 평문도 매번 다른 결과(DB 정렬 불가 — 복호화 후 앱 계층에서만 연산).
+- **듀얼 FilterChain 선택** — admin HTTP Basic과 user JWT를 같은 체인에 두면 Spring Security 6.4+에서 충돌. securityMatcher("/admin/**")로 격리.
+- **UserDetailsServiceImpl 위치(shared/security)** — Spring Security 인프라가 user 레포에 의존. CLAUDE.md §3-2 역방향 금지 예외로 허용(Security 인프라 관행).
+- **AES_KEY 관리** — 분실 시 기존 암호화 데이터 복호화 불가. 프로덕션은 AWS KMS/Vault DEK 패턴 권장.
+
+### 미완료 (Wave 2)
+- **AuthService** — signup(BCrypt+consent), login(access+refresh 발급), refresh(rotation), logout(hash 삭제), force-logout(deleteByUserId)
+- **ConsentService** — 동의 이력 INSERT, 최신 동의 상태 조회
+- **AuthController** — `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`
+- **DTO** — SignupRequest(@Valid), LoginRequest, TokenResponse(accessToken+refreshToken+expiresIn), RefreshRequest
+- **만료 토큰 정리 스케줄러** — `@Scheduled` + `deleteExpiredTokens()`
+
+---
+
 ## 2026-06-03 | 운영 환경 부팅 + 백필 완료 + OTHER 룰 보강
 
 **산출**:

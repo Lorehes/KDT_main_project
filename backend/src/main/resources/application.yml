@@ -71,6 +71,14 @@ dartcommons:
   admin:
     username: ${ADMIN_USERNAME:admin}
     password: ${ADMIN_PASSWORD}
+  # JWT — access/refresh 토큰 발급 (user-auth-jwt-oauth2 Spec Wave 1)
+  jwt:
+    secret: ${JWT_SECRET}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:30}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:14}
+  # AES-256-GCM — avg_buy_price / quantity / phone_number 암호화 (user-auth Spec Wave 1)
+  crypto:
+    aes-key: ${AES_KEY}
   # LLM provider — analysis Stage 2 (analysis-stage2-llm Spec)
   # provider=mock 은 통합 테스트/로컬 검증용. 운영은 ollama (wave 2 구현 후 교체).
   llm:
