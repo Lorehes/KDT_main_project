@@ -11,3 +11,14 @@ dartcommons:
   crypto:
     # base64(32 zero bytes) — 테스트 전용, 실 운영 AES_KEY와 무관
     aes-key: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  admin:
+    username: admin
+    password: test-admin-password
+  llm:
+    provider: mock
+  dart:
+    api-key: test-key
+    base-url: http://localhost
+  krx:
+    api-key: test-key
+    base-url: http://localhost

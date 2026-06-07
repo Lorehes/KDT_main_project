@@ -23,6 +23,7 @@ updated: 2026-06-02
 | 2026-06-07 | Jin | 3c9bc3c | feat(user): M2 사용자·포트폴리오·알림설정 Wave 3 [9/8 L] | User/Shared/Stocks | 9 | 8 | L | IDOR+AES+Free제한+알림설정 구현 |
 | 2026-06-07 | Jin | c0fca6f | feat(user): M2 이메일 Auth 서비스+컨트롤러+DTO Wave 2 [9/8 M] | User/Shared | 9 | 8 | M | signup/login/refresh/logout 구현 |
 | 2026-06-07 | Jin | 1ffec24 | feat(user): M2 OAuth 2.0 Kakao/Google/Naver Wave 4 [8/8 L] | User/Infra | 8 | 8 | L | OAuth 3사 로그인 + state CSRF |
+| 2026-06-08 | Jin | d09deac | test(user): M2 Wave 5 통합테스트+기존 31건 수정 [8/8 L] | User/Analysis/Disclosure | 8 | 8 | L | JWT/IDOR/AES/Free제한 E2E 검증 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -30,5 +31,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 4 | 4 | 10 | 7.9 | 7.7 |
+| Jin | 1 | 11 | 11 | 7.9 | 7.7 |
 <!-- SUMMARY:END -->

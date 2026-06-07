@@ -2,12 +2,33 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-06-08
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-08 | M2 user-auth Wave 5 — 통합 테스트 + 기존 테스트 수정
+
+**Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 5 완료)
+
+### 완료
+- `AuthIntegrationTest` (6 테스트): signup 201, 중복 409, login 200, 잘못된 비밀번호 401, refresh rotation + 기존 토큰 401, logout 204 + 토큰 무효화
+- `PortfolioIntegrationTest` (8 테스트): CRUD 201/200/204, Free 3종목 초과 422, IDOR GET/DELETE 403, AES-256-GCM DB 바이트 직접 검증
+- 기존 테스트 31건 수정: `dartcommons.admin.password=test-admin-password` + `dartcommons.llm.provider=mock` 누락 해소 (8개 테스트 클래스)
+- `src/test/resources/application.yml`에 admin/llm/dart/krx 공통 기본값 추가 → 신규 테스트 자동 정상화
+- 전체 58/58 테스트 통과 (Testcontainers PostgreSQL)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **test yml 기본값 전략**: `dartcommons.admin.password`, `dartcommons.llm.provider=mock`을 `@TestPropertySource`마다 반복하는 대신 `src/test/resources/application.yml`에 한 번만 정의. `@TestPropertySource`로 덮어쓰는 테스트는 override 방식 유지.
+- **MockLlmClient 활성 조건**: `dartcommons.llm.provider=mock` 명시 필수(`matchIfMissing=false`). test yml의 `${LLM_PROVIDER:mock}` fallback은 Spring 환경 우선순위 상 무시됨 — 명시 프로퍼티가 필수.
+- **Wave 5 종료**: Spec `user-auth-jwt-oauth2` → `/dc-spec-move user-auth-jwt-oauth2 Done` 필요
+
+### 미완료
+- `/dc-spec-move user-auth-jwt-oauth2 Done` — Spec 상태 Approved → Done 전환
 
 ---
 

@@ -52,7 +52,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         "dartcommons.llm.model=mock-model",
         "dartcommons.llm.timeout-ms=1000",
         "dartcommons.llm.max-retries=1",
-        "dartcommons.llm.confidence-threshold=0.6"
+        "dartcommons.llm.confidence-threshold=0.6",
+        "dartcommons.admin.username=admin",
+        "dartcommons.admin.password=test-admin-password"
 })
 class AnalysisWave1IntegrationTest {
 
