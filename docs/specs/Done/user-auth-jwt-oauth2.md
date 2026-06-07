@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-07
-updated: 2026-06-07
+updated: 2026-06-08
 ---
 
 # User / Auth / Portfolio Spec (M2)
 
-> 상태: Draft → **Approved** (2026-06-07, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-07) → **Done** (2026-06-08, Wave 5 통합 테스트 58/58 통과)
 
 ## 배경 / 목적
 
