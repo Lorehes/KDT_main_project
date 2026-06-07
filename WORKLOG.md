@@ -195,6 +195,32 @@ curl -u admin:<password> \
 
 ---
 
+## 2026-06-07 | M2 user-auth Wave 3 — 사용자·포트폴리오·알림설정·종목검색
+
+**Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 3: Cards 12-14)
+
+### 완료
+- **UserService** + **UserController** — `GET/PATCH/DELETE /api/v1/users/me` (soft delete + 전 기기 로그아웃)
+- **PortfolioService** (CRUD + Free 3종목 제한 + AES-256-GCM 암복호 + IDOR 방지) + **PortfolioController** — `GET/POST/PUT/DELETE /api/v1/portfolios`
+- **NotificationSettingsService** + **NotificationSettingsController** — `GET/PUT /api/v1/users/me/notifications`
+- **StockSearchController** — `GET /api/v1/stocks/search?q=` PUBLIC (max 20건, @Validated @RequestParam)
+- **DTO 6종**: UserMeResponse, UpdateMeRequest, PortfolioRequest, PortfolioResponse, NotificationSettingsRequest, NotificationSettingsResponse
+- **StockRepository.search()** — JPQL LIKE 쿼리(corpName 포함·stockCode 포함, Pageable 20건)
+- **GlobalExceptionHandler** — `ConstraintViolationException` 핸들러 + `AesGcmEncryptor.CryptoException` 핸들러 추가
+
+### 결정
+- **IDOR 패턴**: `findByIdAndUserId` 스코프 쿼리 → 미존재/권한없음 모두 403. 404와 구분 없음(정보 최소화 허용).
+- **tier 추출**: JWT claims `ROLE_{TIER}` → `UserEntity.Tier.valueOf()` 인메모리 변환. DB 조회 없음.
+- **PortfolioRequest 공유**: create/update 동일 DTO 사용. update 시 stockCode는 `PortfolioEntity.update()`에 전달되지 않아 변경 불가. stockCode 변경 필요 시 DELETE → POST 흐름 안내.
+- **CryptoException 처리**: 500 내부 오류로 반환(AES_KEY 변경·DB 손상 시 발생). 스택 트레이스는 서버 로그에만 기록.
+
+### 미완료 (Wave 4)
+- `KakaoOAuthClient` + `GoogleOAuthClient` + `NaverOAuthClient` (RestClient + @Retryable)
+- `AuthService` OAuth 콜백 (oauth_id 매칭 → 로그인/자동가입)
+- `AuthController` OAuth 엔드포인트 (`GET /auth/oauth/{provider}/url`, `POST /auth/oauth/{provider}/callback`)
+
+---
+
 ## 2026-06-07 | M2 user-auth Wave 2 — 이메일 Auth 서비스·컨트롤러·DTO
 
 **Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 2)
