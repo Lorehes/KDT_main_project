@@ -2,6 +2,11 @@ spring:
   application:
     name: dartcommons
 
+  mvc:
+    # RFC 7807 ProblemDetail 응답 활성화 — ResponseStatusException, @Valid 오류가 표준 포맷으로 직렬화됨
+    problemdetails:
+      enabled: true
+
   datasource:
     # 기본 포트 5433 — docker-compose.yml과 정합 (다른 프로젝트 5432 점유 회피).
     # .env의 DB_URL이 build.gradle bootRun task로 자동 로드됨.

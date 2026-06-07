@@ -195,6 +195,33 @@ curl -u admin:<password> \
 
 ---
 
+## 2026-06-07 | M2 user-auth Wave 2 — 이메일 Auth 서비스·컨트롤러·DTO
+
+**Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 2)
+
+### 완료
+- **DTO 4종**: `SignupRequest`(@AssertTrue terms/privacy/disclaimer 필수, @Email, @Size 8-72), `LoginRequest`, `AuthResponse`(@JsonProperty snake_case, expiresIn), `RefreshRequest`
+- **GlobalExceptionHandler** (shared/exception) — `@Valid` 실패 → RFC 7807 ProblemDetail 필드별 메시지
+- **ConsentService** — `recordSignupConsents` saveAll batch 4건 INSERT, `findLatest`
+- **AuthService** — signup(BCrypt+consent 동일 트랜잭션), login(계정열거방지 동일 401), refresh(rotation: deleteOld+saveNew), logout(멱등), forceLogout(deleteByUserId)
+- **AuthController** — `POST /api/v1/auth/{signup/login/refresh/logout}`, signup→201, logout→204
+- **application.yml** — `spring.mvc.problemdetails.enabled: true`
+- 리뷰 수정: ConsentService saveAll batch (Medium 1건 즉시 반영)
+
+### 결정
+- **계정 열거 방지**: 이메일 미존재·비밀번호 불일치 모두 `"인증 실패"` 동일 응답
+- **refresh token 응답**: body에 raw 값 반환(프론트 보안 저장소 책임). HttpOnly Cookie 전환은 프론트 협의 후
+- **logout 멱등**: 미존재 hash 삭제 시 조용히 성공(클라이언트 재시도 안전)
+- **만료 토큰 클린업**: Wave 5 통합 테스트 시 `@Scheduled + deleteExpiredTokens()` 추가 예정
+
+### 미완료 (Wave 3)
+- `UserService` + `UserController` (me/update/soft-delete) + `UserMeResponse`/`UpdateMeRequest` DTO
+- `PortfolioService` (CRUD + Free 3종목 제한 + AES 암복호) + `PortfolioController` + DTO
+- `StockSearchController` (`GET /api/v1/stocks/search?q=` PUBLIC)
+- `NotificationSettingsService` + `NotificationSettingsController`
+
+---
+
 ## 2026-06-07 | M2 user-auth-jwt-oauth2 Wave 1 — JWT + AES-256 + 사용자 도메인 인프라
 
 **Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 1)
@@ -224,12 +251,7 @@ curl -u admin:<password> \
 - **UserDetailsServiceImpl 위치(shared/security)** — Spring Security 인프라가 user 레포에 의존. CLAUDE.md §3-2 역방향 금지 예외로 허용(Security 인프라 관행).
 - **AES_KEY 관리** — 분실 시 기존 암호화 데이터 복호화 불가. 프로덕션은 AWS KMS/Vault DEK 패턴 권장.
 
-### 미완료 (Wave 2)
-- **AuthService** — signup(BCrypt+consent), login(access+refresh 발급), refresh(rotation), logout(hash 삭제), force-logout(deleteByUserId)
-- **ConsentService** — 동의 이력 INSERT, 최신 동의 상태 조회
-- **AuthController** — `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`
-- **DTO** — SignupRequest(@Valid), LoginRequest, TokenResponse(accessToken+refreshToken+expiresIn), RefreshRequest
-- **만료 토큰 정리 스케줄러** — `@Scheduled` + `deleteExpiredTokens()`
+### 미완료 → Wave 2에서 완료됨 ✅
 
 ---
 
