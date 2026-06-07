@@ -84,6 +84,21 @@ dartcommons:
   # AES-256-GCM — avg_buy_price / quantity / phone_number 암호화 (user-auth Spec Wave 1)
   crypto:
     aes-key: ${AES_KEY}
+  # OAuth 2.0 — Kakao / Google / Naver (user-auth-jwt-oauth2 Spec Wave 4)
+  # 실제 키는 환경변수 주입 (CLAUDE.md §7 하드코딩 금지). 기본값은 로컬 개발용 placeholder.
+  oauth:
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:placeholder}
+      client-secret: ${KAKAO_CLIENT_SECRET:placeholder}
+      redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:3000/auth/oauth/kakao/callback}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:placeholder}
+      client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
+      redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:3000/auth/oauth/google/callback}
+    naver:
+      client-id: ${NAVER_CLIENT_ID:placeholder}
+      client-secret: ${NAVER_CLIENT_SECRET:placeholder}
+      redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:3000/auth/oauth/naver/callback}
   # LLM provider — analysis Stage 2 (analysis-stage2-llm Spec)
   # provider=mock 은 통합 테스트/로컬 검증용. 운영은 ollama (wave 2 구현 후 교체).
   llm:

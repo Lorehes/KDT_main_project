@@ -2,6 +2,8 @@ package com.dartcommons.user.controllers;
 
 import com.dartcommons.user.dto.AuthResponse;
 import com.dartcommons.user.dto.LoginRequest;
+import com.dartcommons.user.dto.OAuthCallbackRequest;
+import com.dartcommons.user.dto.OAuthUrlResponse;
 import com.dartcommons.user.dto.RefreshRequest;
 import com.dartcommons.user.dto.SignupRequest;
 import com.dartcommons.user.services.AuthService;
@@ -10,14 +12,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 /*
- * [목적] 이메일 인증 REST 엔드포인트 — signup / login / refresh / logout.
+ * [목적] 이메일·OAuth 인증 REST 엔드포인트 — signup / login / refresh / logout / oauth URL 생성·콜백.
  *       /api/v1/auth/** 는 SecurityConfig userFilterChain에서 permitAll (토큰 없이 접근 가능).
- * [이유] 회원가입·로그인은 공개 엔드포인트. 갱신·로그아웃은 raw refresh token을 body로 수신.
- *       access token이 없어도 refresh token만 있으면 갱신 가능해야 함(UX).
+ * [이유] 회원가입·로그인·OAuth는 공개 엔드포인트. 갱신·로그아웃은 raw refresh token을 body로 수신.
+ *       OAuth flow: GET /oauth/{provider}/url 로 인가 URL 수신 → provider 리다이렉트 → POST /oauth/{provider}/callback.
  * [사이드 임팩트] /api/v1/auth/** permitAll 정책으로 JWT 없어도 도달 — AuthService가 검증 책임.
  *               logout 응답은 204(No Content) — refresh token 무효화만 수행.
- * [수정 시 고려사항] OAuth2 엔드포인트(GET /auth/oauth/{provider}/url, POST /auth/oauth/{provider}/callback)는
- *               Wave 4에서 이 컨트롤러에 추가. logout을 HttpOnly Cookie로 전환 시 @CookieValue 방식.
+ *               OAuth provider가 지원 목록에 없으면 AuthService에서 400 반환.
+ * [수정 시 고려사항] logout을 HttpOnly Cookie로 전환 시 @CookieValue 방식.
+ *                  OAuth state를 Cookie에 담는 방식으로 전환 시 GET /url에 Set-Cookie 헤더 추가.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -28,6 +31,8 @@ public class AuthController {
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
+
+    // ── 이메일 인증 ────────────────────────────────────────────────────────
 
     /** 이메일 회원가입. 성공 시 201 Created + 토큰 쌍 반환. */
     @PostMapping("/signup")
@@ -53,5 +58,26 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request.refreshToken());
+    }
+
+    // ── OAuth 인증 ─────────────────────────────────────────────────────────
+
+    /**
+     * OAuth 인가 URL 반환 — state UUID 생성 후 캐시 저장.
+     * provider: kakao / google / naver
+     */
+    @GetMapping("/oauth/{provider}/url")
+    public OAuthUrlResponse getOAuthUrl(@PathVariable String provider) {
+        return authService.getOAuthAuthorizationUrl(provider);
+    }
+
+    /**
+     * OAuth 콜백 — 인가 코드 교환 → 사용자 정보 조회 → 로그인 또는 자동 회원가입 → JWT 발급.
+     * 200 OK + 토큰 쌍 반환.
+     */
+    @PostMapping("/oauth/{provider}/callback")
+    public AuthResponse oauthCallback(@PathVariable String provider,
+                                      @Valid @RequestBody OAuthCallbackRequest request) {
+        return authService.oauthCallback(provider, request.code(), request.state());
     }
 }

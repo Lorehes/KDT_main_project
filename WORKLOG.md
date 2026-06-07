@@ -195,6 +195,35 @@ curl -u admin:<password> \
 
 ---
 
+## 2026-06-07 | M2 user-auth Wave 4 — OAuth 2.0 Kakao/Google/Naver
+
+**Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 4: Cards 15-16)
+
+### 완료
+- **OAuthProperties** — @ConfigurationProperties("dartcommons.oauth") record. kakao/google/naver 3중첩 record. application.yml 환경변수 섹션 추가
+- **OAuthProviderClient** (interface) — getProviderName / buildAuthorizationUrl / getUserInfo(code, state)
+- **KakaoOAuthClient** — kauth.kakao.com 토큰 + kapi.kakao.com/v2/user/me. RestClient(timeout 5s/10s) + @Retryable(noRetryFor=4xx)
+- **GoogleOAuthClient** — oauth2.googleapis.com/token + googleapis.com/userinfo. 동일 패턴
+- **NaverOAuthClient** — nid.naver.com/oauth2.0/token(state 포함) + openapi.naver.com/v1/nid/me. 동일 패턴
+- **AuthService** OAuth 메서드 추가: getOAuthAuthorizationUrl(state CSRF Caffeine TTL 5min) + oauthCallback(state검증→getUserInfo→oauth_id 조회→로그인/자동가입)
+- **AuthController** OAuth 엔드포인트: `GET /api/v1/auth/oauth/{provider}/url` + `POST /api/v1/auth/oauth/{provider}/callback`
+- **DTO 2종**: OAuthCallbackRequest(@NotBlank code+state), OAuthUrlResponse(url+state)
+- dc-review-code **Green** (HIGH 1건 수정: concurrent signup DataIntegrityViolationException→409, MEDIUM 2건: timeout 추가, toOAuthProvider valueOf 단순화)
+
+### 결정
+- **state CSRF 저장소**: Caffeine 캐시(in-process) 선택. Redis 불필요(단일 인스턴스 MVP). 수평 확장 시 Redis 전환 필요.
+- **OAuth 이메일 충돌 정책**: 동일 이메일로 이메일 가입 선행 시 409 반환("이메일 로그인 이용"). 자동 계정 연동 미지원(보안·UX 트레이드오프).
+- **OAuth 자동가입 동의**: TERMS/PRIVACY/DISCLAIMER=true, MARKETING=false 기본 처리. 자본시장법 §11 면책조항 포함.
+- **OAuthProviderClient 인터페이스에 state 파라미터**: Naver 토큰 교환에 state 필수 → 인터페이스에 포함. Kakao/Google은 무시.
+- **SecurityConfig 무변경**: `/api/v1/auth/**` 이미 permitAll 커버.
+
+### 미완료 (Wave 5)
+- `AuthIntegrationTest` (Testcontainers PostgreSQL) — signup/login/refresh/logout 흐름 검증
+- `PortfolioIntegrationTest` — IDOR 403, Free 422, AES decrypt 검증
+- Spec `user-auth-jwt-oauth2` → **Done** 전환 (`/dc-spec-move user-auth-jwt-oauth2 Done`)
+
+---
+
 ## 2026-06-07 | M2 user-auth Wave 3 — 사용자·포트폴리오·알림설정·종목검색
 
 **Spec**: `docs/specs/Approved/user-auth-jwt-oauth2.md` (Wave 3: Cards 12-14)
