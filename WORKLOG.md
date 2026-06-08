@@ -32,6 +32,38 @@ updated: 2026-06-08
 
 ---
 
+## 2026-06-08 | M3 notification-retry-job Wave 1+2 — RetryJob + ChannelSender 분리 + 통합 테스트
+
+**Spec**: `docs/specs/Approved/notification-retry-job.md` (Wave 1+2 완료)
+
+### 완료
+- `V15__add_notification_message.sql` — `message_body TEXT`, `message_subject VARCHAR(200)` 추가. RetryJob이 Disclosure·AnalysisResult 재조회 없이 재발송.
+- `NotificationEntity` — messageBody/messageSubject 필드 + `storeMessage()`. markRetrying() 삭제(JPQL이 단독 소유).
+- `ChannelSender` (신규) — Dispatcher·RetryJob 공유 발송 로직 단일 진실 소스. sendKakao/sendEmail/markUnsupported 이관.
+- `NotificationDispatcher` 수정 — ChannelSender 주입. 일시적 채널 오류 시 FAILED 기록 대신 PENDING 유지 → RetryJob 처리.
+- `NotificationRepository` — `findRetryTargets` JPQL(Pageable 100건 제한), `markAsRetrying` CAS UPDATE(`@Modifying(clearAutomatically=true)`).
+- `NotificationRetryService` (신규) — `@Transactional` self-invocation 해결 위해 retryOne 분리. MAX_RETRY=3, RETRY_STATUSES 공개 상수.
+- `NotificationRetryJob` — `@Scheduled(fixedDelay=300s)`, BATCH_SIZE=100, 건별 try-catch, `@ConditionalOnProperty`.
+- `NotificationRetryJobIntegrationTest` — 10 케이스: PENDING→SENT, RETRYING→SENT, retryCount<MAX→RETRYING유지, MAX-1→FAILED확정, pre-V15 null→FAILED, already-SENT→skip, 배치3건, findRetryTargets FAILED/MAX_RETRY제외, soft-delete유저→FAILED.
+- dc-review-code 리뷰 게이트: Critical 2건·High 3건·Medium 2건 해결 후 Green.
+- 79/79 테스트 통과 (기준선 69 → 79).
+
+### 결정 (코드에 드러나지 않는 사항)
+- **Dispatcher 일시적 오류 전략**: `channelSender.send()` 예외 시 FAILED 기록 제거 → record PENDING 유지. RetryJob이 5분 이내 PENDING 픽업. 영구 실패(전화번호 없음, TELEGRAM 미지원)는 ChannelSender 내부 `markFailed()` + save() 처리 — Dispatcher catch 불도달.
+- **self-invocation 패턴**: `NotificationRetryJob.retryFailedNotifications()` → `this.retryOne()` 호출 시 Spring 프록시 우회 → `@Transactional` 무효. NotificationRetryService를 별도 빈으로 분리해 프록시 경유 보장.
+- **ChannelSender 비대칭 계약 허용**: 영구 실패(복호화 오류, blank phone)는 내부 markFailed + 정상 반환. 일시적 실패(API throw)는 전파. 호출자가 일시적/영구 구분 불가 문제는 Wave 4+ 타입 예외 계층(TransientChannelException) 도입으로 해소 예정.
+- **notification-retry-job Spec Done 전환 가능**: Wave 1+2 완료 → `/dc-spec-move notification-retry-job Done` 필요.
+
+### 미완료
+- `/dc-spec-move notification-retry-job Done` — Spec 상태 Approved → Done 전환
+- `/dc-spec-move user-auth-jwt-oauth2 Done` — Wave 2 이월
+- **Sentiment → shared 이관**: cross-domain tech debt (notification→analysis 직접 참조)
+- **TransientChannelException 계층**: ChannelSender 발송 실패 타입 분류 (일시적 vs 영구) — Wave 4+ 도입
+- **ShedLock**: 다중 인스턴스 배포 시 RetryJob 분산 락 (MVP 단일 인스턴스 허용)
+- **MAX_RETRY 외부화**: `application.yml` `dartcommons.notification.max-retry` 프로퍼티
+
+---
+
 ## 2026-06-08 | M3 notification-dispatcher Wave 3 — 통합 테스트
 
 **Spec**: `docs/specs/Approved/notification-dispatcher.md` (Wave 3 완료)
