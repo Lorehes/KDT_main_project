@@ -25,7 +25,7 @@ docs/specs/
 - [[sentiment-to-shared]] — Sentiment enum 이관: analysis 중첩 enum → shared/enums (cross-domain 해소)
 
 ### Approved
-*(없음)*
+*(없음 — 현재 구현 대기 Spec 없음)*
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1
@@ -34,6 +34,7 @@ docs/specs/
 - [[user-auth-jwt-oauth2]] — M2 사용자인증 (JWT+AES256+OAuth2)
 - [[notification-dispatcher]] — 알림 디스패처 MVP (Wave 1~3 + RetryJob 완료)
 - [[notification-retry-job]] — 알림 재발송 배치 잡: ChannelSender 추출 + V15 + RetryJob (Wave 1+2 완료)
+- [[sentiment-to-shared]] — Sentiment enum shared/enums 이관 (단일 Wave 완료)
 
 ## 작업 흐름
 
