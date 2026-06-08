@@ -2,7 +2,7 @@ package com.dartcommons.analysis.dto;
 
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.analysis.entities.AnalysisResult.ExpectedReaction;
-import com.dartcommons.analysis.entities.AnalysisResult.Sentiment;
+import com.dartcommons.shared.enums.Sentiment;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 

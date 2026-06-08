@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-08
 updated: 2026-06-08
 ---
 
 # notification-retry-job Spec
 
-> 상태: Draft → **Approved** (2026-06-08, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-08, Wave 1+2 완료·79/79 통과)
 
 ## 배경 / 목적
 

@@ -1,6 +1,6 @@
 package com.dartcommons.shared.event;
 
-import com.dartcommons.analysis.entities.AnalysisResult.Sentiment;
+import com.dartcommons.shared.enums.Sentiment;
 
 import java.math.BigDecimal;
 

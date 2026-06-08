@@ -5,7 +5,7 @@ import com.dartcommons.analysis.dto.AnalysisResponse;
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.entities.AnalysisJob;
 import com.dartcommons.analysis.entities.AnalysisResult;
-import com.dartcommons.analysis.entities.AnalysisResult.Sentiment;
+import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.analysis.repositories.AnalysisJobRepository;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import com.dartcommons.disclosure.entities.Disclosure;

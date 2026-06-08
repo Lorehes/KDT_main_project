@@ -1,7 +1,7 @@
 package com.dartcommons.notification;
 
 import com.dartcommons.TestcontainersConfiguration;
-import com.dartcommons.analysis.entities.AnalysisResult.Sentiment;
+import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.disclosure.DisclosurePollingJob;
 import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;

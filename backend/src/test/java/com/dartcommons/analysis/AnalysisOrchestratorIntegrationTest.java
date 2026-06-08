@@ -3,7 +3,7 @@ package com.dartcommons.analysis;
 import com.dartcommons.TestcontainersConfiguration;
 import com.dartcommons.analysis.entities.AnalysisJob;
 import com.dartcommons.analysis.entities.AnalysisResult;
-import com.dartcommons.analysis.entities.AnalysisResult.Sentiment;
+import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.analysis.repositories.AnalysisJobRepository;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import com.dartcommons.analysis.services.AnalysisBackfillService;

@@ -32,6 +32,28 @@ updated: 2026-06-08
 
 ---
 
+## 2026-06-08 | sentiment-to-shared — Sentiment enum shared/enums 이관
+
+**Spec**: `docs/specs/Approved/sentiment-to-shared.md` (단일 Wave 완료)
+
+### 완료
+- `shared/enums/Sentiment.java` 신규 생성 (POSITIVE/NEUTRAL/NEGATIVE)
+- `AnalysisResult.java` 중첩 enum 제거, `sentiment` 필드 타입 → `shared.enums.Sentiment` import
+- 본문 7개 + 테스트 5개 import 교체 (`AnalysisResult.Sentiment` → `shared.enums.Sentiment`)
+- 79/79 통과, `grep -r "AnalysisResult.Sentiment"` 잔존 0건 확인
+- notification-dispatcher·notification-retry-job Spec Done 전환 + `user-auth-jwt-oauth2` 이중 확인(이미 Done)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **Sentiment 외 이관 후보**: `AnalysisResult.ExpectedReaction`도 동일 패턴의 cross-domain 후보이나 현재 notification/infra에서 참조 없어 이번 Spec 범위 밖으로 제외. 참조 확산 시 `shared/enums/ExpectedReaction.java`로 동일 패턴 이관 가능.
+- **디자인 완성 후 재개**: 프론트엔드 디자인 완성 전까지 M2 프론트엔드·DigestDispatchJob 구현 보류.
+
+### 미완료
+- **DigestDispatchJob**: DAILY_1/DAILY_2/WEEKLY 빈도 묶음 발송 배치 — 디자인 완성 후 진행
+- **M2 프론트엔드**: 로그인·포트폴리오·공시목록 페이지 — 디자인 완성 후 진행
+- **Stage 3 RAG**: pgvector/Chroma 유사 공시 검색 — 디자인 완성 후 진행
+
+---
+
 ## 2026-06-08 | M3 notification-retry-job Wave 1+2 — RetryJob + ChannelSender 분리 + 통합 테스트
 
 **Spec**: `docs/specs/Approved/notification-retry-job.md` (Wave 1+2 완료)

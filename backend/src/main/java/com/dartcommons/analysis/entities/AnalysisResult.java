@@ -1,5 +1,6 @@
 package com.dartcommons.analysis.entities;
 
+import com.dartcommons.shared.enums.Sentiment;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -26,8 +27,7 @@ import java.time.OffsetDateTime;
 @Builder
 public class AnalysisResult {
 
-    public enum Sentiment { POSITIVE, NEUTRAL, NEGATIVE }
-
+    // Sentiment enum 이관: shared.enums.Sentiment (sentiment-to-shared, 2026-06-08)
     public enum ExpectedReaction { UP, FLAT, DOWN }
 
     @Id

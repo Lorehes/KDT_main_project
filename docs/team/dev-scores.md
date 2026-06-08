@@ -28,6 +28,7 @@ updated: 2026-06-02
 | 2026-06-08 | Jin | cab1b2e | feat(notification): M3 Wave 2 디스패처 코어 [9/8 M] | Notification | 9 | 8 | M | INSTANT 4단계 필터+채널라우팅 |
 | 2026-06-08 | Jin | fd0d848 | test(notification): M3 Wave 3 디스패처 통합 테스트 [8/9 S] | Notification | 8 | 9 | S | 11 통합 테스트+Awaitility 수정 |
 | 2026-06-08 | Jin | 59c7cef | feat(notification): M3 RetryJob+ChannelSender분리+Wave2테스트 [8/9 M] | Notification | 8 | 9 | M | 알림재시도 RetryJob+ChannelSender분리 |
+| 2026-06-08 | Jin | d54f6ab | refactor(shared): Sentiment enum shared/enums 이관 [5/8 L] | Shared/Analysis/Notification/Infra | 5 | 8 | L | Sentiment enum shared/enums 이관 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -35,5 +36,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 5 | 15 | 15 | 8.1 | 7.9 |
+| Jin | 6 | 16 | 16 | 8.1 | 7.7 |
 <!-- SUMMARY:END -->

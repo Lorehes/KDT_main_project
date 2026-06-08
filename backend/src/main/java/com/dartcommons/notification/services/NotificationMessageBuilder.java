@@ -1,6 +1,6 @@
 package com.dartcommons.notification.services;
 
-import com.dartcommons.analysis.entities.AnalysisResult.Sentiment;
+import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.disclosure.entities.Disclosure;
 import org.springframework.stereotype.Component;
 

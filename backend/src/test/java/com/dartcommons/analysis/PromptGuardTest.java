@@ -1,7 +1,7 @@
 package com.dartcommons.analysis;
 
 import com.dartcommons.analysis.dto.Stage2Output;
-import com.dartcommons.analysis.entities.AnalysisResult.Sentiment;
+import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.analysis.services.PromptGuard;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
