@@ -32,6 +32,33 @@ updated: 2026-06-08
 
 ---
 
+## 2026-06-08 | M3 notification-dispatcher Wave 3 — 통합 테스트
+
+**Spec**: `docs/specs/Approved/notification-dispatcher.md` (Wave 3 완료)
+
+### 완료
+- `NotificationDispatcherIntegrationTest` — 11개 통합 테스트 (Testcontainers PostgreSQL + MockitoBean 채널 클라이언트)
+  - INSTANT 4단계 필터 전 경로: withheld / notifyEnabled / typeFilter(POSITIVE_ONLY·NEGATIVE_ONLY) / frequency(DAILY_1)
+  - dedup: 동일 (user, disclosure, channel) 2회 이벤트 → DB 1건 기록 확인
+  - 채널 라우팅: KAKAO 전화번호 있음(SENT) / 없음(FAILED) / EMAIL(SENT)
+  - 신뢰도 낮음(confidence<0.5) → '판단 보류' 메시지 포함 확인
+  - 포트폴리오 미보유 공시 → 발송 없음 확인
+- dc-review-code Green (A+ 종합, Critical 0 / High 0 / Medium 0)
+  - Medium 2건 수정: Thread.sleep(700) → Awaitility during(500ms)/atMost(2s), nanoTime → UUID substring
+
+### 결정 (코드에 드러나지 않는 사항)
+- **부정 테스트 Awaitility 패턴**: `during(500ms).atMost(2s).until(isEmpty)` — 500ms 동안 지속적으로 비어있음을 검증. CI 환경 Thread.sleep flaky 방지.
+- **Wave 3 범위 확정**: off_hours_allowed 필터 테스트는 TradingHoursUtil Clock 주입 도입 후 별도 Wave. TELEGRAM 채널 테스트는 실 구현 후 추가.
+- **M3 Wave 3 완료** — notification-dispatcher Spec Wave 1~3 완료.
+
+### 미완료
+- **RetryJob**: PENDING/RETRYING 상태 재발송 배치 (sent_at IS NULL 이중 발송 방지)
+- **Sentiment → shared 이관**: cross-domain 의존 tech debt 해소
+- **카카오 실계정 endpoint 검증**: 실계정 승인 후 SEND_PATH + AlimtalkRequest 필드 검증
+- `/dc-spec-move user-auth-jwt-oauth2 Done` — Wave 2 미완료 이월
+
+---
+
 ## 2026-06-08 | M3 notification-dispatcher Wave 2 — 디스패처 코어
 
 **Spec**: `docs/specs/Approved/notification-dispatcher.md` (Wave 2 완료)
