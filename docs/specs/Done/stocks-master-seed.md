@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-05-30
-updated: 2026-06-02
+updated: 2026-06-08
 ---
 
 # 종목 마스터 시드/동기화 (stocks) Spec
 
-> 상태: Draft → **Approved** (2026-06-02, dc-tech-review 승인 · KRX 키 발급 완료 / 출처: KRX 공개 CSV)
+> 상태: Draft → Approved (2026-06-02) → **Done** (2026-06-08, 341 종목 V10 시드 + StockMasterSyncJob 완료)
 > 관계: [[disclosure-collection-pipeline]]의 **선행 작업**(커버 종목 필터가 이 데이터에 의존).
 > 연계 SSOT: [[DART공시통역_통합기획서]] §3.1·§7.3 · [[db_schema]] §3.2 · [[api_spec]] §3.1·§3.2 · [[feature_structure]] §4
 

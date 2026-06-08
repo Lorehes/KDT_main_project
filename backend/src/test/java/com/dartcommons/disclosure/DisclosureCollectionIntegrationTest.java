@@ -41,7 +41,10 @@ import static org.assertj.core.api.Assertions.assertThat;
         "dartcommons.dart.api-key=test-key",
         "dartcommons.dart.base-url=http://localhost",
         "dartcommons.krx.api-key=test-key",
-        "dartcommons.krx.base-url=http://localhost"
+        "dartcommons.krx.base-url=http://localhost",
+        "dartcommons.admin.username=admin",
+        "dartcommons.admin.password=test-admin-password",
+        "dartcommons.llm.provider=mock"
 })
 class DisclosureCollectionIntegrationTest {
 

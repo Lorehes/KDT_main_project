@@ -40,7 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "dartcommons.krx.api-key=test-key",
         "dartcommons.krx.base-url=http://localhost",
         "dartcommons.admin.username=admin",
-        "dartcommons.admin.password=test-admin-password"
+        "dartcommons.admin.password=test-admin-password",
+        "dartcommons.llm.provider=mock"
 })
 class AdminAuthIntegrationTest {
 

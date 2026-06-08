@@ -2,6 +2,11 @@ spring:
   application:
     name: dartcommons
 
+  mvc:
+    # RFC 7807 ProblemDetail 응답 활성화 — ResponseStatusException, @Valid 오류가 표준 포맷으로 직렬화됨
+    problemdetails:
+      enabled: true
+
   datasource:
     # 기본 포트 5433 — docker-compose.yml과 정합 (다른 프로젝트 5432 점유 회피).
     # .env의 DB_URL이 build.gradle bootRun task로 자동 로드됨.
@@ -23,6 +28,20 @@ spring:
         jdbc.batch_size: 500
         order_inserts: true
         order_updates: true
+
+  # SMTP 이메일 (notification-dispatcher Spec Wave 1 — 폴백 채널)
+  # 실키는 환경변수 주입. 로컬 개발은 Mailpit(localhost:1025) 또는 placeholder.
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:placeholder}
+    password: ${MAIL_PASSWORD:placeholder}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
 
   flyway:
     enabled: true
@@ -71,6 +90,43 @@ dartcommons:
   admin:
     username: ${ADMIN_USERNAME:admin}
     password: ${ADMIN_PASSWORD}
+  # JWT — access/refresh 토큰 발급 (user-auth-jwt-oauth2 Spec Wave 1)
+  jwt:
+    secret: ${JWT_SECRET}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:30}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:14}
+  # AES-256-GCM — avg_buy_price / quantity / phone_number 암호화 (user-auth Spec Wave 1)
+  crypto:
+    aes-key: ${AES_KEY}
+  # OAuth 2.0 — Kakao / Google / Naver (user-auth-jwt-oauth2 Spec Wave 4)
+  # 실제 키는 환경변수 주입 (CLAUDE.md §7 하드코딩 금지). 기본값은 로컬 개발용 placeholder.
+  oauth:
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:placeholder}
+      client-secret: ${KAKAO_CLIENT_SECRET:placeholder}
+      redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:3000/auth/oauth/kakao/callback}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:placeholder}
+      client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
+      redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:3000/auth/oauth/google/callback}
+    naver:
+      client-id: ${NAVER_CLIENT_ID:placeholder}
+      client-secret: ${NAVER_CLIENT_SECRET:placeholder}
+      redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:3000/auth/oauth/naver/callback}
+  # 카카오 알림톡 (notification-dispatcher Spec Wave 1)
+  # 실제 키는 환경변수 주입 (CLAUDE.md §7 하드코딩 금지).
+  # base-url·endpoint는 카카오 비즈메시지 가이드 확인 후 갱신.
+  kakao:
+    alimtalk:
+      base-url: ${KAKAO_ALIMTALK_BASE_URL:https://alimtalk-api.kakao.com}
+      api-key: ${KAKAO_ALIMTALK_API_KEY:placeholder}
+      sender-key: ${KAKAO_SENDER_KEY:placeholder}
+      template-code: ${KAKAO_ALIMTALK_TEMPLATE_CODE:placeholder}
+      timeout-ms: ${KAKAO_ALIMTALK_TIMEOUT_MS:10000}
+      max-retries: ${KAKAO_ALIMTALK_MAX_RETRIES:3}
+  # 이메일 발송자 주소 (notification-dispatcher Spec Wave 1 — 폴백 채널)
+  mail:
+    from: ${MAIL_FROM:noreply@dartcommons.com}
   # LLM provider — analysis Stage 2 (analysis-stage2-llm Spec)
   # provider=mock 은 통합 테스트/로컬 검증용. 운영은 ollama (wave 2 구현 후 교체).
   llm:

@@ -15,7 +15,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * [사이드 임팩트] @Async("analysisExecutor")/(...Backfill...) 빈명 매칭 필수. 매칭 실패 시 fallback SimpleAsyncTaskExecutor.
  *               큐 크기/풀 크기는 운영 부하 측정 후 application.yml 조정 가능(현재 코드 상수).
  * [수정 시 고려사항] Cloud LLM 전환 시 RPS 한계가 다름 → 풀 크기 재조정. SystemConfig 키로 외부화 후속.
- *                  reject policy CallerRunsPolicy 기본 — 큐 가득 시 호출 스레드(이벤트 리스너)가 직접 실행 → 폴링 지연 트레이드오프.
+ *                  ThreadPoolTaskExecutor 기본 거절 정책은 AbortPolicy(TaskRejectedException throw).
+ *                  CallerRunsPolicy가 필요하면 exec.setRejectedExecutionHandler(new CallerRunsPolicy()) 명시 추가.
  */
 @Configuration
 public class ExecutorConfig {
@@ -44,6 +45,21 @@ public class ExecutorConfig {
         exec.setThreadNamePrefix("analysis-backfill-");
         exec.setWaitForTasksToCompleteOnShutdown(true);
         exec.setAwaitTerminationSeconds(60);
+        exec.initialize();
+        return exec;
+    }
+
+    /** 알림 발송 풀 — AnalysisCompletedEvent AFTER_COMMIT 리스너에서 @Async로 분리.
+     *  notification-dispatcher Spec Wave 1. 분석 풀과 격리해 발송 지연이 분석 SLO에 영향 없도록. */
+    @Bean(name = "notificationExecutor")
+    public TaskExecutor notificationExecutor() {
+        ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
+        exec.setCorePoolSize(2);
+        exec.setMaxPoolSize(4);
+        exec.setQueueCapacity(500);
+        exec.setThreadNamePrefix("notification-");
+        exec.setWaitForTasksToCompleteOnShutdown(true);
+        exec.setAwaitTerminationSeconds(30);
         exec.initialize();
         return exec;
     }

@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-05-30
+updated: 2026-06-08
 ---
 
 # Specs MOC
@@ -22,13 +22,17 @@ docs/specs/
 ## 현황
 
 ### Draft
-- [[stocks-master-seed]] — 종목 마스터 시드/동기화 (stocks): 코스피200+코스닥150 적재 ([[disclosure-collection-pipeline]] 선행)
+- [[sentiment-to-shared]] — Sentiment enum 이관: analysis 중첩 enum → shared/enums (cross-domain 해소)
 
 ### Approved
-- [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 (Stage 1): 11개 작업카드/3 wave, DB변경 없음
+- [[notification-dispatcher]] — 알림 디스패처 MVP (Wave 1~3 완료, RetryJob 미구현)
+- [[notification-retry-job]] — 알림 재발송 배치 잡: ChannelSender 추출 + V15 + RetryJob (2 waves)
 
 ### Done
-*(없음)*
+- [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1
+- [[stocks-master-seed]] — 종목 마스터 시드/동기화 (코스피200+코스닥150)
+- [[analysis-stage2-llm]] — LLM 분석 Stage 2
+- [[user-auth-jwt-oauth2]] — M2 사용자인증 (JWT+AES256+OAuth2)
 
 ## 작업 흐름
 

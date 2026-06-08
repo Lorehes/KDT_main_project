@@ -43,7 +43,8 @@ import static org.mockito.Mockito.when;
         "dartcommons.krx.api-key=test-key",
         "dartcommons.krx.base-url=http://localhost",
         "dartcommons.admin.username=admin",
-        "dartcommons.admin.password=test-admin-password"
+        "dartcommons.admin.password=test-admin-password",
+        "dartcommons.llm.provider=mock"
 })
 class BackfillJobServiceTest {
 
