@@ -22,11 +22,11 @@ docs/specs/
 ## 현황
 
 ### Draft
-- [[notification-retry-job]] — 알림 재발송 배치 잡: PENDING/RETRYING 상태 재발송, 3회 초과 FAILED 확정
 - [[sentiment-to-shared]] — Sentiment enum 이관: analysis 중첩 enum → shared/enums (cross-domain 해소)
 
 ### Approved
 - [[notification-dispatcher]] — 알림 디스패처 MVP (Wave 1~3 완료, RetryJob 미구현)
+- [[notification-retry-job]] — 알림 재발송 배치 잡: ChannelSender 추출 + V15 + RetryJob (2 waves)
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1

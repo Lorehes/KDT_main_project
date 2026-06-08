@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-08
 updated: 2026-06-08
 ---
 
 # notification-retry-job Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-08, dc-tech-review 승인)
 
 ## 배경 / 목적
 
