@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-05-30
-updated: 2026-05-30
+updated: 2026-06-08
 ---
 
 # DART 공시 수집 파이프라인 (Stage 1) Spec
 
-> 상태: Draft → **Approved** (2026-05-30, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-05-30) → **Done** (2026-06-08, Stage 1 수집 파이프라인 91k 공시 + 폴링 완료)
 > 연계 SSOT: [[DART공시통역_통합기획서]] §4.4·§5.1·§6.1 · [[db_schema]] §3.2·§3.4 · [[api_spec]] §3.1 · [[feature_structure]] §2·§4·§6 · [[CLAUDE]] §4
 
 ## 배경 / 목적

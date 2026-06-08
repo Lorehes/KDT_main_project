@@ -1,8 +1,8 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-03
-updated: 2026-06-04
+updated: 2026-06-08
 tech_reviewed: 2026-06-03
 approved: 2026-06-04
 related:
@@ -16,7 +16,7 @@ related:
 
 # analysis Stage 2 LLM — 호재/중립/악재 1차 분류 Spec
 
-> 상태: **Approved** (dc-tech-review 통과, 2026-06-04 wave 1 구현 진입)
+> 상태: Approved (2026-06-04) → **Done** (2026-06-08, Wave 1~5 완료 + qwen3:4b 확정 + 91k 백필 통계)
 > 마일스톤: **M1** (Phase 1 데이터 토대 → 분석 도메인 진입)
 > 선행 의존: [[disclosure-collection-pipeline]] (완료, 91,965건 적재 + 룰 분류 OTHER 8%)
 
