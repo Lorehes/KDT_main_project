@@ -26,7 +26,7 @@ updated: 2026-06-02
 | 2026-06-08 | Jin | d09deac | test(user): M2 Wave 5 통합테스트+기존 31건 수정 [8/8 L] | User/Analysis/Disclosure | 8 | 8 | L | JWT/IDOR/AES/Free제한 E2E 검증 |
 | 2026-06-08 | Jin | 1b18cd0 | feat(notification): M3 Wave 1 알림 인프라 기반 [8/8 L] | Notification/Infra/Shared | 8 | 8 | L | M3 알림 인프라 기반 구축 |
 | 2026-06-08 | Jin | cab1b2e | feat(notification): M3 Wave 2 디스패처 코어 [9/8 M] | Notification | 9 | 8 | M | INSTANT 4단계 필터+채널라우팅 |
-| 2026-06-08 | Jin | 999e0b9 | test(notification): M3 Wave 3 디스패처 통합 테스트 [8/9 S] | Notification | 8 | 9 | S | 11 통합 테스트+Awaitility 수정 |
+| 2026-06-08 | Jin | fd0d848 | test(notification): M3 Wave 3 디스패처 통합 테스트 [8/9 S] | Notification | 8 | 9 | S | 11 통합 테스트+Awaitility 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
