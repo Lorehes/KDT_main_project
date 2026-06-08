@@ -32,6 +32,31 @@ updated: 2026-06-08
 
 ---
 
+## 2026-06-08 | M3 notification-dispatcher Wave 2 — 디스패처 코어
+
+**Spec**: `docs/specs/Approved/notification-dispatcher.md` (Wave 2 완료)
+
+### 완료
+- `NotificationEntity` — notifications(V6) JPA 엔티티. Channel/Status enum, markSent/markFailed, 500자 truncate
+- `NotificationRepository` — `findByUserId` + `findByStatus` (idx_notifications_status 부분 인덱스 활용)
+- `NotificationMessageBuilder` — 채널 무관 본문/제목 조립. confidence<0.5 "판단 보류" 삽입, 면책문구 고정
+- `NotificationDispatcher` — `@TransactionalEventListener(AFTER_COMMIT)` + `@Async("notificationExecutor")`. 4단계 INSTANT 필터(enabled→type_filter→off_hours→INSTANT) + 채널 라우팅(KAKAO/EMAIL/TELEGRAM). uq_notification_dedup DataIntegrityViolationException 멱등 처리. 유저별 try-catch 격리.
+- dc-review-code Green (Critical 0, High 0 / A- 종합)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **DataIntegrityViolationException dedup 패턴**: SimpleJpaRepository.save()는 자체 TX. 위반 예외 catch 후 skip이 caller TX 오염 없이 안전. 각 save()는 독립 TX.
+- **cross-domain 한시 허용**: `notification` → `disclosure.entities.Disclosure` + `analysis.entities.AnalysisResult.Sentiment` 직접 참조. CLAUDE.md §3-2 위반이나 MVP 한시 허용(주석 명시). Sentiment → shared 이관 + Disclosure 요약 → event payload로 해소 예정.
+- **N+1 쿼리 MVP 허용**: 보유자별 userRepository 단건 조회. 인기 종목 대량 보유자 시 개선 필요 — Wave 3 RetryJob 설계 시 `findAllById()` 일괄 조회로 전환 검토.
+- **발송 후 상태 업데이트 실패**: 발송 성공 후 markSent save() 실패 시 record가 PENDING 잔류. RetryJob은 PENDING 재발송 전 sent_at IS NULL 체크로 이중 발송 방지 필요.
+- **TELEGRAM**: MVP 미지원 → FAILED 상태로 기록. 후속 Spec에서 텔레그램 채널 추가 시 markUnsupported 분기 제거.
+
+### 미완료
+- **Wave 3**: `NotificationDispatcherIntegrationTest` (Testcontainers PostgreSQL, MockBean KakaoAlimtalkClient + MailNotificationClient). 4단계 필터 단위 테스트 포함.
+- **RetryJob**: Wave 3+ PENDING/RETRYING 상태 재발송 배치 (sent_at IS NULL 체크로 이중 발송 방지)
+- 카카오 알림톡 실계정 승인 후 endpoint/request body 검증 필요
+
+---
+
 ## 2026-06-08 | M3 notification-dispatcher Wave 1 — 알림 인프라 기반
 
 **Spec**: `docs/specs/Approved/notification-dispatcher.md` (Wave 1 완료)
