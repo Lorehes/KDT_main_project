@@ -29,6 +29,20 @@ spring:
         order_inserts: true
         order_updates: true
 
+  # SMTP 이메일 (notification-dispatcher Spec Wave 1 — 폴백 채널)
+  # 실키는 환경변수 주입. 로컬 개발은 Mailpit(localhost:1025) 또는 placeholder.
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:placeholder}
+    password: ${MAIL_PASSWORD:placeholder}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -99,6 +113,20 @@ dartcommons:
       client-id: ${NAVER_CLIENT_ID:placeholder}
       client-secret: ${NAVER_CLIENT_SECRET:placeholder}
       redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:3000/auth/oauth/naver/callback}
+  # 카카오 알림톡 (notification-dispatcher Spec Wave 1)
+  # 실제 키는 환경변수 주입 (CLAUDE.md §7 하드코딩 금지).
+  # base-url·endpoint는 카카오 비즈메시지 가이드 확인 후 갱신.
+  kakao:
+    alimtalk:
+      base-url: ${KAKAO_ALIMTALK_BASE_URL:https://alimtalk-api.kakao.com}
+      api-key: ${KAKAO_ALIMTALK_API_KEY:placeholder}
+      sender-key: ${KAKAO_SENDER_KEY:placeholder}
+      template-code: ${KAKAO_ALIMTALK_TEMPLATE_CODE:placeholder}
+      timeout-ms: ${KAKAO_ALIMTALK_TIMEOUT_MS:10000}
+      max-retries: ${KAKAO_ALIMTALK_MAX_RETRIES:3}
+  # 이메일 발송자 주소 (notification-dispatcher Spec Wave 1 — 폴백 채널)
+  mail:
+    from: ${MAIL_FROM:noreply@dartcommons.com}
   # LLM provider — analysis Stage 2 (analysis-stage2-llm Spec)
   # provider=mock 은 통합 테스트/로컬 검증용. 운영은 ollama (wave 2 구현 후 교체).
   llm:

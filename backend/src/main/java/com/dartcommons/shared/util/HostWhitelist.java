@@ -15,8 +15,9 @@ import java.util.Set;
 public final class HostWhitelist {
 
     private static final Set<String> PROD_ALLOWED = Set.of(
-            "opendart.fss.or.kr",       // DART OpenAPI
-            "data.krx.co.kr"            // KRX 정보데이터시스템
+            "opendart.fss.or.kr",           // DART OpenAPI
+            "data.krx.co.kr",              // KRX 정보데이터시스템
+            "alimtalk-api.kakao.com"        // 카카오 비즈메시지 알림톡
     );
 
     private static final Set<String> TEST_ALLOWED = Set.of(

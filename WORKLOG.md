@@ -32,6 +32,34 @@ updated: 2026-06-08
 
 ---
 
+## 2026-06-08 | M3 notification-dispatcher Wave 1 — 알림 인프라 기반
+
+**Spec**: `docs/specs/Approved/notification-dispatcher.md` (Wave 1 완료)
+
+### 완료
+- `build.gradle` — `spring-boot-starter-mail` 추가
+- `KakaoAlimtalkProperties` + `KakaoAlimtalkClient` (RestClient + `@Retryable`, HostWhitelist SSRF 방어)
+- `MailNotificationProperties` + `MailNotificationClient` (JavaMailSender 래퍼, `MailSendException`, `isDebugEnabled()` guard)
+- `TradingHoursUtil` — KRX 09:00~15:30 KST 판단 (`shared/util/`, private 상수)
+- `ExecutorConfig.notificationExecutor` 빈 추가 (core=2, max=4, queue=500)
+- `HostWhitelist.PROD_ALLOWED` — `alimtalk-api.kakao.com` 추가
+- `application.yml` — `dartcommons.kakao.alimtalk.*` + `spring.mail.*` + `dartcommons.mail.from` 추가
+- `test/resources/application.yml` — Kakao/mail 더미값 추가, `.env` import **제거** (보안)
+- dc-review-code Green 통과 (NPE guard, private record, MailSendException, 이메일 마스킹 일관화 수정 포함)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **카카오 알림톡 endpoint 미검증 허용**: `SEND_PATH="/v1/message/send"` + `AlimtalkRequest` 필드명은 "확인 필요" 상태로 Wave 1 머지. 카카오 비즈메시지 계정 승인 전 실검증 불가 — Wave 2에서 실계정 확인 후 확정.
+- **test yml .env import 제거**: 로컬 `.env`의 실 운영 키가 테스트 더미값을 덮어쓰는 보안 위험 제거. bootRun의 `.env` 로드(build.gradle Gradle task)는 영향 없음.
+- **ExecutorConfig 거절 정책**: `ThreadPoolTaskExecutor` 기본은 AbortPolicy (CallerRunsPolicy 아님). Wave 2 NotificationDispatcher 구현 시 이벤트 리스너 스레드 블로킹 방지를 위해 명시적 CallerRunsPolicy 추가 검토.
+- **maxRetries property 미반영**: `KakaoAlimtalkProperties.maxRetries`가 `@Retryable(maxAttempts=3)` 리터럴로 하드코딩됨. DartClient와 동일 패턴 — RetryTemplate 전환 시 해결.
+
+### 미완료
+- **Wave 2**: `NotificationEntity` + `NotificationRepository` + `NotificationMessageBuilder` + `NotificationDispatcher` (`@TransactionalEventListener(AFTER_COMMIT)` + `@Async` + INSTANT 4단계 필터 + 채널 라우팅)
+- **Wave 3**: `NotificationDispatcherIntegrationTest` (Testcontainers, MockBean 채널 클라이언트)
+- 카카오 알림톡 실계정 승인 후 endpoint/request body 검증 필요
+
+---
+
 ## 2026-06-02 | stocks 도메인 도입 + disclosure N+1 해소
 
 **Spec**: `docs/specs/Approved/stocks-master-seed.md` (Wave 2 핵심)
