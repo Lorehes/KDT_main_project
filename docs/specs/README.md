@@ -26,13 +26,13 @@ docs/specs/
 
 ### Approved
 - [[notification-dispatcher]] — 알림 디스패처 MVP (Wave 1~3 완료, RetryJob 미구현)
-- [[notification-retry-job]] — 알림 재발송 배치 잡: ChannelSender 추출 + V15 + RetryJob (2 waves)
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1
 - [[stocks-master-seed]] — 종목 마스터 시드/동기화 (코스피200+코스닥150)
 - [[analysis-stage2-llm]] — LLM 분석 Stage 2
 - [[user-auth-jwt-oauth2]] — M2 사용자인증 (JWT+AES256+OAuth2)
+- [[notification-retry-job]] — 알림 재발송 배치 잡: ChannelSender 추출 + V15 + RetryJob (Wave 1+2 완료)
 
 ## 작업 흐름
 
