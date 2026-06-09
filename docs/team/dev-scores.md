@@ -40,7 +40,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | 32ef4f7 | fix(security): 보안강화MVP P0~P1 14건+FE-BE정합미커밋 [9/9 L] | Shared/Analysis/Disclosure/Frontend | 9 | 9 | L | 보안강화MVP P0~P1 14건+FE-BE정합미커밋 |
 | 2026-06-10 | Jin | 6ea3332 | feat(frontend): FE 토큰갱신 Promise큐+BroadcastChannel 다중탭동기화 [8/9 L] | Frontend | 8 | 9 | L | FE 토큰갱신 Promise큐+다중탭동기화 |
 | 2026-06-10 | Jin | 3aca87e | test(frontend): R10 Playwright E2E 인증플로우 4건 [6/9 M] | Frontend | 6 | 9 | M | R10 E2E 인증플로우 4건 |
-| 2026-06-10 | Jin | 4ed1a38 | fix(frontend): 투자자보호 sentiment가드+페이지네이션정합+런타임에러 [7/9 M] | Frontend/Disclosure | 7 | 9 | M | 투자자보호·런타임에러·페이지정합 |
+| 2026-06-10 | Jin | d83880c | fix(frontend): 투자자보호 sentiment가드+페이지네이션정합+런타임에러 [7/9 M] | Frontend/Disclosure | 7 | 9 | M | 투자자보호·런타임에러·페이지정합 |
 <!-- SCORES -->
 
 ## 기간별 집계
