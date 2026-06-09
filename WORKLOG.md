@@ -11,6 +11,20 @@ updated: 2026-06-09
 
 ---
 
+## 2026-06-09 | FE W6 — 알림 설정·센터·모달 (T23~T25)
+
+**Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W6 완료)
+
+### 완료
+- **T23 알림 설정(D14/m06)**: 채널 라디오(KAKAO·EMAIL·TELEGRAM) + 빈도 칩 + 유형 필터 + 야간 토글 + PUT /notifications/settings. 알림톡 미리보기(D25/m08) 토글로 표시
+- **T24 알림 모달(D23/m25)**: TopBar 벨 클릭 팝오버. 최근 4건 + 안읽음 점 + 모두읽음. 읽음 처리 로컬 Set 임시 구현
+- **T25 알림 센터(D24/m26)**: 전체 알림 날짜 그룹 + 필터(전체·안읽음·호재·악재) + 로컬 읽음 처리
+
+### 결정
+- **읽음 처리 클라이언트 임시**: 백엔드 `is_read` 컬럼 미존재(Tech Review 기록). Zustand Set으로 임시 처리. 백엔드 PATCH /notifications/{id}/read 추가 시 교체
+
+---
+
 ## 2026-06-09 | FE W5 — 종목 관리 (T21·T22)
 
 **Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W5 완료)

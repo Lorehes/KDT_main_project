@@ -11,6 +11,7 @@ import { TopBar } from "./TopBar";
 import { BottomTabBar } from "./BottomTabBar";
 import { MobileAppBar } from "./MobileAppBar";
 import { HamburgerDrawer } from "./HamburgerDrawer";
+import { NotificationModal } from "./NotificationModal";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -18,8 +19,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* 웹 레이아웃 (md 이상) */}
       <div className="hidden min-h-screen md:flex">
         <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="relative flex flex-1 flex-col overflow-hidden">
           <TopBar />
+          <NotificationModal />
           <main className="flex-1 overflow-y-auto bg-muted/30 p-8" id="main-content">
             {children}
           </main>

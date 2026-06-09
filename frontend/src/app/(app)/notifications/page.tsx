@@ -1,8 +1,178 @@
+"use client";
+
+// [목적] 알림 센터(D24/m26) — 전체 알림 이력을 날짜 그룹·필터로 탐색
+// [이유] 하단 탭바 '알림' 탭의 핵심 화면. 발송된 모든 알림 인박스 역할
+// [사이드 임팩트] useNotifications 쿼리(전체). 읽음 처리는 로컬 Set 임시 처리(backend is_read 미구현)
+// [수정 시 고려사항] 날짜 그룹은 created_at 기준 클라이언트 파싱.
+//   백엔드 PATCH /notifications/{id}/read 추가 시 readIds Set → API 호출로 교체.
+//   안읽음 필터(UNREAD)는 로컬 필터로 구현(서버 필터 미지원)
+
+import { useState } from "react";
+import Link from "next/link";
+import { Settings2 } from "lucide-react";
+import { useNotifications } from "@/lib/api/notifications";
+import { SentimentBadge } from "@/components/domain/SentimentBadge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { Notification } from "@/lib/api/notifications";
+
+type FilterType = "ALL" | "UNREAD" | "POSITIVE" | "NEGATIVE";
+
+const FILTERS: { value: FilterType; label: string }[] = [
+  { value: "ALL",      label: "전체" },
+  { value: "UNREAD",   label: "안읽음" },
+  { value: "POSITIVE", label: "호재" },
+  { value: "NEGATIVE", label: "악재" },
+];
+
+function groupByDate(notifications: Notification[]) {
+  const today = new Date().toLocaleDateString("ko-KR");
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("ko-KR");
+  const groups: Record<string, Notification[]> = {};
+
+  notifications.forEach((n) => {
+    const d = new Date(n.created_at).toLocaleDateString("ko-KR");
+    const label = d === today ? "오늘" : d === yesterday ? "어제" : d;
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(n);
+  });
+  return groups;
+}
+
 export default function NotificationsPage() {
+  const { data, isLoading } = useNotifications();
+  const [filter, setFilter] = useState<FilterType>("ALL");
+  const [readIds, setReadIds] = useState<Set<number>>(new Set());
+
+  const all = data?.content ?? [];
+
+  const filtered = all.filter((n) => {
+    if (filter === "UNREAD") return !readIds.has(n.id);
+    if (filter === "POSITIVE") return n.sentiment === "POSITIVE";
+    if (filter === "NEGATIVE") return n.sentiment === "NEGATIVE";
+    return true;
+  });
+
+  const groups = groupByDate(filtered);
+  const unreadCount = all.filter((n) => !readIds.has(n.id)).length;
+
+  const markRead = (id: number) => setReadIds((prev) => new Set([...prev, id]));
+  const markAllRead = () => setReadIds(new Set(all.map((n) => n.id)));
+
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-2xl font-bold">알림</h1>
-      <p className="mt-2 text-muted-foreground">준비 중 — 발송 이력 + 설정(채널·빈도·필터·거래시간외, 통합기획서 4.3).</p>
-    </main>
+    <div className="flex flex-col gap-5">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground">알림 센터</h1>
+          {unreadCount > 0 && (
+            <p className="mt-0.5 text-sm text-muted-foreground">안읽음 {unreadCount}건</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              className="text-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              모두 읽음
+            </button>
+          )}
+          <Link href="/notifications/settings" className={buttonVariants({ variant: "outline", size: "sm" })} aria-label="알림 설정">
+            <Settings2 className="size-4" aria-hidden />
+            설정
+          </Link>
+        </div>
+      </div>
+
+      {/* 필터 칩 */}
+      <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="알림 필터">
+        {FILTERS.map(({ value, label }) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={filter === value}
+            onClick={() => setFilter(value)}
+            className={cn(
+              "shrink-0 rounded-full border px-4 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              filter === value
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {label}
+            {value === "UNREAD" && unreadCount > 0 && (
+              <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary-foreground/20 px-1 text-[10px] font-extrabold">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* 알림 목록 */}
+      {isLoading ? (
+        <div className="py-12 text-center text-sm text-muted-foreground" role="status" aria-live="polite">알림을 불러오는 중...</div>
+      ) : filtered.length === 0 ? (
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          {filter === "UNREAD" ? "안읽은 알림이 없습니다." : "알림이 없습니다."}
+        </div>
+      ) : (
+        Object.entries(groups).map(([dateLabel, items]) => (
+          <section key={dateLabel} aria-label={`${dateLabel} 알림`}>
+            {/* 날짜 그룹 헤더 */}
+            <div className="mb-2 flex items-center gap-2.5">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">{dateLabel}</p>
+              <span className="inline-flex h-5 items-center rounded-full bg-primary/10 px-2 text-[11px] font-extrabold text-primary">{items.length}</span>
+              <span className="flex-1 border-t border-border" aria-hidden />
+            </div>
+
+            <ul className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm" role="list">
+              {items.map((notif, idx) => {
+                const isRead = readIds.has(notif.id);
+                return (
+                  <li
+                    key={notif.id}
+                    className={cn("border-b border-border last:border-b-0", isRead && "opacity-60")}
+                  >
+                    <Link
+                      href={`/disclosures/${notif.disclosure_id}`}
+                      onClick={() => markRead(notif.id)}
+                      className="flex gap-3 px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      aria-label={`${notif.corp_name} 공시 상세 보기${!isRead ? " (안읽음)" : ""}`}
+                    >
+                      <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary font-extrabold text-sm text-primary-foreground" aria-hidden>
+                        {notif.corp_name.slice(0, 2)}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-sm font-bold text-foreground">{notif.corp_name}</span>
+                          <SentimentBadge sentiment={notif.sentiment} size="sm" />
+                        </div>
+                        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{notif.report_nm}</p>
+                        <time
+                          className="mt-1 block text-xs text-muted-foreground"
+                          dateTime={notif.created_at}
+                        >
+                          {new Date(notif.created_at).toLocaleString("ko-KR", {
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </time>
+                      </div>
+
+                      {!isRead && (
+                        <span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))
+      )}
+    </div>
   );
 }
