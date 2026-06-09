@@ -35,6 +35,7 @@ updated: 2026-06-02
 | 2026-06-09 | Jin | 49c63ac | feat(frontend): FE W4 공시 피드+상세 [7/8 M] | Frontend | 7 | 8 | M | 공시피드 필터·공시상세 Free·Pro·Premium |
 | 2026-06-09 | Jin | f6ff427 | feat(frontend): FE W5 종목 관리 [6/8 S] | Frontend | 6 | 8 | S | 종목목록+쿼터바·등록상세+매수가·수량입력 |
 | 2026-06-09 | Jin | ad7031f | feat(frontend): FE W6 알림 설정·센터·모달 [6/8 M] | Frontend | 6 | 8 | M | 알림설정·알림톡미리보기·벨팝오버·알림센터 |
+| 2026-06-09 | Jin | 0baafaa | feat(frontend): FE W7 결제·계정·공유 [5/8 S] | Frontend | 5 | 8 | S | Checkout mockup·마이페이지·공유카드·전체완료 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -42,5 +43,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 6 | 7 | 22 | 8.1 | 7.4 |
+| Jin | 7 | 8 | 23 | 8.1 | 7.3 |
 <!-- SUMMARY:END -->

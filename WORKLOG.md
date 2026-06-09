@@ -11,6 +11,32 @@ updated: 2026-06-09
 
 ---
 
+## 2026-06-09 | FE W7 — 결제·계정·공유 (T26~T29) ★ 전체 완료
+
+**Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (전체 29카드 완료 → Done 전환)
+
+### 완료
+- **T26 ProUpsellModal**: (app)/layout.tsx 등록 완료 (W1에서 구현)
+- **T27 결제 UI mockup**: `/checkout`(7일체험·등록카드·카카오페이분기) + `/checkout/new`(신규카드·PCI-DSS고지)
+- **T28 마이페이지(D16/m24)**: 프로필 닉네임 인라인 수정 + 플랜 표시 + 설정 메뉴 + 로그아웃
+- **T29 공유 카드(D22/m21)**: CSS 카드 미리보기 + navigator.share API + 클립보드 폴백
+
+### 결정
+- **실결제 미연동**: 카카오페이/토스페이먼츠 SDK는 별도 Spec에서 연동. 카드번호 PCI-DSS 고지 추가
+- **이미지 저장**: html2canvas 또는 Server-Side OG 이미지 생성으로 교체 예정(현재 alert 안내)
+- **share-summary API 미존재**: authStore + portfolios 로컬 집계로 대체
+
+### 7 Wave 완료 요약 (2026-06-09 하루 세션)
+- W1: 레이아웃·공통컴포넌트 기반 (37개 파일)
+- W2: 랜딩·요금제 (4개 파일)
+- W3: 온보딩 4단계 전체 (13개 파일)
+- W4: 공시 피드·공시 상세 (Free·Pro·Premium·피드백)
+- W5: 종목 관리 (등록·검색·상세)
+- W6: 알림 (설정·센터·모달)
+- W7: 결제·계정·공유
+
+---
+
 ## 2026-06-09 | FE W6 — 알림 설정·센터·모달 (T23~T25)
 
 **Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W6 완료)
