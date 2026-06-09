@@ -11,6 +11,20 @@ updated: 2026-06-09
 
 ---
 
+## 2026-06-09 | FE W5 — 종목 관리 (T21·T22)
+
+**Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W5 완료)
+
+### 완료
+- **T21 종목 관리(D12/m05·D12b/m05b)**: StockSearchCombobox 자동완성, Free 쿼터 바(3/3 초과 시 검색 비활성+Pro 유도), 추천 종목 카드, 등록 종목 목록+삭제
+- **T22 종목 등록 상세(D13/m22)**: 매수 평균가·수량 입력(선택), 알림 토글 switch, 422(Free초과)·409(중복) 에러 인라인 처리
+
+### 결정
+- **매수가·수량 console.log 금지**: 금융 개인정보. 오류 시 ApiException 메시지만 표시, 입력값 로그 없음
+- **edit 모드(PATCH) 미구현**: 기존 종목 수정은 W7에서 추가. 현재 수정 버튼은 new?edit={id}로 이동 준비만
+
+---
+
 ## 2026-06-09 | FE W4 — 공시 피드·공시 상세 (T17~T20)
 
 **Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W4 완료)
