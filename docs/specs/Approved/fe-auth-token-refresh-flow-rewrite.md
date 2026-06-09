@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-10
 ---
 
 # FE 토큰 갱신 플로우 재설계 Spec
 
-> 상태: **Draft** (dc-plan 생성, 2회 코드 리뷰 종합)
+> 상태: **Approved** (2026-06-10, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -94,4 +94,50 @@ updated: 2026-06-09
 - [[security-hardening-mvp]] 의 CSP `connect-src` 와 정합 — refresh 호출 도메인이 CSP 에 포함되도록 동시 갱신
 - `authStore.logout()` 의 `window.location.href = "/login"` 3곳 분산은 [[architecture-refactoring-cleanup]] 에서 `LOGIN_PATH` 상수화로 통합
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-06-10)
+
+### 아키텍처 분해
+
+- **영향 레이어**: frontend (`lib/api/client.ts`, `lib/stores/authStore.ts`, `lib/api/auth.ts`, `app/api/auth/**`, 신규 `lib/constants.ts`, `lib/auth/broadcast.ts`, `lib/api/server-client.ts`) + 없음(BE 변경 없음)
+- **R1·R2 스킵 결정**: `session/route.ts` 브리지 패턴이 이미 httpOnly 쿠키를 올바르게 저장(`dr_session`, `dr_refresh`). BE 가 Set-Cookie 를 직접 발급하지 않아도 보안상 동등. `storeTokenCookies()` 유지 — BE 대규모 변경 없이 R1·R2 불필요. 후속 BE 업데이트 시 제거 가능.
+- **이미 완료**: Route Handlers(`refresh`·`logout`·`session`)는 구현 정상. `doFetch credentials:"include"` 기완료(R6).
+- **신규 파일**: `lib/constants.ts`, `lib/auth/broadcast.ts`, `lib/api/server-client.ts`
+- **수정 파일**: `lib/api/client.ts`, `lib/stores/authStore.ts`
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `lib/constants.ts` 신규 — `LOGIN_PATH = "/login"`, `REFRESH_PATH = "/api/auth/refresh"`, `LOGOUT_PATH = "/api/auth/logout"`. 환경변수 `NEXT_PUBLIC_SITE_URL`로 절대 refresh URL 구성(`${NEXT_PUBLIC_SITE_URL}/api/auth/refresh`). SSR 환경에서 절대경로 없으면 `http://localhost:3000` 폴백 | frontend/lib | FE | 하 | - |
+| 2 | `lib/api/client.ts` Promise 큐 재설계 — `isRefreshing: boolean` → `refreshPromise: Promise<void> \| null`. `performRefresh()` 함수 분리: 진행 중이면 기존 Promise 반환, 아니면 신규 생성 후 `finally { refreshPromise = null }` 보장. timeout 5초 후 강제 reject 추가(Promise 메모리 누수 방지). R5: `/api/auth/refresh` → `REFRESH_PATH` 절대경로 상수 사용. R7: 401 루프 방지 — `refreshPromise` 존재 중에 재시도 한 번으로 제한 (R4·R5·R7) | frontend/lib | FE | 상 | #1 |
+| 3 | `lib/stores/authStore.ts` + `lib/api/auth.ts` — `window.location.href = "/login"` 3곳을 `LOGIN_PATH` 상수 import로 교체. `authStore.logout()`에서 BroadcastChannel 알림 발행 호출(R7 상수화, R8 연동 준비) | frontend/lib | FE | 하 | #1 |
+| 4 | `lib/auth/broadcast.ts` 신규 — `BroadcastChannel('dr_auth')` 래퍼. `postMessage('logout')` / `postMessage('refresh')` 발행. 수신 측: `'logout'` → `authStore.logout()` 재호출 없이 `setUser(null)` + redirect. iOS Safari 폴백: `localStorage` + `storage` event (R8) | frontend/lib | FE | 중 | #3 |
+| 5 | `lib/api/server-client.ts` 신규 — Server Components·Server Actions 전용 fetch. `import { cookies } from "next/headers"` 로 `dr_session` 쿠키 직접 읽어 `Authorization: Bearer {token}` 헤더 세팅. 401 시 throw(SSR에서 redirect는 호출자 책임). 클라이언트 번들 격리를 위해 `"server-only"` 패키지 import (R9) | frontend/lib | FE | 중 | #1 |
+| 6 | Playwright 통합 테스트 — (a) 동시 401 5건 → `/api/auth/refresh` 호출 1회만 확인, (b) refresh 실패 시 `/login` redirect, (c) BroadcastChannel: 탭 A logout → 탭 B 자동 redirect (R10) | frontend/test | FE | 중 | #2·#4 |
+
+### DB / 마이그레이션 영향
+
+- 없음 — BE 변경 없음, DB 스키마 변경 없음.
+
+### 외부 계약 영향
+
+- **BE**: R1 스킵으로 `AuthController` 변경 없음. `refresh_token` JSON body 유지.
+- **CSP**: `security-hardening-mvp` 에서 `connect-src 'self' ${NEXT_PUBLIC_API_URL} wss:` 설정됨. Route Handler `/api/auth/**` 는 same-origin 이므로 CSP 변경 불필요.
+- **DART/KRX/카카오**: 변경 없음.
+
+### 리스크 & 법적 검토
+
+| 리스크 | 대응 |
+|--------|------|
+| Promise 큐 메모리 누수 — refresh 실패 시 큐 요청들이 resolve 안 됨 | `try/finally { refreshPromise = null }` + 5초 timeout reject 필수 |
+| BroadcastChannel iOS Safari 구버전 미지원 | `typeof BroadcastChannel !== "undefined"` 가드 + `localStorage` + `storage` event 폴백 |
+| SSR `server-client.ts` 에서 cookies() 실패 — 서버 컴포넌트에서 쿠키 없을 경우 | 빈 토큰이면 Unauthorized throw — 레이아웃 수준에서 redirect 처리 |
+| `NEXT_PUBLIC_SITE_URL` 미설정 시 SSR refresh 경로 오류 | `process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"` 폴백 + 배포 가이드 명시 |
+| Wave 1 완료 후 Wave 2 이전 기간 동안 다중 탭 간 동기화 없음 | MVP 허용 범위 — 탭 A 에서 로그아웃해도 탭 B 에서 API 계속 동작(쿠키 삭제 전까지). Wave 2 BroadcastChannel로 해소 |
+
+### 예상 wave 수
+
+- **Wave 1 (핵심 버그)**: #1·#2·#3 — Promise 큐 + 절대경로 + 상수화. 이것만으로 P0 race condition 해소.
+- **Wave 2 (멀티탭)**: #4 — BroadcastChannel + localStorage 폴백.
+- **Wave 3 (SSR + 테스트)**: #5·#6 — server-client + Playwright 회귀.
+- Wave 1 완료 후 즉시 `dc-push` 권장 (P0 해소 목적). Wave 2·3은 후속.

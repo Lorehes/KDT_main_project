@@ -11,6 +11,33 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | fe-auth-token-refresh-flow-rewrite — Promise 큐 + BroadcastChannel 다중 탭 동기화
+
+**Spec**: `docs/specs/Approved/fe-auth-token-refresh-flow-rewrite.md` (R4~R9 완료)
+
+### 완료
+- **R4 (Promise 큐)**: `client.ts` `isRefreshing boolean` → `refreshPromise: Promise<void> | null` 패턴. 동시 401 요청 모두 동일 Promise를 await해 refresh 1회 보장, 이후 일괄 재시도
+- **R5 (절대경로)**: SITE_ORIGIN 기반 절대경로 fetch — SSR/RSC 환경 상대경로 fetch 실패 방지
+- **R6 (credentials)**: refresh fetch에 `credentials: "include"` 명시 (cross-origin httpOnly 쿠키 전송)
+- **R7 (fallback)**: refresh 실패 시 logout Route Handler 호출 → `LOGIN_PATH` redirect. 재시도 1회 제한 유지. 5초 타임아웃으로 Promise 누수 방지
+- **R8 (BroadcastChannel)**: `lib/auth/broadcast.ts` 신규 — iOS Safari polyfill(localStorage storage event 폴백) 포함. `authStore.logout()`에서 `broadcastAuth({ type: "logout" })` 호출. `AuthBroadcastListener` Client Component → `(app)/layout.tsx` 마운트
+- **R9 (server-client)**: `lib/api/server-client.ts` 신규 — `next/headers cookies()` 기반 Server Component 전용 클라이언트. `dr_session` 쿠키 → Authorization 헤더 변환
+- **constants.ts**: 분산된 경로 리터럴(LOGIN_PATH/SESSION_PATH/REFRESH_PATH/LOGOUT_PATH/SITE_ORIGIN) 단일 소스로 정리
+- **Spec Draft → Approved**: `fe-auth-token-refresh-flow-rewrite.md` git mv 완료
+
+### 결정
+- **AuthBroadcastListener 위치**: `(app)/layout.tsx`는 Server Component이므로 Client Component를 별도 파일로 분리해 마운트. `setUser(null)` 후 `router.push(LOGIN_PATH)` — authStore.logout()의 full logout(Route Handler 호출)과 달리 수신 측은 쿠키가 이미 삭제된 상태이므로 상태만 초기화
+- **R1~R3 (BE Set-Cookie 연동)**: BE가 직접 Set-Cookie를 발급하는 흐름은 별도 BE Spec에서 처리. 현재 `storeTokenCookies()` (Session Route Handler 경유) 방식 유지 — 백워드 호환
+- **SITE_ORIGIN SSR 폴백**: `typeof window !== "undefined"` 분기 → `NEXT_PUBLIC_SITE_URL` env → `localhost:3000`. client.ts는 클라이언트 전용이지만 안전 장치로 절대경로 사용
+
+### 다음 작업 (미완료)
+- **R10 (Playwright 테스트)**: 동시 401 5건 → refresh 1회 검증 / refresh 실패 → /login redirect / 다중 탭 BroadcastChannel 동기화 테스트
+- `fe-correctness-investor-protection` — sentiment 노출 가드 (P1, 자본시장법)
+- `architecture-refactoring-cleanup` — DTO 패키지 정리, Tier enum, FE 중복 제거
+- FE 미커밋 변경사항 — `portfolios/`, `disclosures/`, `auth/` 페이지 및 Route Handler
+
+---
+
 ## 2026-06-10 | security-hardening-mvp — 보안 강화 전체 Wave (+ FE-BE정합 미커밋 복원)
 
 **Spec**: `docs/specs/Approved/security-hardening-mvp.md` (Wave 1+2+3 완료)

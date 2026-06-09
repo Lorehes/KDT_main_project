@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import { useAuthStore, type AuthUser } from "@/lib/stores/authStore";
+import { LOGIN_PATH, LOGOUT_PATH, SESSION_PATH } from "@/lib/constants";
 
 // ─── 타입 ───────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ export interface UpdateMeBody {
 // ─── 헬퍼 — 토큰 → httpOnly 쿠키 저장 ──────────────────────────────────────
 
 async function storeTokenCookies(tokens: AuthTokenResponse): Promise<void> {
-  await fetch("/api/auth/session", {
+  await fetch(SESSION_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -81,11 +82,11 @@ export function useLogout() {
   const { setUser } = useAuthStore();
   return useMutation({
     mutationFn: async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch(LOGOUT_PATH, { method: "POST" });
     },
     onSuccess: () => {
       setUser(null);
-      window.location.href = "/login";
+      if (typeof window !== "undefined") window.location.href = LOGIN_PATH;
     },
   });
 }

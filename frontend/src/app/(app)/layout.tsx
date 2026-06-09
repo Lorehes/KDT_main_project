@@ -5,10 +5,12 @@
 
 import { AppShell } from "@/components/layout/AppShell";
 import { ProUpsellModal } from "@/components/domain/ProUpsellModal";
+import { AuthBroadcastListener } from "@/components/layout/AuthBroadcastListener";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell>
+      <AuthBroadcastListener />
       {children}
       <ProUpsellModal />
     </AppShell>
