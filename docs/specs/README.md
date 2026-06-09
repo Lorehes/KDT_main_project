@@ -25,7 +25,7 @@ docs/specs/
 - [[sentiment-to-shared]] — Sentiment enum 이관: analysis 중첩 enum → shared/enums (cross-domain 해소)
 
 ### Approved
-- [[frontend-full-ui-implementation]] — 프론트엔드 전체 UI 구현: 7 Zone·26화면 웹/모바일 (Next.js 15 + TailwindCSS + shadcn/ui)
+*(없음)*
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1
@@ -35,6 +35,7 @@ docs/specs/
 - [[notification-dispatcher]] — 알림 디스패처 MVP (Wave 1~3 + RetryJob 완료)
 - [[notification-retry-job]] — 알림 재발송 배치 잡: ChannelSender 추출 + V15 + RetryJob (Wave 1+2 완료)
 - [[sentiment-to-shared]] — Sentiment enum shared/enums 이관 (단일 Wave 완료)
+- [[frontend-full-ui-implementation]] — 프론트엔드 전체 UI: 7 Zone·29카드·W1~W7 완료 (2026-06-09)
 
 ## 작업 흐름
 

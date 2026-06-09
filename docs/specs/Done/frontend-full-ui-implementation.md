@@ -1,6 +1,6 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-09
 reviewed: 2026-06-09
@@ -8,7 +8,7 @@ reviewed: 2026-06-09
 
 # 프론트엔드 전체 UI 구현 Spec
 
-> 상태: **Approved** (2026-06-09, dc-tech-review 승인)
+> 상태: **Done** (2026-06-09, W1~W7 전체 29카드 구현 완료)
 
 ## 배경 / 목적
 
