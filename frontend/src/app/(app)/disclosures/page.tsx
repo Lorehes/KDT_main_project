@@ -1,12 +1,13 @@
 "use client";
 
-// [목적] 공시 피드 페이지(D15/m23) — 전체 공시를 필터·날짜 그룹으로 탐색
+// [목적] 공시 피드 페이지(D15/m23) — 전체 공시를 필터·날짜 그룹으로 탐색, 페이지 누적 "더 보기"
 // [이유] 대시보드는 보유 종목 공시만 표시. 이 페이지는 전체 공시 탐색 + 감성 필터 제공
-// [사이드 임팩트] useDisclosures 쿼리를 sentiment·scope 파라미터로 제어. TierGate는 Pro 미달 시 3개월 이력 차단
+// [사이드 임팩트] useDisclosures 쿼리를 sentiment·scope·page 파라미터로 제어. TierGate는 Pro 미달 시 3개월 이력 차단
 // [수정 시 고려사항] 날짜 그룹(오늘·어제·이번주)은 클라이언트에서 rcept_dt 파싱.
-//   무한 스크롤은 useInfiniteQuery로 교체 예정(현재 페이지 기반). 필터 상태는 URL searchParams로 관리 권장
+//   R4 hasMore 가드: content.length < SIZE → 서버 데이터 고갈 → "더 보기" 숨김. R3(BE JOIN) 완료 후에도 유지 가능.
+//   필터 상태는 URL searchParams로 관리 권장(현재 로컬 state).
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDisclosures, type Sentiment, type Disclosure } from "@/lib/api/disclosures";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
@@ -35,18 +36,46 @@ function groupByDate(disclosures: Disclosure[]) {
   return groups;
 }
 
+const PAGE_SIZE = 30;
+
 export default function DisclosuresFeedPage() {
   const { user } = useAuthStore();
   const [filter, setFilter] = useState<FilterType>("ALL");
   const isPro = user?.tier === "PRO" || user?.tier === "PREMIUM";
 
-  const { data, isLoading, isError } = useDisclosures({
+  // R4: 페이지 누적 상태 — 필터 변경 시 리셋
+  const [page, setPage] = useState(0);
+  const [allItems, setAllItems] = useState<Disclosure[]>([]);
+  const filterRef = useRef(filter);
+
+  const { data, isLoading, isError, isFetching } = useDisclosures({
     scope: "portfolio",
     sentiment: filter === "ALL" ? undefined : filter,
-    size: 30,
+    size: PAGE_SIZE,
+    page,
   });
 
-  const disclosures = data?.content ?? [];
+  // 필터 변경 시 페이지·누적 데이터 리셋
+  useEffect(() => {
+    if (filterRef.current !== filter) {
+      filterRef.current = filter;
+      setPage(0);
+      setAllItems([]);
+    }
+  }, [filter]);
+
+  // 새 페이지 데이터 누적 — data + page를 모두 의존성으로 선언해 stale closure 방지
+  // (filter 변경 시 setPage(0) 큐가 커밋되기 전에 data effect가 실행되는 race condition 차단)
+  useEffect(() => {
+    if (data?.content) {
+      setAllItems(prev => page === 0 ? data.content : [...prev, ...data.content]);
+    }
+  }, [data, page]);
+
+  // R4: content.length < PAGE_SIZE → 마지막 페이지 감지. isFetching과 분리해 버튼 가시성 유지
+  const canLoadMore = (data?.content.length ?? 0) >= PAGE_SIZE;
+
+  const disclosures = allItems;
   const groups = groupByDate(disclosures);
 
   return (
@@ -128,6 +157,21 @@ export default function DisclosuresFeedPage() {
           </ul>
         </section>
       ))}
+
+      {/* R4: content.length >= PAGE_SIZE 일 때만 "더 보기" 표시 — isFetching 중에는 disabled로 유지(소실 방지) */}
+      {canLoadMore && (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={() => setPage(p => p + 1)}
+            disabled={isFetching}
+            className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            aria-label="공시 더 보기"
+          >
+            {isFetching ? "불러오는 중..." : "더 보기"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

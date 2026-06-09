@@ -11,6 +11,32 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | fe-correctness-investor-protection — Wave 1~4 전체 구현
+
+**Spec**: `docs/specs/Approved/fe-correctness-investor-protection.md` (R1·R3~R7 구현 완료)
+
+### 완료
+- **R1 (sentiment 가드)**: `analysis ? (analysis.sentiment ?? disclosure.sentiment) : undefined` — analysis null 시 룰 기반 sentiment 노출 차단. "분析 대기 중" 배지(`role="status"`) 추가. 자본시장법 §11.1 준수
+- **R3 (BE 페이지네이션 정합)**: `DisclosureRepository` native query 2종(`findFilteredByStocksWithSentiment`, `findAllFilteredWithSentiment`) 추가 — LEFT JOIN analysis_results. `DisclosureQueryService` 메모리 필터 제거. sentiment 지정 시 DB JOIN, null 시 JPQL fallback 유지
+- **R4 (FE hasMore 가드)**: `disclosures/page.tsx` 페이지 누적(`filterRef` 패턴) + `canLoadMore = content.length >= PAGE_SIZE` 가드. "더 보기" 버튼 추가
+- **R5 (email optional)**: `signup/terms` `useEffect` redirect + `email?.split` optional chaining
+- **R6 (atLimit isLoading)**: `portfolios` `atLimit = isLoading || (!isPro && count >= FREE_LIMIT)`
+- **R7 (analysis enabled)**: `useDisclosureAnalysis(id, { enabled: !!disclosure })` + 404 retry 차단
+- **코드 리뷰 후속 수정**: pagination race condition(data+page 의존성), JPQL fallback(performance), canLoadMore 분리(버튼 UX)
+
+### 결정
+- **R2는 이미 구현됨**: `isWithheld` 로직 + 판단 보류 UI가 이전 wave에서 이미 존재 — skip
+- **BE JPQL fallback 유지**: sentimentFilter=null(일반 피드 조회, 빈번한 path)은 LEFT JOIN 없는 JPQL 경로 유지. JOIN은 sentiment 지정 시에만 — 성능·dead code 두 문제 동시 해소
+- **native query 선택**: Disclosure ↔ AnalysisResult JPA 매핑 없어 JPQL JOIN 불가 → `@Query(nativeQuery=true)` 사용. countQuery 별도 작성으로 Spring Data JPA pagination 정확도 확보
+- **"분析 대기 중" 배지**: analysis 404(미완료)는 정상 상태로 처리. retry=false로 즉시 배지 표시(UX 개선)
+
+### 다음 작업 (미완료)
+- `fe-correctness-investor-protection` Spec → Done 전환 (`/dc-spec-move`)
+- `architecture-refactoring-cleanup` — DTO 패키지, Tier enum, FE 중복 제거
+- BE native query 테스트 추가 (코드 리뷰 Low 지적)
+
+---
+
 ## 2026-06-10 | fe-auth-token-refresh-flow-rewrite R10 — Playwright E2E 테스트
 
 **Spec**: `docs/specs/Approved/fe-auth-token-refresh-flow-rewrite.md` (R10 완료 → Spec 전체 완료)

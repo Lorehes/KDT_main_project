@@ -1,12 +1,12 @@
 "use client";
 
-// [목적] 공시 상세 페이지(D3/m04·D17/m17·D18/m20) — Free·Pro·Premium 단계별 분석 + 피드백
+// [목적] 공시 상세 페이지(D3/m04·D17/m17·D18/m20) — Free·Pro·Premium 단계별 분析 + 피드백
 // [이유] 티어별 정보 노출: Free(판정+요약), Pro(유사사례+주가반응), Premium(재무+업황). 티어 미달 시 TierGate
-// [사이드 임팩트] useDisclosure·useDisclosureAnalysis 두 쿼리 병렬 실행.
-//   분석 응답의 disclaimer·report_inaccuracy_path는 항상 DisclaimerNotice·FeedbackPrompt에 전달
+// [사이드 임팩트] disclosure 로드 완료 후 analysis 쿼리 활성(R7) — 직렬화로 미스매치 방지.
+//   analysis null → disclosure.sentiment 폴백 대신 "분析 대기 중" 배지(R1, 자본시장법 §11.1).
 // [수정 시 고려사항] 원문 인용 필드(corp_name·report_nm·수치)는 LLM 변형 없이 그대로 렌더(CLAUDE.md §4).
 //   is_withheld=true 또는 confidence<0.5 시 SentimentBadge를 WITHHELD로 표시(투자자 보호 의무).
-//   Premium financial_context는 현재 JSON 원시 출력 — W7에서 구조화된 테이블 UI로 교체 예정
+//   Premium financial_context는 현재 JSON 원시 출력 — 구조화된 테이블 UI로 교체 예정
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -26,7 +26,8 @@ export default function DisclosureDetailPage() {
   const { user } = useAuthStore();
 
   const { data: disclosure, isLoading: discLoading } = useDisclosure(id);
-  const { data: analysis, isLoading: analysisLoading } = useDisclosureAnalysis(id);
+  // R7: disclosure 로드 완료 후 분석 쿼리 활성 — 미스매치 데이터 렌더 방지
+  const { data: analysis, isLoading: analysisLoading } = useDisclosureAnalysis(id, { enabled: !!disclosure });
 
   const isPro     = user?.tier === "PRO" || user?.tier === "PREMIUM";
   const isPremium = user?.tier === "PREMIUM";
@@ -48,10 +49,12 @@ export default function DisclosureDetailPage() {
     );
   }
 
-  // is_withheld=true 또는 confidence<0.5 양쪽 조건 모두 WITHHELD 처리 (투자자 보호 — CLAUDE.md §6-6)
+  // is_withheld=true 또는 confidence<0.5 → WITHHELD (투자자 보호 — CLAUDE.md §6-6)
   const isWithheld = (analysis?.is_withheld ?? false) ||
     (analysis?.confidence !== undefined && analysis.confidence < 0.5);
-  const sentiment  = analysis?.sentiment ?? disclosure.sentiment;
+  // R1: analysis 미완료 시 disclosure.sentiment(룰 기반) 노출 금지 — 자본시장법 §11.1
+  // analysis가 존재할 때만 폴백 허용. null이면 undefined → SentimentBadge 미표시
+  const sentiment = analysis ? (analysis.sentiment ?? disclosure.sentiment) : undefined;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -77,7 +80,19 @@ export default function DisclosureDetailPage() {
                   접수일 {disclosure.rcept_dt}
                 </time>
               </div>
-              {sentiment && <SentimentBadge sentiment={sentiment} isWithheld={isWithheld} />}
+              {sentiment
+                ? <SentimentBadge sentiment={sentiment} isWithheld={isWithheld} />
+                : (
+                  // R1: analysis 미완료 → 룰 기반 sentiment 대신 "분析 대기 중" 명시 (자본시장법 §11.1)
+                  <span
+                    className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground"
+                    role="status"
+                    aria-label="AI 분석 대기 중"
+                  >
+                    분석 대기 중
+                  </span>
+                )
+              }
             </div>
 
             {analysis?.confidence !== undefined && (

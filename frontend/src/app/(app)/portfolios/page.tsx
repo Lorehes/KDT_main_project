@@ -2,9 +2,10 @@
 
 // [목적] 종목 관리 페이지(D12/m05·D12b/m05b) — 보유 종목 목록 + 검색 자동완성 + Free 쿼터 표시
 // [이유] 사용자가 등록한 종목을 한눈에 확인하고 추가·삭제하는 핵심 관리 화면
-// [사이드 임팩트] usePortfolios·useDeletePortfolio 쿼리. 삭제 후 ["portfolios"] 자동 무효화
+// [사이드 임팩트] usePortfolios·useDeletePortfolio 쿼리. 삭제 후 ["portfolios"] 자동 무효화.
 //   StockSearchCombobox → /portfolios/new?code= 로 이동 (선택 즉시 등록 상세 페이지)
 // [수정 시 고려사항] Free 3종목 초과 시 422 BUSINESS_RULE_VIOLATION — UI에서 검색 비활성화.
+//   atLimit에 isLoading 포함(R6) — 로딩 중 count=0으로 오활성 방지. 로딩 완료 후 실제 count로 재평가.
 //   매수가·수량은 목록에 표시하되 console.log 절대 금지(금융 개인정보, CLAUDE.md §7)
 
 import { useRouter } from "next/navigation";
@@ -26,7 +27,8 @@ export default function PortfoliosPage() {
 
   const isPro = user?.tier === "PRO" || user?.tier === "PREMIUM";
   const count = portfolios?.length ?? 0;
-  const atLimit = !isPro && count >= FREE_LIMIT;
+  // R6: isLoading 중에는 count=0이므로 atLimit=false가 되어 추가 버튼 오활성 — isLoading 포함
+  const atLimit = isLoading || (!isPro && count >= FREE_LIMIT);
 
   const handleSelect = (stock: StockSearchResult) => {
     router.push(`/portfolios/new?code=${stock.stock_code}&name=${encodeURIComponent(stock.corp_name)}`);

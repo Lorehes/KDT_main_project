@@ -2,13 +2,14 @@
 
 // [목적] 약관 동의 화면(D7/m11, STEP 2/4) — 필수 4종 + 선택 1종 동의 수집 + 자본시장법 고지
 // [이유] DISCLAIMER(정보 제공 도구 동의)는 자본시장법 제6조·제17조 리스크 방어를 위한 필수 동의
-// [사이드 임팩트] 동의 수집 후 signupStore에 저장. POST /auth/signup API 호출은 terms 단계에서 수행
+// [사이드 임팩트] 동의 수집 후 signupStore에 저장. POST /auth/signup API 호출은 terms 단계에서 수행.
+//   email 미존재(페이지 새로고침 등) 시 useEffect redirect → /signup 첫 단계로 복귀(R5).
 // [수정 시 고려사항] 필수 동의 미완료 시 버튼 비활성화. 동의 시각은 BE created_at으로 로깅됨.
 //   BE SignupRequest는 flat boolean 구조(termsAgreed/privacyAgreed/disclaimerAgreed/marketingAgreed).
 //   api_spec의 consents 배열 구조와 다름 — BE 구현 우선. AGE는 로컬 UI 전용(API 미전송).
-//   nickname 미입력 시 email 앞부분을 기본값으로 사용(BE @NotBlank 충족)
+//   nickname 미입력 시 email?.split 앞부분을 기본값으로 사용(BE @NotBlank 충족 + R5 optional chaining)
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { OnboardingStepper } from "@/components/layout/OnboardingStepper";
@@ -33,6 +34,11 @@ export default function TermsPage() {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
 
+  // R5: store가 비어 있으면(페이지 새로고침 등) 가입 첫 단계로 redirect — email 없이 API 호출 시 TypeError 방지
+  useEffect(() => {
+    if (!email) router.replace("/signup");
+  }, [email, router]);
+
   const toggle = (key: string) => setChecked((p) => ({ ...p, [key]: !p[key] }));
   const toggleAll = () => {
     const allChecked = TERMS_ITEMS.every((t) => checked[t.key]);
@@ -50,7 +56,8 @@ export default function TermsPage() {
 
     // BE SignupRequest flat boolean 구조에 맞게 전송
     // nickname @NotBlank 충족 위해 미입력 시 email 앞부분 사용
-    const resolvedNickname = (nickname || "").trim() || email.split("@")[0] || "사용자";
+    // R5: email?.split — store 클리어 직후 redirect 전 짧은 순간 email이 없을 수 있어 optional chaining
+    const resolvedNickname = (nickname || "").trim() || email?.split("@")[0] || "사용자";
 
     try {
       await mutateAsync({
