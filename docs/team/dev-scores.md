@@ -31,6 +31,7 @@ updated: 2026-06-02
 | 2026-06-08 | Jin | d54f6ab | refactor(shared): Sentiment enum shared/enums 이관 [5/8 L] | Shared/Analysis/Notification/Infra | 5 | 8 | L | Sentiment enum shared/enums 이관 |
 | 2026-06-09 | Jin | 391d07d | feat(frontend): FE W1 레이아웃+컴포넌트 기반 구축 [5/8 L] | Frontend | 5 | 8 | L | FE W1 레이아웃·컴포넌트 기반 구축 |
 | 2026-06-09 | Jin | d055be0 | feat(frontend): FE W2 랜딩·요금제 페이지 [4/8 S] | Frontend | 4 | 8 | S | 랜딩 히어로+기능그리드·요금제 플랜카드 |
+| 2026-06-09 | Jin | 2243acf | feat(frontend): FE W3 온보딩 플로우 전체 [6/8 M] | Frontend | 6 | 8 | M | 로그인·가입·OTP·약관·휴대폰·프로필·완료 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -38,5 +39,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 2 | 3 | 18 | 8.1 | 7.5 |
+| Jin | 3 | 4 | 19 | 8.1 | 7.4 |
 <!-- SUMMARY:END -->

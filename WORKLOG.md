@@ -11,6 +11,27 @@ updated: 2026-06-09
 
 ---
 
+## 2026-06-09 | FE W3 — 온보딩 플로우 전체 (T11~T16)
+
+**Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W3 완료)
+
+### 완료
+- **T11 로그인·가입(D5/m02)**: 카카오·구글 소셜 placeholder + 이메일/비밀번호 폼, AuthLayout 스플릿, 자본시장법 고지 상시 노출
+- **T12 이메일 인증(D6/m10)**: OTPInput 6칸 + 5분 타이머 + 재전송 UI
+- **T13 약관 동의(D7/m11)**: 전체/필수4/선택1 체크박스, AGE 로컬 처리, POST /auth/signup 호출
+- **T14 휴대폰 인증(D8/m12)**: 번호 입력 + SMS OTP + 카카오 채널 안내 + "나중에" 스킵
+- **T15 프로필 입력(D9/m13)**: 투자 경험 라디오 + 주 사용 시점 세그먼트, PATCH /users/me
+- **T16 가입 완료(D10/m14) + 빈 대시보드(D11/m15)**: 환영 메시지·체크리스트, 대시보드 empty state + 추천 종목 + 알림 설정 유도
+
+### 결정
+- **Zod v4 + @hookform/resolvers**: 타입 충돌 발생 → `zodResolver(schema as any)` 캐스팅. 런타임 정상 동작 확인. 추후 @hookform/resolvers 버전 업으로 해소 예정
+- **AGE 동의**: API ConsentType에 없으므로 로컬 체크박스만 처리(필수 완료 게이트). API 전송 제외
+
+### 미완료 (다음 Wave)
+- **W4** 대시보드 실데이터·공시 피드·공시 상세 구현 (현재 대시보드는 구조+empty state까지)
+
+---
+
 ## 2026-06-09 | FE W2 — 랜딩·요금제 페이지 (T9·T10)
 
 **Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W2 완료)
