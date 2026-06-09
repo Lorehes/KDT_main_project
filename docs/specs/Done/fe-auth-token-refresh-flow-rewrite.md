@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-10
 ---
 
 # FE 토큰 갱신 플로우 재설계 Spec
 
-> 상태: **Approved** (2026-06-10, dc-tech-review 승인)
+> 상태: **Done** (2026-06-10, R4~R10 전 요구사항 구현 + Playwright E2E 검증 완료)
 
 ## 배경 / 목적
 
