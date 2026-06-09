@@ -38,7 +38,7 @@ updated: 2026-06-02
 | 2026-06-09 | Jin | 0baafaa | feat(frontend): FE W7 결제·계정·공유 [5/8 S] | Frontend | 5 | 8 | S | Checkout mockup·마이페이지·공유카드·전체완료 |
 | 2026-06-10 | Jin | ecfc2d9 | fix(disclosure): BE P0 블로킹 버그 6건 픽스+테스트21건 [8/9 L] | Disclosure/Analysis/User | 8 | 9 | L | BE P0 버그 6건 픽스+테스트21건 |
 | 2026-06-10 | Jin | 32ef4f7 | fix(security): 보안강화MVP P0~P1 14건+FE-BE정합미커밋 [9/9 L] | Shared/Analysis/Disclosure/Frontend | 9 | 9 | L | 보안강화MVP P0~P1 14건+FE-BE정합미커밋 |
-| 2026-06-10 | Jin | cc2f54a | feat(frontend): FE 토큰갱신 Promise큐+BroadcastChannel 다중탭동기화 [8/9 L] | Frontend | 8 | 9 | L | FE 토큰갱신 Promise큐+다중탭동기화 |
+| 2026-06-10 | Jin | 6ea3332 | feat(frontend): FE 토큰갱신 Promise큐+BroadcastChannel 다중탭동기화 [8/9 L] | Frontend | 8 | 9 | L | FE 토큰갱신 Promise큐+다중탭동기화 |
 <!-- SCORES -->
 
 ## 기간별 집계
