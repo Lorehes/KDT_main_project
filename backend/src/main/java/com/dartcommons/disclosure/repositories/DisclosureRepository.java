@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /*
  * [목적] disclosures 테이블 CRUD + rcept_no 멱등 체크 + 사용자 공시 피드 조회를 제공하는 JPA 리포지토리.
@@ -28,6 +29,13 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
 
     /** rcept_no가 이미 존재하는지 확인. 중복 발송 방어 1차 게이트(CLAUDE.md §4). */
     boolean existsByRceptNo(String rceptNo);
+
+    /**
+     * 공시 id → stock_code 단일 컬럼 조회. 포트폴리오 소유권 검증에서 전체 엔티티 로드를 피하기 위해 사용.
+     * 비상장 공시(stock_code IS NULL)는 Optional.of(null) 또는 Optional.empty() — 호출자에서 null 체크 필수.
+     */
+    @Query("SELECT d.stockCode FROM Disclosure d WHERE d.id = :id")
+    Optional<String> findStockCodeById(@Param("id") Long id);
 
     /**
      * 포트폴리오 종목 필터 조회 (scope=portfolio).

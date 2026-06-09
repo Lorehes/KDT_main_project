@@ -139,21 +139,33 @@ class DisclosureControllerTest {
     }
 
     @Test
-    @DisplayName("scope=all — 포트폴리오 무관하게 전체 공시 반환")
-    void list_scopeAll_returnsAllDisclosures() throws Exception {
-        String token = signupAndGetToken(uniqueEmail());
-        // 포트폴리오 등록 없이도 scope=all은 전체 반환
+    @DisplayName("scope=all FREE 티어 — 403 Forbidden (R4: Pro+ 전용)")
+    void list_scopeAll_freeTier_returns403() throws Exception {
+        String token = signupAndGetToken(uniqueEmail()); // FREE 티어
+        mockMvc.perform(get("/api/v1/disclosures")
+                        .header("Authorization", "Bearer " + token)
+                        .param("scope", "all"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("scope=all PRO 티어 — 전체 공시 반환 (R4: Pro+ 허용)")
+    void list_scopeAll_proTier_returnsAllDisclosures() throws Exception {
+        String email = uniqueEmail();
+        signupAndGetToken(email);
+        jdbc.update("UPDATE users SET tier = 'PRO' WHERE email = ?", email);
+        String proToken = loginAndGetToken(email);
+
         insertDisclosure(uniqueRceptNo(), "005930", "2025-06-02");
         insertDisclosure(uniqueRceptNo(), "000660", "2025-06-02");
 
         String resp = mockMvc.perform(get("/api/v1/disclosures")
-                        .header("Authorization", "Bearer " + token)
+                        .header("Authorization", "Bearer " + proToken)
                         .param("scope", "all"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         JsonNode content = objectMapper.readTree(resp).get("content");
-        // 두 종목 이상 포함
         assertThat(content.size()).isGreaterThanOrEqualTo(2);
     }
 
@@ -174,9 +186,13 @@ class DisclosureControllerTest {
     }
 
     @Test
-    @DisplayName("ORDER BY rcept_dt DESC — 최신 공시가 이전 공시보다 앞에 정렬")
+    @DisplayName("ORDER BY rcept_dt DESC — 최신 공시가 이전 공시보다 앞에 정렬 (PRO 티어 scope=all)")
     void list_scopeAll_orderByRceptDtDesc() throws Exception {
-        String token = signupAndGetToken(uniqueEmail());
+        String email = uniqueEmail();
+        signupAndGetToken(email);
+        jdbc.update("UPDATE users SET tier = 'PRO' WHERE email = ?", email);
+        String token = loginAndGetToken(email);
+
         insertDisclosure(uniqueRceptNo(), "005930", "2024-01-01"); // 오래된
         insertDisclosure(uniqueRceptNo(), "005930", "2025-12-31"); // 최신
 
@@ -200,6 +216,7 @@ class DisclosureControllerTest {
     @DisplayName("FREE 티어 분석 결과 — expected_reaction·rationale 미포함, disclaimer 포함")
     void analysis_freeTier_excludesProFields() throws Exception {
         String token = signupAndGetToken(uniqueEmail());
+        addPortfolio(token, "005930"); // R1: 포트폴리오 소유권 필요
         long disclosureId = insertDisclosure(uniqueRceptNo(), "005930", "2025-06-03");
         insertAnalysis(disclosureId);
 
@@ -225,7 +242,8 @@ class DisclosureControllerTest {
     @DisplayName("PRO 티어 분석 결과 — expected_reaction·rationale 포함, disclaimer 포함")
     void analysis_proTier_includesProFields() throws Exception {
         String email = uniqueEmail();
-        signupAndGetToken(email); // FREE로 가입
+        String freeToken = signupAndGetToken(email); // FREE로 가입
+        addPortfolio(freeToken, "005930"); // R1: 포트폴리오 소유권 필요 (티어 업그레이드 전에 등록)
         jdbc.update("UPDATE users SET tier = 'PRO' WHERE email = ?", email);
         String proToken = loginAndGetToken(email); // PRO JWT 재발급
 
@@ -245,11 +263,25 @@ class DisclosureControllerTest {
     }
 
     @Test
-    @DisplayName("분석 미완료 공시 — 404 반환")
+    @DisplayName("분석 미완료 공시 — 404 반환 (포트폴리오 소유는 있으나 분석 미완료)")
     void analysis_noResult_returns404() throws Exception {
         String token = signupAndGetToken(uniqueEmail());
+        addPortfolio(token, "005930"); // R1: 소유권 있음 → 분석 결과 없음으로 404
         long disclosureId = insertDisclosure(uniqueRceptNo(), "005930", "2025-06-05");
         // analysis_results 미삽입
+
+        mockMvc.perform(get("/api/v1/disclosures/" + disclosureId + "/analysis")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("포트폴리오 미소유 공시 분석 — 404 반환 (R1 IDOR 방어)")
+    void analysis_noPortfolioOwnership_returns404() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        // 포트폴리오에 005930 미등록 상태에서 005930 공시 분석 접근
+        long disclosureId = insertDisclosure(uniqueRceptNo(), "005930", "2025-06-06");
+        insertAnalysis(disclosureId);
 
         mockMvc.perform(get("/api/v1/disclosures/" + disclosureId + "/analysis")
                         .header("Authorization", "Bearer " + token))

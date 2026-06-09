@@ -21,7 +21,10 @@ import java.util.HexFormat;
  * [이유] jjwt-api 0.12.x 사용 — Spring Boot 3.x 호환, 단순 API.
  *       refresh token을 JWT로 만들지 않는 이유: 서버측 무효화(logout/rotation)가 필요하므로
  *       DB에 저장해야 함. SHA-256 해시만 저장해 DB 유출 시 원본 토큰 노출 방지.
- * [사이드 임팩트] JWT_SECRET 변경 시 기존 발급 access token 전부 무효화됨. 점진 교체 불가.
+ *       R14: JWT_SECRET은 Base64 인코딩 필수 — raw string보다 무작위성이 높고 JwtProperties 검증과 분리.
+ *       키 생성: `openssl rand -base64 32` (32 random bytes → 44-char Base64).
+ * [사이드 임팩트] R14 파괴적 변경: 기존 raw string JWT_SECRET은 Base64 디코딩 실패 → 부팅 즉시 실패.
+ *               JWT_SECRET 변경 시 기존 발급 access token 전부 무효화됨 — 사용자 재로그인 1회 필요.
  *               AuthService(Wave 2)가 이 컴포넌트에 의존 — 변경 시 AuthService 동반 확인.
  * [수정 시 고려사항] kid(key id) + 멀티 키 지원으로 무중단 key rotation 가능(현재 미구현).
  *                  토큰 블랙리스트(access token 즉시 무효화)가 필요하면 Redis TTL 저장 추가.
@@ -37,7 +40,19 @@ public class JwtTokenProvider {
     private final long      refreshTtlMs;
 
     public JwtTokenProvider(JwtProperties props) {
-        byte[] keyBytes = props.secret().getBytes(StandardCharsets.UTF_8);
+        // R14: Base64 디코딩 후 키 생성 — raw string 대비 무작위성 보장.
+        // 부팅 실패 조건: Base64 비정상 문자열(IllegalArgumentException) 또는 디코딩 길이 < 32 bytes.
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(props.secret());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be a valid Base64-encoded string. Generate with: openssl rand -base64 32", e);
+        }
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must decode to at least 32 bytes (256 bits). Use: openssl rand -base64 32");
+        }
         this.signingKey   = Keys.hmacShaKeyFor(keyBytes);
         this.accessTtlMs  = (long) props.accessTtlMinutes() * 60 * 1000;
         this.refreshTtlMs = (long) props.refreshTtlDays() * 24 * 60 * 60 * 1000;

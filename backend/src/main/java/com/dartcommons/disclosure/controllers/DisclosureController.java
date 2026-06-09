@@ -7,10 +7,15 @@ import com.dartcommons.disclosure.services.DisclosureQueryService;
 import com.dartcommons.shared.dto.PageResponse;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.user.entities.UserEntity;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Positive;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -26,6 +31,7 @@ import java.util.Comparator;
  */
 @RestController
 @RequestMapping("/api/v1/disclosures")
+@Validated
 public class DisclosureController {
 
     private final DisclosureQueryService disclosureQueryService;
@@ -41,29 +47,37 @@ public class DisclosureController {
     @GetMapping
     public PageResponse<DisclosureListItemResponse> list(
             @AuthenticationPrincipal Long userId,
+            Authentication authentication,
             @RequestParam(defaultValue = "portfolio") String scope,
             @RequestParam(required = false) String stock_code,
             @RequestParam(required = false) Sentiment sentiment,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") @Positive @Max(100) int size
     ) {
-        return disclosureQueryService.list(userId, scope, stock_code, sentiment, from, to, page, size);
+        UserEntity.Tier tier = extractTier(authentication);
+        return disclosureQueryService.list(userId, scope, stock_code, sentiment, from, to, page, size, tier);
     }
 
-    /** 공시 상세 — 기본 메타 + 분석 요약 포함. */
+    /** 공시 상세 — 기본 메타 + 분석 요약 포함. 인증만 필요 (DART 공개 데이터 정책). */
     @GetMapping("/{id}")
     public DisclosureListItemResponse detail(@PathVariable Long id) {
+        // 공시 상세는 DART 공개 데이터 — 인증(JWT) 조건만 적용, 포트폴리오 소유권 체크 없음
         return disclosureQueryService.detail(id);
     }
 
-    /** 공시 분석 결과 — 티어별 필드 차등. 분석 미완료 시 404. */
+    /** 공시 분석 결과 — 티어별 필드 차등. 분석 미완료 시 404. 포트폴리오 미소유 시 404(IDOR 방어). */
     @GetMapping("/{id}/analysis")
     public AnalysisResponse analysis(
             @PathVariable Long id,
+            @AuthenticationPrincipal Long userId,
             Authentication authentication
     ) {
+        // R1: 분석 결과는 유료 데이터 — portfolio 소유권 검증. 미소유 시 404(정보 누설 방지)
+        if (!disclosureQueryService.hasPortfolioAccess(userId, id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공시를 찾을 수 없습니다.");
+        }
         UserEntity.Tier tier = extractTier(authentication);
         return analysisQueryService.getByDisclosureId(id, tier);
     }

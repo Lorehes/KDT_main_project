@@ -52,12 +52,14 @@ spring:
   cache:
     type: caffeine
 
-# API 문서 (springdoc-openapi)
+# API 문서 (springdoc-openapi) — 운영 기본 비활성화(R7). 로컬 개발 시 application-local.yml에서 활성화.
 springdoc:
   api-docs:
     path: /v3/api-docs
+    enabled: ${SWAGGER_ENABLED:false}
   swagger-ui:
     path: /swagger-ui
+    enabled: ${SWAGGER_ENABLED:false}
 
 # 운영 모니터링 (Actuator) — 최소 노출
 management:

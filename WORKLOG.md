@@ -11,6 +11,41 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | security-hardening-mvp — 보안 강화 전체 Wave (+ FE-BE정합 미커밋 복원)
+
+**Spec**: `docs/specs/Approved/security-hardening-mvp.md` (Wave 1+2+3 완료)
+
+### 완료
+- **R1 (IDOR)**: `DisclosureController.analysis()`에 `hasPortfolioAccess()` 소유권 검증 + `list()`에 tier 추가
+- **R2 (Feedback IDOR)**: `FeedbackService.upsert()`에 `analysisId→disclosureId→stockCode→portfolio` 체인 검증
+- **R3 (rate-limit)**: Caffeine 30건/시간 rate-limit (userId 단위, 인스턴스 로컬)
+- **R4 (scope=all)**: Free 티어 scope=all 403 차단 (Pro+ 전용 BM 정책)
+- **R5 (CORS)**: `SecurityConfig.CorsConfigurationSource` 빈 + ALLOWED_ORIGINS 환경변수
+- **R6 (CSP)**: `next.config.ts` CSP 헤더 (connect-src API_URL, frame-ancestors none 등)
+- **R7 (Swagger)**: admin chain으로 이관 + application.yml 기본 비활성화
+- **R8 (OAuth)**: `auth.ts getOAuthUrl()` 도메인 화이트리스트 (kakao/google/naver)
+- **R9 (size cap)**: `@Max(100)` + Math.min 이중 방어
+- **R11 (JWT log)**: `JwtAuthenticationFilter` WARN 로그 (token 원본 미포함)
+- **R12 (reason)**: V16 마이그레이션 + `FeedbackEntity.update()` 2000자 가드
+- **R13 (TOCTOU)**: `tryInsertFeedback(REQUIRES_NEW)` 격리 — 충돌 트랜잭션만 롤백
+- **R14 (Base64)**: `JwtTokenProvider` Base64 디코딩 + `JwtProperties @Size(min=44)` + 테스트 secret 갱신
+- **리뷰 게이트 수정**: TOCTOU catch(PostgreSQL aborted tx) → REQUIRES_NEW로 수정, CORS origins trim 추가
+
+### 결정
+- **R1 disclosure detail 공개 정책**: `GET /disclosures/{id}` = DART 공개 데이터이므로 인증만 요구, 소유권 검증 없음. 분석 결과만 소유권 필요.
+- **scope=all BM**: Free = portfolio 3종목 한정. stockCode 단일 파라미터는 Pro+ 제한 적용 안 함(BM 차별화 대상 아님).
+- **FeedbackService rate-limit 인스턴스 로컬**: MVP 단계에서 Redis 불필요. 수평 확장 시 Redis로 교체.
+- **R14 파괴적 변경**: 기존 `JWT_SECRET` raw string → Base64 재생성 필요. `openssl rand -base64 32`
+- **FE-BE정합성 미커밋 소스**: AnalysisController, FeedbackService 등 FE-BE정합성수정 미커밋 BE 소스를 이 커밋에 포함 (be-api-blocking-bugs-fix 커밋 후 repo 컴파일 불가 상태 해소).
+
+### 다음 작업 (미완료)
+- `fe-auth-token-refresh-flow-rewrite` — Promise 큐 + httpOnly 쿠키 (P0)
+- `fe-correctness-investor-protection` — sentiment 노출 가드 (P1, 자본시장법)
+- `architecture-refactoring-cleanup` — DTO 패키지, Tier enum, FE 중복
+- FE 미커밋 변경사항 — `portfolios/`, `disclosures/`, `auth/` 페이지 및 Route Handler
+
+---
+
 ## 2026-06-10 | be-api-blocking-bugs-fix — BE P0 6건 일괄 픽스
 
 **Spec**: `docs/specs/Approved/be-api-blocking-bugs-fix.md` (단일 Wave 완료)
