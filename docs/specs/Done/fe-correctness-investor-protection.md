@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-10
 ---
 
 # FE 정확성 · 투자자 보호 보강 Spec
 
-> 상태: **Approved** (2026-06-10, dc-tech-review 승인 — R2 이미 구현, 4-wave 계획 확정)
+> 상태: **Done** (2026-06-10, R1·R3~R7 전체 구현 + 코드 리뷰 Medium 3건 수정 완료)
 
 ## 배경 / 목적
 

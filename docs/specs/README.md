@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-10 (fe-correctness-investor-protection Approved 전환)
+updated: 2026-06-10 (fe-correctness-investor-protection Done 전환)
 ---
 
 # Specs MOC
@@ -39,7 +39,6 @@ docs/specs/
 ### Approved
 - [[be-api-blocking-bugs-fix]] — BE API 블로킹 버그 일괄 픽스: JPQL/DTO/Tier 6건 P0
 - [[security-hardening-mvp]] — 보안 강화 MVP: IDOR·CORS·CSP·Swagger·JWT 감사로그·Feedback 길이/TOCTOU
-- [[fe-correctness-investor-protection]] — FE 정확성·투자자 보호: sentiment 노출 가드·페이지네이션 정합·런타임 에러 차단 (4-wave)
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1
@@ -51,6 +50,7 @@ docs/specs/
 - [[sentiment-to-shared]] — Sentiment enum shared/enums 이관 (단일 Wave 완료)
 - [[frontend-full-ui-implementation]] — 프론트엔드 전체 UI: 7 Zone·29카드·W1~W7 완료 (2026-06-09)
 - [[fe-auth-token-refresh-flow-rewrite]] — FE 토큰 갱신 흐름 재설계: Promise 큐 + httpOnly + BroadcastChannel + Playwright E2E (2026-06-10)
+- [[fe-correctness-investor-protection]] — FE 정확성·투자자 보호: R1 sentiment 가드·R3 BE JOIN·R4~R7 런타임에러 (2026-06-10)
 
 ## 작업 흐름
 
