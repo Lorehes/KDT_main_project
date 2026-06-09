@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-10 (fe-correctness-investor-protection Done 전환)
+updated: 2026-06-10 (architecture-refactoring-cleanup Approved 전환)
 ---
 
 # Specs MOC
@@ -31,7 +31,6 @@ docs/specs/
 
 **2026-06-09 코드 리뷰 후속 (수동 분석 + dc-review-code 종합 — 56개 이슈를 8개 Spec 으로 분리)**
 
-- [[architecture-refactoring-cleanup]] — 아키텍처/유지보수성 정리: DTO 패키지·Tier enum·cross-domain 의존·FE 중복 제거
 - [[performance-caching-staletime]] — 성능/캐싱: Caffeine portfolios/analysis + TanStack staleTime + size 제한 + 복합 인덱스
 - [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + TopBar 검색 결정
@@ -39,6 +38,7 @@ docs/specs/
 ### Approved
 - [[be-api-blocking-bugs-fix]] — BE API 블로킹 버그 일괄 픽스: JPQL/DTO/Tier 6건 P0
 - [[security-hardening-mvp]] — 보안 강화 MVP: IDOR·CORS·CSP·Swagger·JWT 감사로그·Feedback 길이/TOCTOU
+- [[architecture-refactoring-cleanup]] — 아키텍처·유지보수성 정리: DTO 패키지·Tier enum·cross-domain·FE 중복 (4-wave)
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1
