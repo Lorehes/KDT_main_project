@@ -1,0 +1,78 @@
+// [목적] 호재·악재·중립·판단보류 배지 — 색+아이콘+텍스트 3중 표기
+// [이유] WCAG 2.1 AA 준수 + 색맹 배려. 색상만으로 의미 전달 금지(CLAUDE.md §6-5, design_structure §2.2)
+// [사이드 임팩트] DisclosureCard·공시 상세 등 모든 감성 표기 화면에서 사용. 토큰 변경 시 전체 반영
+// [수정 시 고려사항] 한국 증시 관행: 호재(상승)=빨강, 악재(하락)=파랑. 서구 관행 반대.
+//   판단보류(is_withheld)는 amber 계열로 별도 토큰 사용
+
+import { TrendingUp, TrendingDown, Minus, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Sentiment } from "@/lib/api/disclosures";
+
+type SentimentVariant = Sentiment | "WITHHELD";
+
+const CONFIG: Record<
+  SentimentVariant,
+  { label: string; Icon: React.ElementType; className: string; ariaLabel: string }
+> = {
+  POSITIVE: {
+    label: "호재",
+    Icon: TrendingUp,
+    className:
+      "bg-[color:var(--color-sentiment-positive)] text-[color:var(--color-sentiment-positive-foreground)]",
+    ariaLabel: "호재 — 주가 상승 가능성",
+  },
+  NEGATIVE: {
+    label: "악재",
+    Icon: TrendingDown,
+    className:
+      "bg-[color:var(--color-sentiment-negative)] text-[color:var(--color-sentiment-negative-foreground)]",
+    ariaLabel: "악재 — 주가 하락 가능성",
+  },
+  NEUTRAL: {
+    label: "중립",
+    Icon: Minus,
+    className:
+      "bg-[color:var(--color-sentiment-neutral)] text-[color:var(--color-sentiment-neutral-foreground)]",
+    ariaLabel: "중립 — 주가 영향 미미",
+  },
+  WITHHELD: {
+    label: "판단 보류",
+    Icon: AlertCircle,
+    className:
+      "bg-[color:var(--color-sentiment-withheld)] text-[color:var(--color-sentiment-withheld-foreground)]",
+    ariaLabel: "판단 보류 — AI 신뢰도 낮음",
+  },
+};
+
+interface SentimentBadgeProps {
+  sentiment: Sentiment;
+  isWithheld?: boolean;
+  size?: "sm" | "md";
+  className?: string;
+}
+
+export function SentimentBadge({
+  sentiment,
+  isWithheld = false,
+  size = "md",
+  className,
+}: SentimentBadgeProps) {
+  const variant: SentimentVariant = isWithheld ? "WITHHELD" : sentiment;
+  const { label, Icon, className: colorClass, ariaLabel } = CONFIG[variant];
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-badge)] font-extrabold tracking-tight",
+        size === "sm" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs",
+        colorClass,
+        className,
+      )}
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <Icon className={size === "sm" ? "size-3" : "size-3.5"} aria-hidden />
+      {label}
+    </span>
+  );
+}

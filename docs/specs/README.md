@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-08
+updated: 2026-06-09
 ---
 
 # Specs MOC
@@ -25,7 +25,7 @@ docs/specs/
 - [[sentiment-to-shared]] — Sentiment enum 이관: analysis 중첩 enum → shared/enums (cross-domain 해소)
 
 ### Approved
-*(없음 — 현재 구현 대기 Spec 없음)*
+- [[frontend-full-ui-implementation]] — 프론트엔드 전체 UI 구현: 7 Zone·26화면 웹/모바일 (Next.js 15 + TailwindCSS + shadcn/ui)
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1

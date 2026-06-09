@@ -2,12 +2,38 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-08
+updated: 2026-06-09
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-09 | FE W1 — 레이아웃 셸 + 공통 컴포넌트 기반 구축
+
+**Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W1 완료)
+
+### 완료
+- **T1** Pretendard(가변폰트, next/font/local) + IBM Plex Mono + globals.css 브랜드 토큰(navy·blue·sky·primary 오버라이드)
+- **T2** Route Groups `(public)/(auth)/(app)` + `middleware.ts` (dr_session httpOnly 쿠키 가드)
+- **T3** shadcn CLI 9종 UI 컴포넌트 추가 (input·badge·card·dialog·sheet·tabs·switch·progress·popover)
+- **T4** 레이아웃 9종: AppShell(웹/모바일 분기 md:)·Sidebar·TopBar·BottomTabBar·HamburgerDrawer·MobileAppBar·AuthLayout·PublicNavbar·BrandMark
+- **T5** 도메인 기반 4종: SentimentBadge(색+아이콘+텍스트 3중)·ConfidenceMeter·DisclaimerNotice·TierGate
+- **T6** 도메인 심화 3종: DisclosureCard(Progressive Disclosure)·OTPInput(자동포커스·붙여넣기)·FeedbackPrompt
+- **T7** 도메인 복합 4종: StockSearchCombobox·PlanCard·ProUpsellModal·PriceReactionChart(Recharts)
+- **T8** API 레이어: lib/api/5종(client·auth·disclosures·portfolios·notifications·stocks)·lib/stores/2종(auth·ui)·lib/schemas/3종
+
+### 결정 (코드에 드러나지 않는 사항)
+- **인증 전략**: NextAuth v5(beta) 대신 Zustand authStore + httpOnly cookie(dr_session). 이유: beta 안정성 우려, 백엔드 자체 JWT와 직접 연동이 더 단순
+- **asChild 미사용**: @base-ui/react Button이 `asChild` 미지원 → `buttonVariants()` 클래스를 Link에 직접 적용
+- **알림 읽음 처리**: 백엔드 `is_read` 컬럼 미존재 → W6에서 Zustand 로컬 상태 임시 처리 후 백엔드 추가 시 교체
+
+### 미완료 (다음 Wave)
+- **W2** 랜딩(D1/m01) + 요금제(D4/m07) 실제 페이지 구현
+- **W3** 온보딩 4단계 (가입·이메일인증·약관·휴대폰·프로필·완료)
+- **W4** 대시보드·공시 피드·공시 상세 (핵심 앱 화면)
 
 ---
 
