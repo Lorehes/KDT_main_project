@@ -11,6 +11,23 @@ updated: 2026-06-09
 
 ---
 
+## 2026-06-09 | FE W2 — 랜딩·요금제 페이지 (T9·T10)
+
+**Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W2 완료)
+
+### 완료
+- **T9 랜딩 (D1/m01)**: 히어로(네이비+카피+CTA) + 기능 4종 그리드 + CTA 배너 + 면책 고지 footer. LandingRedirect(로그인 세션 시 /dashboard 이동) 클라이언트 컴포넌트 분리
+- **T10 요금제 (D4/m07)**: PlanCard 3종(Free·Pro·Premium) + 현재 등급 바인딩(PricingClient) + B2B 섹션 + 면책 고지
+
+### 결정
+- **PricingClient 분리**: authStore(클라이언트 전용)를 page.tsx(서버 컴포넌트)에서 쓸 수 없어 별도 클라이언트 컴포넌트로 분리. metadata export 유지
+- **플랜 데이터 정적**: MVP는 하드코딩. W7에서 `/pricing/plans` API 연동 시 TanStack Query로 교체
+
+### 미완료 (다음 Wave)
+- **W3** 온보딩 4단계 — 로그인·가입·이메일인증·약관·휴대폰·프로필·완료
+
+---
+
 ## 2026-06-09 | FE W1 — 레이아웃 셸 + 공통 컴포넌트 기반 구축
 
 **Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W1 완료)
