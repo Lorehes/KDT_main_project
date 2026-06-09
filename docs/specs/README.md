@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-09
+updated: 2026-06-09 (post code-review 8 spec 추가)
 ---
 
 # Specs MOC
@@ -29,8 +29,18 @@ docs/specs/
 - [[notification-read-status]] — 알림 읽음 처리: is_read 컬럼 + PATCH API + TopBar 미읽음 카운트
 - [[frontend-share-card-image]] — 공유 카드 이미지: html2canvas PNG 다운로드·SNS 공유
 
+**2026-06-09 코드 리뷰 후속 (수동 분석 + dc-review-code 종합 — 56개 이슈를 8개 Spec 으로 분리)**
+
+- [[security-hardening-mvp]] — 보안 강화 MVP: IDOR·CORS·CSP·Swagger·JWT 감사로그·Feedback 길이/TOCTOU
+- [[fe-auth-token-refresh-flow-rewrite]] — FE 토큰 갱신 흐름 재설계: Promise 큐 + httpOnly Set-Cookie + BroadcastChannel
+- [[fe-correctness-investor-protection]] — FE 정확성·투자자 보호: sentiment 노출 가드·페이지네이션 정합·런타임 에러 차단
+- [[architecture-refactoring-cleanup]] — 아키텍처/유지보수성 정리: DTO 패키지·Tier enum·cross-domain 의존·FE 중복 제거
+- [[performance-caching-staletime]] — 성능/캐싱: Caffeine portfolios/analysis + TanStack staleTime + size 제한 + 복합 인덱스
+- [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans
+- [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + TopBar 검색 결정
+
 ### Approved
-*(없음)*
+- [[be-api-blocking-bugs-fix]] — BE API 블로킹 버그 일괄 픽스: JPQL/DTO/Tier 6건 P0
 
 ### Done
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1

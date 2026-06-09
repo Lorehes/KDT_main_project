@@ -23,6 +23,7 @@ import java.util.List;
  * [사이드 임팩트] StockRepository를 read-only로 직접 참조 — 마스터 도메인 예외(CLAUDE.md §3-2).
  *               portfolios.stock_code는 stocks.stock_code FK(DB RESTRICT) — 미등록 종목 저장 시 DB 에러.
  *               애플리케이션 계층에서 existsByStockCode()로 사전 검증해 DB 에러 대신 400 반환.
+ *               avgBuyPrice/quantity가 null이면 암호화 없이 null byte[] 저장 — avg_buy_price_enc/quantity_enc는 nullable(V3).
  * [수정 시 고려사항] Free→Pro 업그레이드 시 countByUserId() 재검사 불필요(이미 등록된 종목 유지).
  *                  동시 요청 경쟁 조건: @Transactional + DB UNIQUE(user_id, stock_code) 이중 방어.
  *                  avg_buy_price·quantity는 DB 정렬/집계 불가 — 손익계산은 복호화 후 앱 계층에서만.
@@ -72,8 +73,10 @@ public class PortfolioService {
         PortfolioEntity portfolio = PortfolioEntity.builder()
                 .userId(userId)
                 .stockCode(request.stockCode())
-                .avgBuyPriceEnc(encryptor.encrypt(request.avgBuyPrice().toPlainString()))
-                .quantityEnc(encryptor.encrypt(request.quantity().toPlainString()))
+                .avgBuyPriceEnc(request.avgBuyPrice() != null
+                        ? encryptor.encrypt(request.avgBuyPrice().toPlainString()) : null)
+                .quantityEnc(request.quantity() != null
+                        ? encryptor.encrypt(request.quantity().toPlainString()) : null)
                 .memo(request.memo())
                 .build();
         portfolioRepository.save(portfolio);
@@ -83,8 +86,10 @@ public class PortfolioService {
     public PortfolioResponse updatePortfolio(Long userId, Long portfolioId, PortfolioRequest request) {
         PortfolioEntity portfolio = findOwned(userId, portfolioId);
         portfolio.update(
-                encryptor.encrypt(request.avgBuyPrice().toPlainString()),
-                encryptor.encrypt(request.quantity().toPlainString()),
+                request.avgBuyPrice() != null
+                        ? encryptor.encrypt(request.avgBuyPrice().toPlainString()) : null,
+                request.quantity() != null
+                        ? encryptor.encrypt(request.quantity().toPlainString()) : null,
                 request.memo()
         );
         return toResponse(portfolio);

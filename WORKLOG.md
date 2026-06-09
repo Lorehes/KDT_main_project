@@ -2,12 +2,37 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-09
+updated: 2026-06-10
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-10 | be-api-blocking-bugs-fix — BE P0 6건 일괄 픽스
+
+**Spec**: `docs/specs/Approved/be-api-blocking-bugs-fix.md` (단일 Wave 완료)
+
+### 완료
+- **R1·R2**: `DisclosureRepository.findFiltered` → `findFilteredByStocks`/`findAllFiltered` 분리. Hibernate 6 Collection IS NULL 미지원 버그 해소. JPQL ORDER BY 명시, Pageable Sort 이중 적용 제거
+- **R3**: `DisclosureQueryService.list()` ids.isEmpty() 가드 추가 — Hibernate IN() SQL 오류 방지
+- **R4**: `PortfolioRequest.avgBuyPrice`/`quantity` `@NotNull` 제거 + `PortfolioService` null 암호화 분기 — FE optional 필드 수신
+- **R5**: `AnalysisResponse.from()` `premium ? null : null` dead code → `null // TODO Stage-5`
+- **R6**: `DisclosureController.extractTier()` `findFirst()` → `max(ordinal)` — PREMIUM > PRO > FREE 최고 티어 보장
+- **테스트 21건 추가**: DisclosureControllerTest(7) + AnalysisResponseTest(5) + PortfolioRequestValidationTest(9), 100/100 통과
+- **pre-existing 픽스**: `AuthIntegrationTest`/`PortfolioIntegrationTest` camelCase → snake_case JSON 정합
+
+### 결정
+- **extractTier 위치**: security-hardening-mvp Spec에서 `SecurityUtils.extractTier()`로 이관 예정 — 지금은 로직만 수정
+- **financial_context**: Stage 5 미구현 상태에서 모든 티어 null — `TODO Stage-5` 주석으로 수정 포인트 표시
+- **ids.isEmpty() 패턴**: Hibernate의 IN() 빈 배열 처리를 애플리케이션 레벨에서 차단 (DB dialect 의존 방지)
+
+### 다음 작업 (미완료)
+- `security-hardening-mvp` — IDOR·CORS·CSP·Swagger·JWT감사로그 (P0 4건)
+- `fe-auth-token-refresh-flow-rewrite` — race condition·httpOnly 쿠키·BroadcastChannel (P0 3건)
+- `fe-correctness-investor-protection` — sentiment 노출 가드·페이지네이션 정합 (P1)
 
 ---
 

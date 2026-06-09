@@ -78,10 +78,10 @@ class PortfolioIntegrationTest {
 
     private JsonNode createPortfolio(String token, String stockCode) throws Exception {
         ObjectNode body = objectMapper.createObjectNode()
-                .put("stockCode",   stockCode)
-                .put("avgBuyPrice", new BigDecimal("50000"))
-                .put("quantity",    new BigDecimal("10"))
-                .put("memo",        "테스트 메모");
+                .put("stock_code",    stockCode)
+                .put("avg_buy_price", new BigDecimal("50000"))
+                .put("quantity",      new BigDecimal("10"))
+                .put("memo",          "테스트 메모");
 
         String resp = mockMvc.perform(post("/api/v1/portfolios")
                         .header("Authorization", "Bearer " + token)
@@ -128,10 +128,10 @@ class PortfolioIntegrationTest {
         long id = createPortfolio(token, "005930").get("id").asLong();
 
         ObjectNode body = objectMapper.createObjectNode()
-                .put("stockCode",   "005930")
-                .put("avgBuyPrice", new BigDecimal("60000"))
-                .put("quantity",    new BigDecimal("5"))
-                .put("memo",        "수정 메모");
+                .put("stock_code",    "005930")
+                .put("avg_buy_price", new BigDecimal("60000"))
+                .put("quantity",      new BigDecimal("5"))
+                .put("memo",          "수정 메모");
 
         String resp = mockMvc.perform(put("/api/v1/portfolios/" + id)
                         .header("Authorization", "Bearer " + token)
@@ -171,9 +171,9 @@ class PortfolioIntegrationTest {
 
         // 4번째 → 422
         ObjectNode body = objectMapper.createObjectNode()
-                .put("stockCode",   "005380")
-                .put("avgBuyPrice", new BigDecimal("100000"))
-                .put("quantity",    new BigDecimal("1"));
+                .put("stock_code",    "005380")
+                .put("avg_buy_price", new BigDecimal("100000"))
+                .put("quantity",      new BigDecimal("1"));
 
         mockMvc.perform(post("/api/v1/portfolios")
                         .header("Authorization", "Bearer " + token)

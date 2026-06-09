@@ -145,7 +145,7 @@ class AuthIntegrationTest {
         JsonNode first = doSignup(uniqueEmail());
         String oldRefresh = first.get("refresh_token").asText();
 
-        ObjectNode body = objectMapper.createObjectNode().put("refreshToken", oldRefresh);
+        ObjectNode body = objectMapper.createObjectNode().put("refresh_token", oldRefresh);
 
         // 첫 번째 갱신 성공 → 새 refresh token 발급
         String resp = mockMvc.perform(post("/api/v1/auth/refresh")
@@ -170,7 +170,7 @@ class AuthIntegrationTest {
         JsonNode tokens = doSignup(uniqueEmail());
         String refresh = tokens.get("refresh_token").asText();
 
-        ObjectNode body = objectMapper.createObjectNode().put("refreshToken", refresh);
+        ObjectNode body = objectMapper.createObjectNode().put("refresh_token", refresh);
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)
