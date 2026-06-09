@@ -11,6 +11,25 @@ updated: 2026-06-09
 
 ---
 
+## 2026-06-09 | FE W4 — 공시 피드·공시 상세 (T17~T20)
+
+**Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W4 완료)
+
+### 완료
+- **T18 공시 피드(D15/m23)**: 감성 필터 칩(전체·호재·악재·중립) + 날짜 그룹(오늘·어제) + Pro TierGate(3개월 이력)
+- **T19 공시 상세 Free+Pro(D3/m04)**: 헤더(DART 원문 인용 그대로) + SentimentBadge + ConfidenceMeter + 3줄 요약 + 예상 방향 + PriceReactionChart TierGate
+- **T20 공시 상세 Premium(D17/m17) + 피드백(D18/m20)**: Premium TierGate + FeedbackPrompt + DisclaimerNotice 웹/모바일 모두 상시 노출
+
+### 결정
+- **면책 고지 이중 렌더**: 웹은 사이드바에, 모바일은 페이지 하단에 `DisclaimerNotice` 각각 배치(lg:hidden 분기). 모든 경우 노출 보장
+- **Premium financial_context**: 현재 JSON 원시 출력. W7에서 구조화 테이블로 교체 예정
+
+### 미완료 (다음 Wave)
+- **W5** 종목 관리 (등록·검색·상세)
+- **W6** 알림 설정·센터·모달
+
+---
+
 ## 2026-06-09 | FE W3 — 온보딩 플로우 전체 (T11~T16)
 
 **Spec**: `docs/specs/Approved/frontend-full-ui-implementation.md` (W3 완료)
