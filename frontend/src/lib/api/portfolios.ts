@@ -1,8 +1,9 @@
 // [목적] 포트폴리오(보유 종목) API 타입 + TanStack Query 훅
-// [이유] 종목 목록·등록·수정·삭제를 서버 상태로 관리
-// [사이드 임팩트] 종목 등록 후 ["portfolios"] 쿼리 무효화 필요
-// [수정 시 고려사항] avg_buy_price·quantity는 서버에서 AES-256 복호화 후 평문 반환.
-//   클라이언트 로그 출력 금지(console.log 사용 자제)
+// [이유] BE PortfolioController는 PUT /{id}로 수정(api_spec §2.2는 PATCH 명세이나 BE 구현이 PUT — FE 동기화).
+//   요청 body는 snake_case(stock_code, avg_buy_price) — BE PortfolioRequest @JsonProperty로 매핑됨.
+//   매수가·수량은 BE에서 AES-256 복호화 후 BigDecimal로 반환 — 클라이언트 로그 절대 금지
+// [사이드 임팩트] 생성·수정·삭제 모두 ["portfolios"] 쿼리 무효화로 자동 리페치
+// [수정 시 고려사항] BE PortfolioResponse에 corp_name 없음 — optional 처리. stocks JOIN 추가 후 non-optional 가능
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
@@ -10,12 +11,12 @@ import { apiClient } from "./client";
 export interface Portfolio {
   id: number;
   stock_code: string;
-  corp_name: string;
-  avg_buy_price: number;
-  quantity: number;
+  corp_name?: string;      // BE PortfolioResponse 미포함 — stocks JOIN 후 추가 예정
+  avg_buy_price?: number;  // BigDecimal → number (AES-256 복호화 후 반환)
+  quantity?: number;
   memo?: string;
-  notify_enabled: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface CreatePortfolioBody {
@@ -24,6 +25,8 @@ export interface CreatePortfolioBody {
   quantity?: number;
   memo?: string;
 }
+
+export type UpdatePortfolioBody = Omit<CreatePortfolioBody, "stock_code">;
 
 export function usePortfolios() {
   return useQuery({
@@ -37,6 +40,15 @@ export function useCreatePortfolio() {
   return useMutation({
     mutationFn: (body: CreatePortfolioBody) =>
       apiClient<Portfolio>("/portfolios", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolios"] }),
+  });
+}
+
+export function useUpdatePortfolio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: UpdatePortfolioBody }) =>
+      apiClient<Portfolio>(`/portfolios/${id}`, { method: "PUT", body: JSON.stringify(body) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolios"] }),
   });
 }

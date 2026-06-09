@@ -63,8 +63,10 @@ export function SentimentBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[var(--radius-badge)] font-extrabold tracking-tight",
+        "inline-flex items-center gap-1.5 rounded-full font-extrabold tracking-tight",
         size === "sm" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs",
+        // --radius-badge 토큰 정의 후 사용. 미정의 시 rounded-full 폴백
+
         colorClass,
         className,
       )}

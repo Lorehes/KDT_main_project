@@ -40,11 +40,11 @@ function NewPortfolioForm() {
   const onSubmit = async (data: FormValues) => {
     if (!stockCode) { router.push("/portfolios"); return; }
 
+    // notify_enabled는 BE PortfolioRequest 미지원 — 전송 제외. 알림은 계정 전역 설정으로 관리.
     const body = {
       stock_code: stockCode,
       avg_buy_price: data.avg_buy_price ? Number(data.avg_buy_price) : undefined,
       quantity: data.quantity ? Number(data.quantity) : undefined,
-      notify_enabled: data.notify_enabled,
     };
 
     // avg_buy_price·quantity는 절대 console.log 금지 — 금융 개인정보

@@ -32,7 +32,7 @@ export function TierGate({ requiredTier, children, className }: TierGateProps) {
         </div>
       )}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/90 p-6 text-center">
-        <div className="grid size-12 place-items-center rounded-[13px] bg-[color:var(--color-brand-navy)]">
+        <div className="grid size-12 place-items-center rounded-xl bg-[color:var(--color-brand-navy)]">
           <Lock className="size-5 text-white" aria-hidden />
         </div>
         <h4 className="text-base font-extrabold text-foreground">

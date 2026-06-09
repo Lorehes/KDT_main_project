@@ -13,18 +13,19 @@ import {
   Briefcase,
   Bell,
   CreditCard,
-  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "./BrandMark";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { buttonVariants } from "@/components/ui/button";
 
+// /portfolios/new는 NAV_ITEMS에서 제거 — /portfolios 내부 CTA로만 제공(IA 계층 정합)
+// /notifications(이력)을 최상위 메뉴에 추가 — design_structure §1 IA 기준
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
-  { href: "/disclosures", label: "공시 피드", icon: FileText, badge: null },
-  { href: "/portfolios", label: "내 포트폴리오", icon: Briefcase },
-  { href: "/portfolios/new", label: "종목 등록", icon: Plus },
+  { href: "/dashboard",    label: "대시보드",    icon: LayoutDashboard },
+  { href: "/disclosures",  label: "공시 피드",   icon: FileText },
+  { href: "/portfolios",   label: "내 포트폴리오", icon: Briefcase },
+  { href: "/notifications", label: "알림",       icon: Bell },
 ];
 
 const SETTING_ITEMS = [

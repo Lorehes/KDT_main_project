@@ -48,7 +48,9 @@ export default function DisclosureDetailPage() {
     );
   }
 
-  const isWithheld = analysis?.is_withheld ?? false;
+  // is_withheld=true 또는 confidence<0.5 양쪽 조건 모두 WITHHELD 처리 (투자자 보호 — CLAUDE.md §6-6)
+  const isWithheld = (analysis?.is_withheld ?? false) ||
+    (analysis?.confidence !== undefined && analysis.confidence < 0.5);
   const sentiment  = analysis?.sentiment ?? disclosure.sentiment;
 
   return (
@@ -185,7 +187,7 @@ export default function DisclosureDetailPage() {
           )}
 
           {/* 면책 고지 — 모든 분석 화면 상시 노출 필수 (CLAUDE.md §6-6) */}
-          <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path} />
+          <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? "mailto:support@dartcommons.kr"} />
 
           {analysis && (
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm text-xs text-muted-foreground">
@@ -199,9 +201,9 @@ export default function DisclosureDetailPage() {
         </aside>
       </div>
 
-      {/* 모바일 면책 고지 */}
+      {/* 모바일 면책 고지 — analysis 없어도 신고 경로 표시(CLAUDE.md §6-6 신고 경로 동반 의무) */}
       <div className="mt-6 lg:hidden">
-        <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path} />
+        <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? "mailto:support@dartcommons.kr"} />
       </div>
     </div>
   );

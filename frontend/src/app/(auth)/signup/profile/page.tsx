@@ -2,7 +2,8 @@
 
 // [목적] 프로필 입력 화면(D9/m13, STEP 4/4) — 투자 경험·주 사용 시점 입력. 모두 선택 사항
 // [이유] 개인화된 해석 톤·추천을 위한 데이터 수집. 미입력 시 기본값(INTERMEDIATE·REALTIME) 적용
-// [사이드 임팩트] PATCH /users/me 호출 후 /signup/complete로 이동. 실패해도 완료로 진행(선택 데이터)
+// [사이드 임팩트] BE UpdateMeRequest에 investment_experience·preferred_time 미지원 — API 호출 스킵, UX 수집 전용 화면.
+//   BE에 해당 필드 추가 후 handleSubmit 내 apiClient 호출 복원 필요
 // [수정 시 고려사항] 투자 경험은 공시 해석의 복잡도를 조정할 예정. 언제든 마이페이지에서 변경 가능
 
 import { useState } from "react";
@@ -11,7 +12,6 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 import { OnboardingStepper } from "@/components/layout/OnboardingStepper";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { apiClient } from "@/lib/api/client";
 
 const EXPERIENCE_OPTIONS = [
   { value: "BEGINNER",     label: "입문 (1년 미만)",  desc: "공시 용어부터 쉽게 풀어드려요" },
@@ -33,17 +33,10 @@ export default function ProfilePage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    try {
-      await apiClient("/users/me", {
-        method: "PATCH",
-        body: JSON.stringify({ investment_experience: experience, preferred_time: time }),
-      });
-    } catch {
-      // 선택 데이터 — 실패해도 완료로 진행
-    } finally {
-      setIsSubmitting(false);
-      router.push("/signup/complete");
-    }
+    // BE UpdateMeRequest에 investment_experience·preferred_time 미지원(nickname 단일 필드).
+    // 해당 BE 필드 추가 후 아래 apiClient 호출 복원. 현재는 UX 수집 전용으로 스킵.
+    setIsSubmitting(false);
+    router.push("/signup/complete");
   };
 
   return (

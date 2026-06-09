@@ -3,8 +3,10 @@
 // [목적] 약관 동의 화면(D7/m11, STEP 2/4) — 필수 4종 + 선택 1종 동의 수집 + 자본시장법 고지
 // [이유] DISCLAIMER(정보 제공 도구 동의)는 자본시장법 제6조·제17조 리스크 방어를 위한 필수 동의
 // [사이드 임팩트] 동의 수집 후 signupStore에 저장. POST /auth/signup API 호출은 terms 단계에서 수행
-// [수정 시 고려사항] 필수 동의 미완료 시 버튼 비활성화. 동의 시각·버전은 API 응답의 created_at으로 로깅됨.
-//   policy_version은 "v1.0" 하드코딩 — 정책 변경 시 버전 업 필요
+// [수정 시 고려사항] 필수 동의 미완료 시 버튼 비활성화. 동의 시각은 BE created_at으로 로깅됨.
+//   BE SignupRequest는 flat boolean 구조(termsAgreed/privacyAgreed/disclaimerAgreed/marketingAgreed).
+//   api_spec의 consents 배열 구조와 다름 — BE 구현 우선. AGE는 로컬 UI 전용(API 미전송).
+//   nickname 미입력 시 email 앞부분을 기본값으로 사용(BE @NotBlank 충족)
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,18 +17,14 @@ import { cn } from "@/lib/utils";
 import { useSignupStore } from "@/lib/stores/signupStore";
 import { useSignup } from "@/lib/api/auth";
 import { ApiException } from "@/lib/api/client";
-import type { ConsentType } from "@/lib/api/auth";
 
-// AGE는 API ConsentType에 포함되지 않으므로 로컬 전용 키로 관리. API 전송 시 제외
-const TERMS_ITEMS: { key: ConsentType | "AGE"; label: string; required: boolean; link?: string; apiExclude?: boolean }[] = [
-  { key: "TERMS",      label: "서비스 이용약관",                               required: true,  link: "#" },
-  { key: "PRIVACY",    label: "개인정보 수집·이용 동의",                         required: true,  link: "#" },
-  { key: "DISCLAIMER", label: "본 서비스는 투자 자문이 아닌 정보 제공 도구임에 동의\n(자본시장법 제6조·제17조)", required: true, link: "#" },
-  { key: "AGE",        label: "만 14세 이상입니다", required: true, apiExclude: true },
-  { key: "MARKETING",  label: "마케팅 정보 수신 (혜택·이벤트)", required: false },
+const TERMS_ITEMS: { key: string; label: string; required: boolean; link?: string; apiKey?: keyof { termsAgreed: boolean; privacyAgreed: boolean; disclaimerAgreed: boolean; marketingAgreed: boolean } }[] = [
+  { key: "TERMS",      label: "서비스 이용약관",                               required: true,  link: "#", apiKey: "termsAgreed" },
+  { key: "PRIVACY",    label: "개인정보 수집·이용 동의",                         required: true,  link: "#", apiKey: "privacyAgreed" },
+  { key: "DISCLAIMER", label: "본 서비스는 투자 자문이 아닌 정보 제공 도구임에 동의\n(자본시장법 제6조·제17조)", required: true, link: "#", apiKey: "disclaimerAgreed" },
+  { key: "AGE",        label: "만 14세 이상입니다", required: true },  // UI 전용 — API 미전송
+  { key: "MARKETING",  label: "마케팅 정보 수신 (혜택·이벤트)", required: false, apiKey: "marketingAgreed" },
 ];
-
-const POLICY_VERSION = "v1.0";
 
 export default function TermsPage() {
   const router = useRouter();
@@ -50,16 +48,20 @@ export default function TermsPage() {
     if (!requiredDone) return;
     setConsents(checked);
 
-    const consents = TERMS_ITEMS
-      .filter((t) => !t.apiExclude) // AGE는 API 미지원 — 제외
-      .map((t) => ({
-        consent_type: t.key as ConsentType,
-        agreed: !!checked[t.key],
-        policy_version: POLICY_VERSION,
-      }));
+    // BE SignupRequest flat boolean 구조에 맞게 전송
+    // nickname @NotBlank 충족 위해 미입력 시 email 앞부분 사용
+    const resolvedNickname = (nickname || "").trim() || email.split("@")[0] || "사용자";
 
     try {
-      await mutateAsync({ email, password, nickname: nickname || undefined, consents });
+      await mutateAsync({
+        email,
+        password,
+        nickname: resolvedNickname,
+        termsAgreed:       !!checked["TERMS"],
+        privacyAgreed:     !!checked["PRIVACY"],
+        disclaimerAgreed:  !!checked["DISCLAIMER"],
+        marketingAgreed:   !!checked["MARKETING"],
+      });
       router.push("/signup/phone");
     } catch (e) {
       const msg = e instanceof ApiException ? e.body.message : "가입에 실패했습니다. 다시 시도해주세요.";

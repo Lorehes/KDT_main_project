@@ -9,7 +9,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Bell, BellOff } from "lucide-react";
+import { Trash2, Bell } from "lucide-react";
 import { usePortfolios, useDeletePortfolio } from "@/lib/api/portfolios";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { StockSearchCombobox } from "@/components/domain/StockSearchCombobox";
@@ -100,34 +100,31 @@ export default function PortfoliosPage() {
                   <li key={p.id} className="flex items-center justify-between px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>
-                        {p.corp_name.slice(0, 2)}
+                        {(p.corp_name ?? p.stock_code).slice(0, 2)}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-foreground">{p.corp_name}</p>
+                        <p className="text-sm font-bold text-foreground">{p.corp_name ?? p.stock_code}</p>
                         <p className="font-mono text-xs text-muted-foreground">{p.stock_code}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* 알림 상태 아이콘 (읽기 전용 표시) */}
-                      {p.notify_enabled
-                        ? <Bell className="size-4 text-primary" aria-label="알림 켜짐" />
-                        : <BellOff className="size-4 text-muted-foreground" aria-label="알림 꺼짐" />
-                      }
+                      {/* 알림 아이콘 — BE notify_enabled 미지원(PortfolioResponse에 없음). 알림 설정은 계정 전역 설정으로 관리 */}
+                      <Bell className="size-4 text-primary" aria-label="알림 켜짐" />
                       <Link
-                        href={`/portfolios/new?code=${p.stock_code}&name=${encodeURIComponent(p.corp_name)}&edit=${p.id}`}
+                        href={`/portfolios/new?code=${p.stock_code}&name=${encodeURIComponent(p.corp_name ?? p.stock_code)}&edit=${p.id}`}
                         className={buttonVariants({ variant: "ghost", size: "sm" })}
-                        aria-label={`${p.corp_name} 수정`}
+                        aria-label={`${p.corp_name ?? p.stock_code} 수정`}
                       >
                         수정
                       </Link>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(p.id, p.corp_name)}
+                        onClick={() => handleDelete(p.id, p.corp_name ?? p.stock_code)}
                         disabled={isDeleting}
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`${p.corp_name} 삭제`}
+                        aria-label={`${p.corp_name ?? p.stock_code} 삭제`}
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </Button>
@@ -143,15 +140,16 @@ export default function PortfoliosPage() {
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="mb-4 text-sm font-extrabold text-foreground">이런 종목은 어때요?</p>
           <ul className="flex flex-col gap-3">
+            {/* 추천 종목 아이콘 배경은 bg-primary 단일 색으로 통일 (P2 토큰화 — CLAUDE.md §6-4) */}
             {[
-              { code: "005930", name: "삼성전자",  color: "#1428A0", abbr: "SE", market: "코스피" },
-              { code: "035420", name: "NAVER",     color: "#03C75A", abbr: "NV", market: "코스피" },
-              { code: "000660", name: "SK하이닉스", color: "#E2231A", abbr: "SK", market: "코스피" },
-              { code: "035720", name: "카카오",     color: "#FEE500", abbr: "KK", market: "코스피" },
-            ].map(({ code, name, color, abbr, market }) => (
+              { code: "005930", name: "삼성전자",  abbr: "SE", market: "코스피" },
+              { code: "035420", name: "NAVER",     abbr: "NV", market: "코스피" },
+              { code: "000660", name: "SK하이닉스", abbr: "SK", market: "코스피" },
+              { code: "035720", name: "카카오",     abbr: "KK", market: "코스피" },
+            ].map(({ code, name, abbr, market }) => (
               <li key={code} className="flex items-center justify-between rounded-xl border border-border bg-background px-3.5 py-2.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="grid size-8 place-items-center rounded-lg font-extrabold text-xs" style={{ background: color, color: color === "#FEE500" ? "#3C1E1E" : "#fff" }} aria-hidden>{abbr}</div>
+                  <div className="grid size-8 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>{abbr}</div>
                   <div>
                     <p className="text-sm font-bold text-foreground">{name}</p>
                     <p className="font-mono text-xs text-muted-foreground">{code} · {market}</p>

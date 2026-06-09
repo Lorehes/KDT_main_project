@@ -84,6 +84,8 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  /* 배지 라운드 토큰 — SentimentBadge 등에서 사용 */
+  --radius-badge: calc(var(--radius) * 0.6);
   /* 브랜드 원색: navy=#0F2A47 / blue=#1E6FE0 / sky=#4FA3F7 (design_structure §2) */
   --brand-navy: oklch(0.22 0.06 243);
   --brand-blue: oklch(0.50 0.20 249);

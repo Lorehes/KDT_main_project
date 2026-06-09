@@ -9,15 +9,16 @@ import java.time.OffsetDateTime;
  * [목적] GET /api/v1/users/me 응답 DTO — 사용자 프로필·알림 설정·BM 티어 정보.
  * [이유] UserEntity를 직접 직렬화하면 passwordHash·phoneNumberEnc·deletedAt 등 민감정보 노출 위험.
  *       응답 DTO를 별도로 두어 노출 필드를 명시적으로 통제.
- * [사이드 임팩트] 없음.
+ * [사이드 임팩트] FE AuthUser.tier_expires_at 표시에 사용. Free 구독은 null.
  * [수정 시 고려사항] phoneNumber(복호화 값) 노출이 필요하면 별도 엔드포인트로 분리(보안 리뷰 필수).
- *                  tier 만료(tierExpiresAt) 노출이 필요하면 필드 추가.
+ *                  phone_verified 필드 추가 시 phoneNumberEnc != null 여부로 판정.
  */
 public record UserMeResponse(
         Long id,
         String email,
         String nickname,
         String tier,
+        @JsonProperty("tier_expires_at")   OffsetDateTime tierExpiresAt,
         @JsonProperty("notify_channel")    String notifyChannel,
         @JsonProperty("notify_enabled")    boolean notifyEnabled,
         @JsonProperty("notify_frequency")  String notifyFrequency,
@@ -34,6 +35,7 @@ public record UserMeResponse(
                 u.getEmail(),
                 u.getNickname(),
                 u.getTier().name(),
+                u.getTierExpiresAt(),
                 u.getNotifyChannel().name(),
                 u.isNotifyEnabled(),
                 u.getNotifyFrequency().name(),

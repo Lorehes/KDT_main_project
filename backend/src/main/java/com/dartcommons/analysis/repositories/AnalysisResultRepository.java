@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,9 @@ public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, 
     Optional<AnalysisResult> findByDisclosureId(Long disclosureId);
 
     boolean existsByDisclosureId(Long disclosureId);
+
+    /** 공시 목록 응답 생성용 bulk 조회 — N+1 쿼리 방지. */
+    List<AnalysisResult> findByDisclosureIdIn(Collection<Long> disclosureIds);
 
     /**
      * 분석 결과 없는 공시 id 목록(disclosure_id 오름차순).

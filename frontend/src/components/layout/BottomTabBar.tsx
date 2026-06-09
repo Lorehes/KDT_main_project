@@ -1,20 +1,22 @@
 "use client";
 
-// [목적] 모바일 하단 탭바 — 대시보드·종목·알림·요금제 탭 네비게이션
-// [이유] 모바일(< md)에서 앱의 4개 핵심 섹션에 즉시 접근하는 표준 모바일 패턴
+// [목적] 모바일 하단 탭바 — 대시보드·공시·종목·알림 4개 핵심 탭 네비게이션
+// [이유] /disclosures(공시 피드)가 핵심 (USER) 섹션이므로 4번째 탭으로 추가.
+//   /pricing은 HamburgerDrawer로 이동 — 모바일에서 공시 피드 직접 접근이 더 중요
 // [사이드 임팩트] AppShell에서 md:hidden으로 제어됨. 웹에서는 숨겨짐
-// [수정 시 고려사항] 탭 항목은 4개 고정(디자인 명세). 5개 이상은 HamburgerDrawer로 이동
+// [수정 시 고려사항] 탭 항목은 4개 고정(디자인 명세). 5개 이상은 HamburgerDrawer로 이동.
+//   /pricing은 HamburgerDrawer MENU_ITEMS에 유지됨
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Briefcase, Bell, CreditCard } from "lucide-react";
+import { LayoutDashboard, Briefcase, Bell, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
-  { href: "/portfolios", label: "종목", icon: Briefcase },
-  { href: "/notifications", label: "알림", icon: Bell },
-  { href: "/pricing", label: "요금제", icon: CreditCard },
+  { href: "/dashboard",    label: "대시보드", icon: LayoutDashboard },
+  { href: "/disclosures",  label: "공시",     icon: FileText },
+  { href: "/portfolios",   label: "종목",     icon: Briefcase },
+  { href: "/notifications", label: "알림",    icon: Bell },
 ];
 
 export function BottomTabBar() {
