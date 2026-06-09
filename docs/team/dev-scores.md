@@ -39,6 +39,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | ecfc2d9 | fix(disclosure): BE P0 블로킹 버그 6건 픽스+테스트21건 [8/9 L] | Disclosure/Analysis/User | 8 | 9 | L | BE P0 버그 6건 픽스+테스트21건 |
 | 2026-06-10 | Jin | 32ef4f7 | fix(security): 보안강화MVP P0~P1 14건+FE-BE정합미커밋 [9/9 L] | Shared/Analysis/Disclosure/Frontend | 9 | 9 | L | 보안강화MVP P0~P1 14건+FE-BE정합미커밋 |
 | 2026-06-10 | Jin | 6ea3332 | feat(frontend): FE 토큰갱신 Promise큐+BroadcastChannel 다중탭동기화 [8/9 L] | Frontend | 8 | 9 | L | FE 토큰갱신 Promise큐+다중탭동기화 |
+| 2026-06-10 | Jin | 5238ded | test(frontend): R10 Playwright E2E 인증플로우 4건 [6/9 M] | Frontend | 6 | 9 | M | R10 E2E 인증플로우 4건 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -46,5 +47,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 3 | 11 | 26 | 8.4 | 7.5 |
+| Jin | 4 | 12 | 27 | 8.5 | 7.4 |
 <!-- SUMMARY:END -->

@@ -11,6 +11,31 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | fe-auth-token-refresh-flow-rewrite R10 — Playwright E2E 테스트
+
+**Spec**: `docs/specs/Approved/fe-auth-token-refresh-flow-rewrite.md` (R10 완료 → Spec 전체 완료)
+
+### 완료
+- **테스트 인프라 설치**: `@playwright/test 1.60.0` devDep 추가, `playwright.config.ts` 설정 (chromium, webServer 자동 기동, `test:e2e` 스크립트)
+- **(a) Promise 큐 검증**: `e2e/auth/token-refresh.spec.ts` — 5개 동시 401 → refresh 1회 + meCallCount=10 정량 검증
+- **(b) refresh 실패 redirect**: refresh 401 → LOGOUT_URL mock → `window.location.href='/login'` → `waitForURL('/login')` 검증
+- **(c) BroadcastChannel 동기화**: `browser.newContext()` 동일 컨텍스트 두 페이지, pageA evaluate로 이벤트 발행 → pageB waitForURL 검증
+- **(c-fallback) localStorage 폴백**: `addInitScript`로 BroadcastChannel 삭제 → storage event 경로 검증
+- **테스트 픽스처 페이지**: `src/app/test/concurrent-auth/page.tsx` — `mode=concurrent` 쿼리로 5개 병렬 apiClient 호출, `AuthBroadcastListener` 직접 포함(app group 밖), prod guard
+
+### 결정
+- **픽스처 페이지 위치**: `(app)` 그룹 밖 → AppShell API 호출 간섭 제거. `AuthBroadcastListener`를 직접 포함해 BroadcastChannel 구독 보장
+- **`mode=concurrent` 쿼리 파라미터**: 페이지 마운트 시 자동 API 호출을 옵트인으로 분리 — BroadcastChannel 전용 테스트(c/c-fallback)에서 의도치 않은 refresh 트리거 방지
+- **순차 실행(`fullyParallel: false`)**: 인증 상태 쿠키 공유 방지, 테스트 간 간섭 없음
+- **meCallCount=10 검증**: 초기 5건(401) + 재시도 5건(200) = 10. Promise 큐 동작의 정량적 증거
+
+### 다음 작업 (미완료)
+- `fe-correctness-investor-protection` — sentiment 노출 가드 (P1, 자본시장법)
+- `architecture-refactoring-cleanup` — DTO 패키지, Tier enum, FE 중복 제거
+- Spec `fe-auth-token-refresh-flow-rewrite` → Done 전환 (`/dc-spec-move`)
+
+---
+
 ## 2026-06-10 | fe-auth-token-refresh-flow-rewrite — Promise 큐 + BroadcastChannel 다중 탭 동기화
 
 **Spec**: `docs/specs/Approved/fe-auth-token-refresh-flow-rewrite.md` (R4~R9 완료)
