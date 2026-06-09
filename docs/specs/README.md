@@ -23,6 +23,11 @@ docs/specs/
 
 ### Draft
 - [[sentiment-to-shared]] — Sentiment enum 이관: analysis 중첩 enum → shared/enums (cross-domain 해소)
+- [[frontend-api-integration]] — FE 백엔드 API 실연동: 401 인터셉터·모든 훅 실데이터 연결
+- [[frontend-oauth-social]] — 소셜 OAuth 실연동: 카카오·구글 콜백 Route Handler 구현
+- [[payment-pg-integration]] — 결제 PG 연동: 카카오페이 정기결제·구독 관리·환불
+- [[notification-read-status]] — 알림 읽음 처리: is_read 컬럼 + PATCH API + TopBar 미읽음 카운트
+- [[frontend-share-card-image]] — 공유 카드 이미지: html2canvas PNG 다운로드·SNS 공유
 
 ### Approved
 *(없음)*
