@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-10 (architecture-refactoring-cleanup Done 전환)
+updated: 2026-06-10 (frontend-api-integration Done 전환)
 ---
 
 # Specs MOC
@@ -23,7 +23,6 @@ docs/specs/
 
 ### Draft
 - [[sentiment-to-shared]] — Sentiment enum 이관: analysis 중첩 enum → shared/enums (cross-domain 해소)
-- [[frontend-api-integration]] — FE 백엔드 API 실연동: 401 인터셉터·모든 훅 실데이터 연결
 - [[frontend-oauth-social]] — 소셜 OAuth 실연동: 카카오·구글 콜백 Route Handler 구현
 - [[payment-pg-integration]] — 결제 PG 연동: 카카오페이 정기결제·구독 관리·환불
 - [[notification-read-status]] — 알림 읽음 처리: is_read 컬럼 + PATCH API + TopBar 미읽음 카운트
@@ -52,6 +51,7 @@ docs/specs/
 - [[frontend-full-ui-implementation]] — 프론트엔드 전체 UI: 7 Zone·29카드·W1~W7 완료 (2026-06-09)
 - [[fe-auth-token-refresh-flow-rewrite]] — FE 토큰 갱신 흐름 재설계: Promise 큐 + httpOnly + BroadcastChannel + Playwright E2E (2026-06-10)
 - [[fe-correctness-investor-protection]] — FE 정확성·투자자 보호: R1 sentiment 가드·R3 BE JOIN·R4~R7 런타임에러 (2026-06-10)
+- [[frontend-api-integration]] — FE BE API 실연동: env prefix·fetchMe 부트스트랩·Sonner Toast (2026-06-10)
 
 ## 작업 흐름
 
