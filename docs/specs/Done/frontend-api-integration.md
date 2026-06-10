@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Done
 created: 2026-06-09
 updated: 2026-06-10
 ---
 
 # 프론트엔드 백엔드 API 실연동 Spec
 
-> 상태: **Draft** (2026-06-10 재진단 — dc-tech-review 페이지별 Read 완료)
+> 상태: **Done** (2026-06-10, dc-push 40d045f — R1·R9·R10 구현 완료)
 
 ## 배경 / 목적
 
