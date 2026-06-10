@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-10
 ---
 
 # 아키텍처 · 유지보수성 정리 Spec
 
-> 상태: **Approved** (2026-06-10, dc-tech-review 승인 — R10 skip·R3 범위 축소·R7 4파일·4-wave 계획 확정)
+> 상태: **Done** (2026-06-10, 구현 완료 — R1~R18 전체(R10 skip), 테스트 120건 통과)
 
 ## 배경 / 목적
 

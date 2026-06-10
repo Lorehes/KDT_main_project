@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-10 (security-hardening-mvp Done 전환)
+updated: 2026-06-10 (architecture-refactoring-cleanup Done 전환)
 ---
 
 # Specs MOC
@@ -36,9 +36,10 @@ docs/specs/
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + TopBar 검색 결정
 
 ### Approved
-- [[architecture-refactoring-cleanup]] — 아키텍처·유지보수성 정리: DTO 패키지·Tier enum·cross-domain·FE 중복 (4-wave)
+(없음 — 현재 모든 Approved Spec 구현 완료)
 
 ### Done
+- [[architecture-refactoring-cleanup]] — 아키텍처·유지보수성 정리: DTO 패키지·Tier enum·cross-domain·FE 중복 (2026-06-10)
 - [[be-api-blocking-bugs-fix]] — BE API 블로킹 버그 일괄 픽스: JPQL/DTO/Tier 6건 P0 + 테스트 23건 (2026-06-10)
 - [[security-hardening-mvp]] — 보안 강화 MVP: IDOR·CORS·CSP·Swagger·JWT·Feedback DoS — R1~R14 + 테스트 8건 (2026-06-10)
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1

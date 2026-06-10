@@ -11,6 +11,19 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | architecture-refactoring-cleanup — Spec Done 전환 (이미 구현 완료)
+
+**Spec**: `docs/specs/Done/architecture-refactoring-cleanup.md`
+
+모든 작업 카드(R1~R18, R10 skip)가 `7796f54`에서 이미 구현 완료됨을 확인.
+테스트 120건 통과. Spec Approved → Done 전환 + README MOC 갱신.
+
+### 결정
+- **Approved Spec 3개 모두 Done 전환 완료** — be-api-blocking-bugs-fix, security-hardening-mvp, architecture-refactoring-cleanup 모두 구현 완료 상태 확인. Approved 폴더 비어있음
+- **다음 우선순위**: Draft Spec 중 `frontend-api-integration`(FE-BE 실연동)이 MVP 데모에 직결 — 다음 세션 진입 권장
+
+---
+
 ## 2026-06-10 | security-hardening-mvp — 보안 테스트 8건 + Spec 2개 Done
 
 **Spec**: `docs/specs/Done/security-hardening-mvp.md`, `docs/specs/Done/be-api-blocking-bugs-fix.md`
