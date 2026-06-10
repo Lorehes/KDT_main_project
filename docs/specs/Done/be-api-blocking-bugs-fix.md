@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-10
 ---
 
 # BE API 블로킹 버그 일괄 픽스 Spec
 
-> 상태: **Approved** (2026-06-10, dc-tech-review 승인)
+> 상태: **Done** (2026-06-10, 구현 완료 — R1~R7 전체, 테스트 112건 통과)
 
 ## 배경 / 목적
 

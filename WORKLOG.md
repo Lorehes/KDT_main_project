@@ -11,6 +11,21 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | security-hardening-mvp — 보안 테스트 8건 + Spec 2개 Done
+
+**Spec**: `docs/specs/Done/security-hardening-mvp.md`, `docs/specs/Done/be-api-blocking-bugs-fix.md`
+
+**산출**:
+- `SecurityHardeningIntegrationTest` 신규 — CORS preflight(허용·비허용), size=99999→400, size=100 경계, JWT 위변조→401, JWT 없음→401, Swagger/OpenAPI docs 401 (8케이스)
+- `be-api-blocking-bugs-fix`, `security-hardening-mvp` Spec → Done 전환
+- 전체 테스트 112 → 120건 (실패 0)
+
+### 결정
+- **SecurityHardeningIntegrationTest를 별도 파일로 분리** — CORS/JWT/size 시나리오는 DisclosureControllerTest(기능)·AdminAuthIntegrationTest(admin) 어느 쪽에도 맞지 않음. security 패키지에 전용 파일을 두어 보안 회귀 게이트를 명확히 분리
+- **CORS 미허용 Origin 테스트는 `status()` 검증 없이 헤더 부재만 확인** — Spring Security가 미허용 CORS preflight를 403/200 중 어느 것으로 반환할지 구현에 따라 다름. `Access-Control-Allow-Origin` 헤더 부재만 검증하면 구현 변경에 강건
+
+---
+
 ## 2026-06-10 | architecture-refactoring-cleanup — 아키텍처 정리 + 도메인 경계 복구
 
 **Spec**: `docs/specs/Approved/architecture-refactoring-cleanup.md` (→ Done)

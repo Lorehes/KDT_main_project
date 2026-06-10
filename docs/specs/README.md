@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-10 (architecture-refactoring-cleanup Approved 전환)
+updated: 2026-06-10 (security-hardening-mvp Done 전환)
 ---
 
 # Specs MOC
@@ -36,11 +36,11 @@ docs/specs/
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + TopBar 검색 결정
 
 ### Approved
-- [[be-api-blocking-bugs-fix]] — BE API 블로킹 버그 일괄 픽스: JPQL/DTO/Tier 6건 P0
-- [[security-hardening-mvp]] — 보안 강화 MVP: IDOR·CORS·CSP·Swagger·JWT 감사로그·Feedback 길이/TOCTOU
 - [[architecture-refactoring-cleanup]] — 아키텍처·유지보수성 정리: DTO 패키지·Tier enum·cross-domain·FE 중복 (4-wave)
 
 ### Done
+- [[be-api-blocking-bugs-fix]] — BE API 블로킹 버그 일괄 픽스: JPQL/DTO/Tier 6건 P0 + 테스트 23건 (2026-06-10)
+- [[security-hardening-mvp]] — 보안 강화 MVP: IDOR·CORS·CSP·Swagger·JWT·Feedback DoS — R1~R14 + 테스트 8건 (2026-06-10)
 - [[disclosure-collection-pipeline]] — DART 공시 수집 파이프라인 Stage 1
 - [[stocks-master-seed]] — 종목 마스터 시드/동기화 (코스피200+코스닥150)
 - [[analysis-stage2-llm]] — LLM 분석 Stage 2

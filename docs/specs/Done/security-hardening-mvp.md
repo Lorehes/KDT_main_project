@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-10
 ---
 
 # 보안 강화 MVP Spec (CORS · IDOR · CSP · 감사로그)
 
-> 상태: **Approved** (2026-06-10, dc-tech-review 승인)
+> 상태: **Done** (2026-06-10, 구현 완료 — R1~R14 전체, 테스트 120건 통과)
 
 ## 배경 / 목적
 
