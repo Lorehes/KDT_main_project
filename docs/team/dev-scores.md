@@ -44,6 +44,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | 7796f54 | refactor(arch): 아키텍처정리+도메인경계복구+테스트9건 [5/9 L] | Shared/Disclosure/Analysis/User/Frontend | 5 | 9 | L | 아키텍처정리+도메인경계복구+테스트9건 |
 | 2026-06-10 | Jin | 0e163c8 | test(security): 보안테스트8건+Spec2개Done [6/8 S] | Shared/Docs | 6 | 8 | S | 보안테스트8건+Spec2개Done |
 | 2026-06-10 | Jin | 80d182e | chore(spec): 아키텍처정리Spec Done전환 [2/8 S] | Docs | 2 | 8 | S | 아키텍처정리Spec Done전환 |
+| 2026-06-10 | Jin | 96e47a0 | feat(frontend): API연동정합+인증부트스트랩+SonnerToast [6/7 M] | Frontend | 6 | 7 | M | API연동정합+인증부트스트랩+Toast |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -51,5 +52,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 8 | 24 | 31 | 8.2 | 6.9 |
+| Jin | 9 | 25 | 32 | 8.2 | 6.8 |
 <!-- SUMMARY:END -->

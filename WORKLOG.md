@@ -11,6 +11,30 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | frontend-api-integration — R1·R9·R10 구현 완료
+
+**Spec**: `docs/specs/Draft/frontend-api-integration.md`
+
+**R1 (P0)** `.env.local`·`.env.example` `NEXT_PUBLIC_API_URL`에 `/api/v1` suffix 추가.
+BE Controller가 `/api/v1/*`를 직접 매핑하는데 환경변수에 prefix 누락 → 환경변수 set 상태에서 모든 API 호출 404.
+
+**R9** `AuthBroadcastListener`에 `fetchMe()` useEffect 추가 — `/dashboard` 등 직접 진입·새로고침 시 user null 복원.
+`LandingRedirect`는 루트(`/`) 전용이라 `(app)` 그룹 직접 진입 커버 불가.
+
+**R10** sonner 2.0.7 설치, `providers.tsx` `<Toaster />` 마운트, `useUpdateNotificationSettings`·`useTestNotification`·`useUpdatePortfolio`·`useDeletePortfolio`에 `onError toast.error` 연결.
+`useCreatePortfolio`는 폼 에러(setError)로 처리 — onError 없음(중복 방지, 주석으로 문서화).
+
+### 결정
+- **fetchMe 위치**: `(app)/layout.tsx` 직접 전환 대신 기존 `AuthBroadcastListener`(이미 mounted, auth 전담)에 추가. 파일 신규 생성 없이 확장.
+- **Toast import in API layer**: 아키텍처 결합 트레이드오프 수용 — `[사이드 임팩트]` 주석에 문서화. MVP 범위.
+- **Zustand selector**: 리뷰 피드백 반영 — `useAuthStore()` → `useAuthStore(s => s.setUser)` 개별 selector로 교체.
+
+### 미완료
+- **frontend-api-integration Spec 상태**: 모든 R 완료했으나 Spec status 여전히 Draft. `/dc-spec-move frontend-api-integration Done` 처리 필요.
+- **Double fetchMe**: `LandingRedirect`(루트) + `AuthBroadcastListener`(앱 그룹 최초 진입) — 로그인 플로우에서 최대 2회 `/users/me` 호출. MVP 허용, 추후 authStore.initialized 가드 추가 고려.
+
+---
+
 ## 2026-06-10 | architecture-refactoring-cleanup — Spec Done 전환 (이미 구현 완료)
 
 **Spec**: `docs/specs/Done/architecture-refactoring-cleanup.md`
