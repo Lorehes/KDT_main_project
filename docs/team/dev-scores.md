@@ -46,7 +46,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | 80d182e | chore(spec): 아키텍처정리Spec Done전환 [2/8 S] | Docs | 2 | 8 | S | 아키텍처정리Spec Done전환 |
 | 2026-06-10 | Jin | 40d045f | feat(frontend): API연동정합+인증부트스트랩+SonnerToast [6/7 M] | Frontend | 6 | 7 | M | API연동정합+인증부트스트랩+Toast |
 | 2026-06-10 | Jin | a7b1cc1 | feat(user): MVP 가입OTP·동의·요금제API 완성 [7/8 L] | User/Infra/Frontend | 7 | 8 | L | MVP 가입OTP·동의·요금제API 완성 |
-| 2026-06-10 | Jin | 5a255d9 | test(user): Phone·동의·요금제 Wave4 통합테스트 19건 [6/8 M] | User | 6 | 8 | M | Phone·동의·요금제 통합테스트 |
+| 2026-06-10 | Jin | 24c663e | test(user): Phone·동의·요금제 Wave4 통합테스트 19건 [6/8 M] | User | 6 | 8 | M | Phone·동의·요금제 통합테스트 |
 <!-- SCORES -->
 
 ## 기간별 집계
