@@ -15,6 +15,7 @@ import { ArrowLeft, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCreatePortfolio } from "@/lib/api/portfolios";
 import { ApiException } from "@/lib/api/client";
+import { API_ERROR_CODES } from "@/lib/api/errorCodes";
 import { cn } from "@/lib/utils";
 
 interface FormValues {
@@ -54,9 +55,9 @@ function NewPortfolioForm() {
       router.push("/portfolios");
     } catch (e) {
       if (e instanceof ApiException) {
-        if (e.body.code === "BUSINESS_RULE_VIOLATION") {
+        if (e.body.code === API_ERROR_CODES.BUSINESS_RULE_VIOLATION) {
           setError("root", { message: "Free 플랜은 최대 3종목까지 등록 가능합니다. Pro로 업그레이드해주세요." });
-        } else if (e.body.code === "DUPLICATE_RESOURCE") {
+        } else if (e.body.code === API_ERROR_CODES.DUPLICATE_RESOURCE) {
           setError("root", { message: "이미 등록된 종목입니다." });
         } else {
           setError("root", { message: e.body.message ?? "등록에 실패했습니다." });

@@ -17,6 +17,8 @@ import {
 import { cn } from "@/lib/utils";
 import { BrandMark } from "./BrandMark";
 import { useAuthStore } from "@/lib/stores/authStore";
+import { useTierCheck } from "@/lib/hooks/useTierCheck";
+import { isActivePath } from "@/lib/utils/isActivePath";
 import { buttonVariants } from "@/components/ui/button";
 
 // /portfolios/new는 NAV_ITEMS에서 제거 — /portfolios 내부 CTA로만 제공(IA 계층 정합)
@@ -36,7 +38,7 @@ const SETTING_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuthStore();
-  const isPro = user?.tier === "PRO" || user?.tier === "PREMIUM";
+  const { isPro } = useTierCheck();
 
   return (
     <aside className="flex w-60 flex-col border-r border-border bg-background px-3.5 py-5">
@@ -54,7 +56,7 @@ export function Sidebar() {
             href={href}
             className={cn(
               "flex items-center gap-3 rounded-[11px] px-3 py-3 text-[14.5px] font-bold transition-colors",
-              pathname === href || (href !== "/dashboard" && pathname.startsWith(href))
+              isActivePath(pathname, href)
                 ? "bg-primary/10 text-primary"
                 : "text-foreground hover:bg-muted",
             )}

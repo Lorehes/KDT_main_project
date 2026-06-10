@@ -2,6 +2,8 @@ package com.dartcommons.user.repositories;
 
 import com.dartcommons.user.entities.PortfolioEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +18,10 @@ import java.util.Optional;
 public interface PortfolioRepository extends JpaRepository<PortfolioEntity, Long> {
 
     List<PortfolioEntity> findByUserId(Long userId);
+
+    /** 종목코드 목록 스칼라 프로젝션 — avg_buy_price_enc 등 암호화 컬럼 로드 없이 stock_code만 반환. */
+    @Query("SELECT p.stockCode FROM PortfolioEntity p WHERE p.userId = :userId")
+    List<String> findStockCodesByUserId(@Param("userId") Long userId);
 
     Optional<PortfolioEntity> findByIdAndUserId(Long id, Long userId);
 

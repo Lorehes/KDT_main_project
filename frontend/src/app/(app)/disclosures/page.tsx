@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useDisclosures, type Sentiment, type Disclosure } from "@/lib/api/disclosures";
-import { useAuthStore } from "@/lib/stores/authStore";
+import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
 import { TierGate } from "@/components/domain/TierGate";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
@@ -39,9 +39,8 @@ function groupByDate(disclosures: Disclosure[]) {
 const PAGE_SIZE = 30;
 
 export default function DisclosuresFeedPage() {
-  const { user } = useAuthStore();
+  const { isPro } = useTierCheck();
   const [filter, setFilter] = useState<FilterType>("ALL");
-  const isPro = user?.tier === "PRO" || user?.tier === "PREMIUM";
 
   // R4: 페이지 누적 상태 — 필터 변경 시 리셋
   const [page, setPage] = useState(0);

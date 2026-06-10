@@ -2,7 +2,7 @@ package com.dartcommons.analysis.services;
 
 import com.dartcommons.analysis.dto.AnalysisResponse;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
-import com.dartcommons.user.entities.UserEntity;
+import com.dartcommons.shared.enums.Tier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,17 +24,11 @@ public class AnalysisQueryService {
     private final AnalysisResultRepository analysisResultRepository;
 
     @Transactional(readOnly = true)
-    public AnalysisResponse getByDisclosureId(Long disclosureId, UserEntity.Tier tier) {
+    public AnalysisResponse getByDisclosureId(Long disclosureId, Tier tier) {
         var result = analysisResultRepository.findByDisclosureId(disclosureId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "아직 분석이 완료되지 않았습니다."));
 
-        AnalysisResponse.Tier responseTier = switch (tier) {
-            case PRO     -> AnalysisResponse.Tier.PRO;
-            case PREMIUM -> AnalysisResponse.Tier.PREMIUM;
-            default      -> AnalysisResponse.Tier.FREE;
-        };
-
-        return AnalysisResponse.from(result, responseTier);
+        return AnalysisResponse.from(result, tier);
     }
 }

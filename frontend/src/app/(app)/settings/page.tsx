@@ -12,6 +12,7 @@ import { Bell, CreditCard, Lock, LogOut, User, ChevronRight } from "lucide-react
 import { useAuthStore } from "@/lib/stores/authStore";
 import { apiClient } from "@/lib/api/client";
 import { buttonVariants } from "@/components/ui/button";
+import { SUPPORT_EMAIL } from "@/lib/constants";
 
 const TIER_LABEL: Record<string, string> = {
   FREE:    "Free",
@@ -163,7 +164,7 @@ export default function SettingsPage() {
         <div className="px-5 py-3.5">
           <p className="text-xs text-muted-foreground">
             회원 탈퇴를 원하시면{" "}
-            <a href="mailto:support@dartcommons.kr" className="font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
               고객지원
             </a>
             에 문의해 주세요.

@@ -5,7 +5,7 @@ import com.dartcommons.analysis.entities.FeedbackEntity;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import com.dartcommons.analysis.repositories.FeedbackRepository;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
-import com.dartcommons.user.repositories.PortfolioRepository;
+import com.dartcommons.shared.ports.UserStockCodesPort;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.http.HttpStatus;
@@ -40,7 +40,7 @@ public class FeedbackService {
     private final FeedbackRepository       feedbackRepository;
     private final AnalysisResultRepository analysisResultRepository;
     private final DisclosureRepository     disclosureRepository;
-    private final PortfolioRepository      portfolioRepository;
+    private final UserStockCodesPort       userStockCodesProvider;
 
     // userId → 시간 내 피드백 횟수. expireAfterWrite으로 1시간마다 리셋.
     private final Cache<Long, AtomicInteger> rateLimitCache = Caffeine.newBuilder()
@@ -51,11 +51,11 @@ public class FeedbackService {
     public FeedbackService(FeedbackRepository feedbackRepository,
                            AnalysisResultRepository analysisResultRepository,
                            DisclosureRepository disclosureRepository,
-                           PortfolioRepository portfolioRepository) {
+                           UserStockCodesPort userStockCodesProvider) {
         this.feedbackRepository       = feedbackRepository;
         this.analysisResultRepository = analysisResultRepository;
         this.disclosureRepository     = disclosureRepository;
-        this.portfolioRepository      = portfolioRepository;
+        this.userStockCodesProvider   = userStockCodesProvider;
     }
 
     @Transactional
@@ -70,7 +70,7 @@ public class FeedbackService {
 
         String stockCode = disclosureRepository.findStockCodeById(analysisResult.getDisclosureId())
                 .orElse(null);
-        if (stockCode == null || !portfolioRepository.existsByUserIdAndStockCode(userId, stockCode)) {
+        if (stockCode == null || !userStockCodesProvider.hasStockCode(userId, stockCode)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "분석 결과를 찾을 수 없습니다.");
         }
 

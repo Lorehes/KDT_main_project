@@ -11,6 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Briefcase, Bell, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isActivePath } from "@/lib/utils/isActivePath";
 
 const TABS = [
   { href: "/dashboard",    label: "대시보드", icon: LayoutDashboard },
@@ -28,7 +29,7 @@ export function BottomTabBar() {
       aria-label="하단 탭 메뉴"
     >
       {TABS.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+        const active = isActivePath(pathname, href);
         return (
           <Link
             key={href}

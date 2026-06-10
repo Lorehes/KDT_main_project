@@ -8,36 +8,43 @@
 //   atLimit에 isLoading 포함(R6) — 로딩 중 count=0으로 오활성 방지. 로딩 완료 후 실제 count로 재평가.
 //   매수가·수량은 목록에 표시하되 console.log 절대 금지(금융 개인정보, CLAUDE.md §7)
 
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Bell } from "lucide-react";
 import { usePortfolios, useDeletePortfolio } from "@/lib/api/portfolios";
-import { useAuthStore } from "@/lib/stores/authStore";
+import { useTierCheck } from "@/lib/hooks/useTierCheck";
+import { PortfolioListItem } from "@/components/domain/PortfolioListItem";
 import { StockSearchCombobox } from "@/components/domain/StockSearchCombobox";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import type { StockSearchResult } from "@/lib/api/stocks";
 
 const FREE_LIMIT = 3;
 
+const RECOMMENDED_STOCKS = [
+  { code: "005930", name: "삼성전자",  abbr: "SE", market: "코스피" },
+  { code: "035420", name: "NAVER",     abbr: "NV", market: "코스피" },
+  { code: "000660", name: "SK하이닉스", abbr: "SK", market: "코스피" },
+  { code: "035720", name: "카카오",     abbr: "KK", market: "코스피" },
+] as const;
+
 export default function PortfoliosPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { isPro } = useTierCheck();
   const { data: portfolios, isLoading } = usePortfolios();
   const { mutate: deletePortfolio, isPending: isDeleting } = useDeletePortfolio();
 
-  const isPro = user?.tier === "PRO" || user?.tier === "PREMIUM";
   const count = portfolios?.length ?? 0;
-  // R6: isLoading 중에는 count=0이므로 atLimit=false가 되어 추가 버튼 오활성 — isLoading 포함
+  // isLoading 중에는 count=0이므로 atLimit=false가 되어 추가 버튼 오활성 — isLoading 포함
   const atLimit = isLoading || (!isPro && count >= FREE_LIMIT);
 
   const handleSelect = (stock: StockSearchResult) => {
     router.push(`/portfolios/new?code=${stock.stock_code}&name=${encodeURIComponent(stock.corp_name)}`);
   };
 
-  const handleDelete = (id: number, name: string) => {
+  const handleDelete = useCallback((id: number, name: string) => {
     if (!confirm(`"${name}"을 삭제하시겠습니까?`)) return;
     deletePortfolio(id);
-  };
+  }, [deletePortfolio]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,39 +106,12 @@ export default function PortfoliosPage() {
             ) : (
               <ul aria-label="등록 종목 목록" className="divide-y divide-border">
                 {portfolios.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>
-                        {(p.corp_name ?? p.stock_code).slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{p.corp_name ?? p.stock_code}</p>
-                        <p className="font-mono text-xs text-muted-foreground">{p.stock_code}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* 알림 아이콘 — BE notify_enabled 미지원(PortfolioResponse에 없음). 알림 설정은 계정 전역 설정으로 관리 */}
-                      <Bell className="size-4 text-primary" aria-label="알림 켜짐" />
-                      <Link
-                        href={`/portfolios/new?code=${p.stock_code}&name=${encodeURIComponent(p.corp_name ?? p.stock_code)}&edit=${p.id}`}
-                        className={buttonVariants({ variant: "ghost", size: "sm" })}
-                        aria-label={`${p.corp_name ?? p.stock_code} 수정`}
-                      >
-                        수정
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(p.id, p.corp_name ?? p.stock_code)}
-                        disabled={isDeleting}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`${p.corp_name ?? p.stock_code} 삭제`}
-                      >
-                        <Trash2 className="size-4" aria-hidden />
-                      </Button>
-                    </div>
-                  </li>
+                  <PortfolioListItem
+                    key={p.id}
+                    portfolio={p}
+                    onDelete={handleDelete}
+                    isDeleting={isDeleting}
+                  />
                 ))}
               </ul>
             )}
@@ -143,12 +123,7 @@ export default function PortfoliosPage() {
           <p className="mb-4 text-sm font-extrabold text-foreground">이런 종목은 어때요?</p>
           <ul className="flex flex-col gap-3">
             {/* 추천 종목 아이콘 배경은 bg-primary 단일 색으로 통일 (P2 토큰화 — CLAUDE.md §6-4) */}
-            {[
-              { code: "005930", name: "삼성전자",  abbr: "SE", market: "코스피" },
-              { code: "035420", name: "NAVER",     abbr: "NV", market: "코스피" },
-              { code: "000660", name: "SK하이닉스", abbr: "SK", market: "코스피" },
-              { code: "035720", name: "카카오",     abbr: "KK", market: "코스피" },
-            ].map(({ code, name, abbr, market }) => (
+            {RECOMMENDED_STOCKS.map(({ code, name, abbr, market }) => (
               <li key={code} className="flex items-center justify-between rounded-xl border border-border bg-background px-3.5 py-2.5">
                 <div className="flex items-center gap-2.5">
                   <div className="grid size-8 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>{abbr}</div>

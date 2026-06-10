@@ -1,4 +1,4 @@
-package com.dartcommons.disclosure.services;
+package com.dartcommons.disclosure.dto;
 
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.disclosure.entities.Disclosure;
@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 /*
  * [목적] GET /api/v1/disclosures 목록 + /disclosures/{id} 상세 응답 DTO — FE Disclosure 타입과 1:1 대응.
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
  * [사이드 임팩트] corp_name·report_nm은 DART 원본 그대로 — LLM 변형 금지(CLAUDE.md §4).
  * [수정 시 고려사항] attachment_url은 현재 Stage 1 범위 밖(Disclosure.attachmentUrl = null) — 후속 Spec에서 채움.
  *                  confidence는 BigDecimal로 저장되나 JSON은 숫자로 직렬화됨.
+ *                  패키지 위치: services/ → dto/ (CLAUDE.md §3-2 도메인 모듈 표준).
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record DisclosureListItemResponse(
@@ -25,7 +27,7 @@ public record DisclosureListItemResponse(
         @JsonProperty("report_nm")     String reportNm,
         @JsonProperty("rcept_dt")      String rceptDt,
         @JsonProperty("attachment_url") String attachmentUrl,
-        // 분석 결과 (미완료 시 null → 직렬화 제외)
+        // 분析 결과 (미완료 시 null → 직렬화 제외)
         Sentiment sentiment,
         BigDecimal confidence,
         @JsonProperty("is_withheld")   Boolean isWithheld,
@@ -33,6 +35,7 @@ public record DisclosureListItemResponse(
 ) {
 
     public static DisclosureListItemResponse from(Disclosure d, AnalysisResult ar) {
+        Optional<AnalysisResult> opt = Optional.ofNullable(ar);
         return new DisclosureListItemResponse(
                 d.getId(),
                 d.getRceptNo(),
@@ -41,10 +44,10 @@ public record DisclosureListItemResponse(
                 d.getReportNm(),
                 d.getRceptDt().toString(),
                 d.getAttachmentUrl(),
-                ar != null ? ar.getSentiment() : null,
-                ar != null ? ar.getConfidence() : null,
-                ar != null ? ar.isWithheld()   : null,
-                ar != null ? ar.getSummary()   : null
+                opt.map(AnalysisResult::getSentiment).orElse(null),
+                opt.map(AnalysisResult::getConfidence).orElse(null),
+                opt.map(AnalysisResult::isWithheld).orElse(null),
+                opt.map(AnalysisResult::getSummary).orElse(null)
         );
     }
 }

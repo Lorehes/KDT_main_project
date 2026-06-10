@@ -1,8 +1,9 @@
 package com.dartcommons.user.controllers;
 
+import com.dartcommons.shared.enums.Tier;
+import com.dartcommons.shared.security.SecurityUtils;
 import com.dartcommons.user.dto.PortfolioRequest;
 import com.dartcommons.user.dto.PortfolioResponse;
-import com.dartcommons.user.entities.UserEntity;
 import com.dartcommons.user.services.PortfolioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -46,7 +47,7 @@ public class PortfolioController {
     public PortfolioResponse create(@AuthenticationPrincipal Long userId,
                                     Authentication authentication,
                                     @Valid @RequestBody PortfolioRequest request) {
-        UserEntity.Tier tier = extractTier(authentication);
+        Tier tier = SecurityUtils.extractTier(authentication);
         return portfolioService.createPortfolio(userId, request, tier);
     }
 
@@ -63,18 +64,5 @@ public class PortfolioController {
         portfolioService.deletePortfolio(userId, id);
     }
 
-    /** JWT claims의 ROLE_{TIER}에서 tier 추출 — DB 조회 없이 인메모리 결정. */
-    private UserEntity.Tier extractTier(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .map(a -> a.getAuthority().replace("ROLE_", ""))
-                .map(s -> {
-                    try {
-                        return UserEntity.Tier.valueOf(s);
-                    } catch (IllegalArgumentException e) {
-                        return UserEntity.Tier.FREE;
-                    }
-                })
-                .findFirst()
-                .orElse(UserEntity.Tier.FREE);
-    }
 }
+

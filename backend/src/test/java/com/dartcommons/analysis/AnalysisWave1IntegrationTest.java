@@ -6,6 +6,7 @@ import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.entities.AnalysisJob;
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.shared.enums.Sentiment;
+import com.dartcommons.shared.enums.Tier;
 import com.dartcommons.analysis.repositories.AnalysisJobRepository;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import com.dartcommons.disclosure.entities.Disclosure;
@@ -138,14 +139,14 @@ class AnalysisWave1IntegrationTest {
                 .createdAt(OffsetDateTime.now())
                 .build();
 
-        AnalysisResponse freeResp = AnalysisResponse.from(ar, AnalysisResponse.Tier.FREE);
+        AnalysisResponse freeResp = AnalysisResponse.from(ar, Tier.FREE);
         assertThat(freeResp.sentiment()).isEqualTo(Sentiment.POSITIVE);
         assertThat(freeResp.expectedReaction()).isNull();   // Free 제외
         assertThat(freeResp.rationale()).isNull();
         assertThat(freeResp.disclaimer()).isEqualTo(AnalysisResponse.DISCLAIMER);
         assertThat(freeResp.reportInaccuracyPath()).isEqualTo("/api/v1/analyses/99/feedback");
 
-        AnalysisResponse proResp = AnalysisResponse.from(ar, AnalysisResponse.Tier.PRO);
+        AnalysisResponse proResp = AnalysisResponse.from(ar, Tier.PRO);
         assertThat(proResp.expectedReaction()).isEqualTo(AnalysisResult.ExpectedReaction.UP);
         assertThat(proResp.rationale()).contains("과거 동일 유형");
         assertThat(proResp.disclaimer()).isEqualTo(AnalysisResponse.DISCLAIMER);

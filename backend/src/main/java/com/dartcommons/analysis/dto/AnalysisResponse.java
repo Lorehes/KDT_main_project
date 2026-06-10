@@ -3,6 +3,7 @@ package com.dartcommons.analysis.dto;
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.analysis.entities.AnalysisResult.ExpectedReaction;
 import com.dartcommons.shared.enums.Sentiment;
+import com.dartcommons.shared.enums.Tier;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -43,7 +44,7 @@ public record AnalysisResponse(
         // Pro+ (Stage 3~4) — Free 응답에서는 null로 두어 직렬화 제외
         @JsonProperty("expected_reaction") ExpectedReaction expectedReaction,
         String rationale,
-        @JsonProperty("similar_disclosures") List<Object> similarDisclosures,
+        @JsonProperty("similar_disclosures") List<SimilarDisclosureItem> similarDisclosures,
 
         // Premium (Stage 5) — Free/Pro 응답에서는 null
         @JsonProperty("financial_context") Object financialContext,
@@ -61,13 +62,12 @@ public record AnalysisResponse(
     public static final String DISCLAIMER =
             "본 분석은 정보 제공용이며 투자 자문/권유가 아닙니다. AI 분석은 부정확할 수 있으며 투자 책임은 이용자에게 있습니다.";
 
-    public enum Tier { FREE, PRO, PREMIUM }
-
     /*
      * [목적] 엔티티 + 티어로 티어 차등 응답 생성 — FREE/PRO/PREMIUM 필드 화이트리스트 적용.
      * [이유] @JsonInclude(NON_NULL) 전략 — null 필드는 JSON에서 제외되어 FE가 미존재 필드를 하위 티어 표시로 처리.
      *       disclaimer/reportInaccuracyPath는 항상 포함 — 자본시장법 §11.1 면책 의무(CLAUDE.md §6-6, §7).
      *       is_withheld는 모든 티어에서 그대로 전달 — 화면이 "판단 보류" 처리.
+     *       shared.enums.Tier를 직접 사용해 AnalysisQueryService의 switch 변환 보일러플레이트를 제거(R2).
      * [사이드 임팩트] financial_context는 Stage 5 미구현이므로 모든 티어에서 항상 null.
      *               Stage 5 구현 시 PREMIUM 분기를 추가해야 하며 AnalysisResponseTest PREMIUM 케이스도 함께 갱신 필요.
      * [수정 시 고려사항] tier 필드 추가 시 AnalysisResponseTest.allTiers_alwaysIncludeDisclaimerAndReportPath() 도 갱신.

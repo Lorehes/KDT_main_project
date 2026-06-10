@@ -1,11 +1,11 @@
 package com.dartcommons.user.services;
 
 import com.dartcommons.shared.crypto.AesGcmEncryptor;
+import com.dartcommons.shared.enums.Tier;
 import com.dartcommons.stocks.repositories.StockRepository;
 import com.dartcommons.user.dto.PortfolioRequest;
 import com.dartcommons.user.dto.PortfolioResponse;
 import com.dartcommons.user.entities.PortfolioEntity;
-import com.dartcommons.user.entities.UserEntity;
 import com.dartcommons.user.repositories.PortfolioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -58,8 +58,8 @@ public class PortfolioService {
         return toResponse(findOwned(userId, portfolioId));
     }
 
-    public PortfolioResponse createPortfolio(Long userId, PortfolioRequest request, UserEntity.Tier tier) {
-        if (tier == UserEntity.Tier.FREE && portfolioRepository.countByUserId(userId) >= FREE_TIER_LIMIT) {
+    public PortfolioResponse createPortfolio(Long userId, PortfolioRequest request, Tier tier) {
+        if (tier == Tier.FREE && portfolioRepository.countByUserId(userId) >= FREE_TIER_LIMIT) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "Free 티어는 최대 " + FREE_TIER_LIMIT + "개 종목만 등록 가능합니다");
         }

@@ -11,6 +11,32 @@ updated: 2026-06-10
 
 ---
 
+## 2026-06-10 | architecture-refactoring-cleanup — 아키텍처 정리 + 도메인 경계 복구
+
+**Spec**: `docs/specs/Approved/architecture-refactoring-cleanup.md` (→ Done)
+
+**산출** (Wave 1~4 + 리뷰 픽스):
+- `shared/enums/Tier.java` — UserEntity.Tier·AnalysisResponse.Tier 이중 정의 통합. DB/JSON/JWT 와이어 포맷 무변경
+- `shared/security/SecurityUtils.extractTier()` — DisclosureController·PortfolioController 중복 private 메서드 → 공통 유틸. AnonymousAuthenticationToken 가드 + `startsWith("ROLE_")` 앵커 수정
+- `shared/ports/UserStockCodesPort` — disclosure·analysis 도메인의 `user.PortfolioRepository` 직접 의존 제거. 인터페이스를 shared/ports에, 구현체를 user/services에 배치해 import 방향 `analysis→shared`, `user→shared` 단방향 고정
+- `disclosure/dto/DisclosureListItemResponse` — services/ → dto/ 패키지 이동 (CLAUDE.md §3-2)
+- `analysis/dto/SimilarDisclosureItem` record — `List<Object>` → `List<SimilarDisclosureItem>` 타입 시그니처 확정 (Stage 3 구현 전 placeholder)
+- `PortfolioRepository.findStockCodesByUserId` — 스칼라 프로젝션. avg_buy_price_enc 등 암호화 컬럼 로드 제거
+- FE: `useTierCheck` 훅(isPro·isPremium 중복 4→1), `isActivePath` 유틸(Sidebar·BottomTabBar), `PortfolioListItem` memo 컴포넌트, `API_ERROR_CODES` const, `SUPPORT_EMAIL` 상수, `EXPECTED_REACTION_CONFIG` 맵, isSubmitting dead state 제거, RECOMMENDED_STOCKS 모듈 스코프
+- 테스트 9건 신규: `AnalysisControllerTest`(6), `FeedbackServiceIntegrationTest`(3), `TierOrdinalInvariantTest`(1). 총 112/112
+- 리뷰 즉시 픽스: DisclaimerNotice reportPath template literal 버그(HIGH), SecurityUtils AnonymousToken·ROLE_ 앵커(Medium), UserStockCodesPort 도메인 위치(Medium), IIFE→reactionCfg 변수(Medium), Record 타입 중복(Medium), Bell aria-hidden(Low), useTierCheck 런타임 가드(Low), stock_code @Pattern 검증(Low)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **UserStockCodesPort를 shared/ports에 배치** — 인터페이스를 user/services에 두면 disclosure/analysis가 user 패키지를 직접 import해 CLAUDE.md §3-2 도메인 경계를 재위반. shared/ports가 anti-corruption layer 역할
+- **Tier ordinal 불변식은 테스트로 기계 검증** — `SecurityUtils.extractTier`의 `max(ordinal)` 패턴이 enum 순서에 의존하므로, 순서 불변식을 TierOrdinalInvariantTest로 보호. 신규 Tier 추가 시 이 테스트가 가이드 역할
+- **PortfolioListItem을 React.memo로 감싼 이유** — handleDelete가 `useCallback`으로 안정화됐으므로, 부모 재렌더 시 목록 아이템이 불필요하게 재렌더되지 않음. Free(3종목)/Pro(무제한) 모두 효과적
+
+### 미완료
+- R3 축소 범위: extractTier는 현재 DisclosureController·PortfolioController 2곳 적용. AnalysisController는 별도 미존재(피드백 엔드포인트는 DisclosureController 하위). 향후 신규 컨트롤러 추가 시 SecurityUtils 자동 재사용
+- `isActivePath`의 Sidebar SETTING_ITEMS는 현재 `pathname.startsWith(href)` 인라인 유지 — `isActivePath` 미적용. 추후 Sidebar 전면 리팩 시 통합 권장
+
+---
+
 ## 2026-06-10 | fe-correctness-investor-protection — Wave 1~4 전체 구현
 
 **Spec**: `docs/specs/Approved/fe-correctness-investor-protection.md` (R1·R3~R7 구현 완료)

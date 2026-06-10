@@ -3,6 +3,7 @@ package com.dartcommons.analysis;
 import com.dartcommons.analysis.dto.AnalysisResponse;
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.shared.enums.Sentiment;
+import com.dartcommons.shared.enums.Tier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ class AnalysisResponseTest {
     @Test
     @DisplayName("FREE 티어 — sentiment·confidence·summary·disclaimer 포함, expected_reaction·rationale null")
     void from_freeTier_includesBaseFieldsOnly() {
-        AnalysisResponse resp = AnalysisResponse.from(ar, AnalysisResponse.Tier.FREE);
+        AnalysisResponse resp = AnalysisResponse.from(ar, Tier.FREE);
 
         assertThat(resp.sentiment()).isEqualTo(Sentiment.POSITIVE);
         assertThat(resp.confidence()).isEqualByComparingTo(new BigDecimal("0.850"));
@@ -61,7 +62,7 @@ class AnalysisResponseTest {
     @Test
     @DisplayName("PRO 티어 — expected_reaction·rationale 포함, financial_context null(Stage 5 미구현)")
     void from_proTier_includesProFields() {
-        AnalysisResponse resp = AnalysisResponse.from(ar, AnalysisResponse.Tier.PRO);
+        AnalysisResponse resp = AnalysisResponse.from(ar, Tier.PRO);
 
         assertThat(resp.expectedReaction()).isEqualTo(AnalysisResult.ExpectedReaction.UP);
         assertThat(resp.rationale()).isEqualTo("과거 유사 공시 분석 근거");
@@ -73,7 +74,7 @@ class AnalysisResponseTest {
     @Test
     @DisplayName("PREMIUM 티어 — Pro+ 필드 포함, financial_context는 Stage 5 미구현으로 null")
     void from_premiumTier_includesProFieldsAndFinancialContextNull() {
-        AnalysisResponse resp = AnalysisResponse.from(ar, AnalysisResponse.Tier.PREMIUM);
+        AnalysisResponse resp = AnalysisResponse.from(ar, Tier.PREMIUM);
 
         assertThat(resp.expectedReaction()).isEqualTo(AnalysisResult.ExpectedReaction.UP);
         assertThat(resp.rationale()).isNotNull();
@@ -85,7 +86,7 @@ class AnalysisResponseTest {
     @Test
     @DisplayName("모든 티어 — disclaimer + report_inaccuracy_path 항상 포함 (자본시장법 §11.1 회귀 게이트)")
     void from_allTiers_alwaysIncludeDisclaimerAndReportPath() {
-        for (AnalysisResponse.Tier tier : AnalysisResponse.Tier.values()) {
+        for (Tier tier : Tier.values()) {
             AnalysisResponse resp = AnalysisResponse.from(ar, tier);
 
             assertThat(resp.disclaimer())
@@ -112,7 +113,7 @@ class AnalysisResponseTest {
                 .createdAt(OffsetDateTime.now())
                 .build();
 
-        for (AnalysisResponse.Tier tier : AnalysisResponse.Tier.values()) {
+        for (Tier tier : Tier.values()) {
             AnalysisResponse resp = AnalysisResponse.from(withheldAr, tier);
             assertThat(resp.isWithheld())
                     .as("tier=%s: is_withheld must be true", tier)

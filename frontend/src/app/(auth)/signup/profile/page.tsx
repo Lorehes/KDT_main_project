@@ -29,13 +29,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const [experience, setExperience] = useState("INTERMEDIATE");
   const [time, setTime] = useState("REALTIME");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    // BE UpdateMeRequest에 investment_experience·preferred_time 미지원(nickname 단일 필드).
-    // 해당 BE 필드 추가 후 아래 apiClient 호출 복원. 현재는 UX 수집 전용으로 스킵.
-    setIsSubmitting(false);
+  const handleSubmit = () => {
+    // TODO: BE UpdateMeRequest에 investment_experience·preferred_time 추가 후 아래 호출 복원.
+    // await apiClient("/users/me", { method: "PATCH", body: JSON.stringify({ investment_experience: experience, preferred_time: time }) });
+    // experience·time 값은 현재 UX 수집 전용 — 저장되지 않음.
     router.push("/signup/complete");
   };
 
@@ -96,8 +94,8 @@ export default function ProfilePage() {
           </div>
         </fieldset>
 
-        <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "저장 중..." : "시작하기 →"}
+        <Button onClick={handleSubmit} className="w-full">
+          시작하기 →
         </Button>
       </div>
     </AuthLayout>

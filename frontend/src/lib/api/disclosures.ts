@@ -69,6 +69,18 @@ export interface DisclosureListParams {
   sort?: string;
 }
 
+// ─── 설정 ────────────────────────────────────────────────────────────────────
+
+/**
+ * expected_reaction 매직 문자열 → label·colorClass 매핑(R13).
+ * disclosures/[id]/page.tsx에서 "UP"/"DOWN"/"FLAT" 인라인 비교를 제거.
+ */
+export const EXPECTED_REACTION_CONFIG: Record<ExpectedReaction, { label: string; colorClass: string }> = {
+  UP:   { label: "▲ 상승 예상", colorClass: "bg-[color:var(--color-sentiment-positive)]/10 text-[color:var(--color-sentiment-positive)]" },
+  DOWN: { label: "▼ 하락 예상", colorClass: "bg-[color:var(--color-sentiment-negative)]/10 text-[color:var(--color-sentiment-negative)]" },
+  FLAT: { label: "― 보합 예상", colorClass: "bg-muted text-muted-foreground" },
+};
+
 // ─── 훅 ─────────────────────────────────────────────────────────────────────
 
 export function useDisclosures(params: DisclosureListParams = {}) {

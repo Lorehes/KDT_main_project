@@ -1,5 +1,6 @@
 package com.dartcommons.user.entities;
 
+import com.dartcommons.shared.enums.Tier;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,7 +25,6 @@ import java.time.OffsetDateTime;
 public class UserEntity {
 
     public enum OAuthProvider { KAKAO, GOOGLE, NAVER }
-    public enum Tier           { FREE, PRO, PREMIUM }
     public enum NotifyChannel  { KAKAO, TELEGRAM, EMAIL }
     public enum NotifyFrequency{ INSTANT, DAILY_1, DAILY_2, WEEKLY }
     public enum NotifyTypeFilter{ POSITIVE_ONLY, NEGATIVE_ONLY, ALL }

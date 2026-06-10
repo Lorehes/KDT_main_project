@@ -11,8 +11,9 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ExternalLink, ArrowLeft } from "lucide-react";
-import { useDisclosure, useDisclosureAnalysis } from "@/lib/api/disclosures";
-import { useAuthStore } from "@/lib/stores/authStore";
+import { useDisclosure, useDisclosureAnalysis, EXPECTED_REACTION_CONFIG } from "@/lib/api/disclosures";
+import { useTierCheck } from "@/lib/hooks/useTierCheck";
+import { SUPPORT_EMAIL } from "@/lib/constants";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { ConfidenceMeter } from "@/components/domain/ConfidenceMeter";
 import { DisclaimerNotice } from "@/components/domain/DisclaimerNotice";
@@ -23,14 +24,11 @@ import { PriceReactionChart } from "@/components/domain/PriceReactionChart";
 export default function DisclosureDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
-  const { user } = useAuthStore();
+  const { isPro, isPremium } = useTierCheck();
 
   const { data: disclosure, isLoading: discLoading } = useDisclosure(id);
-  // R7: disclosure 로드 완료 후 분석 쿼리 활성 — 미스매치 데이터 렌더 방지
+  // R7: disclosure 로드 완료 후 분析 쿼리 활성 — 미스매치 데이터 렌더 방지
   const { data: analysis, isLoading: analysisLoading } = useDisclosureAnalysis(id, { enabled: !!disclosure });
-
-  const isPro     = user?.tier === "PRO" || user?.tier === "PREMIUM";
-  const isPremium = user?.tier === "PREMIUM";
 
   if (discLoading || analysisLoading) {
     return (
@@ -55,6 +53,9 @@ export default function DisclosureDetailPage() {
   // R1: analysis 미완료 시 disclosure.sentiment(룰 기반) 노출 금지 — 자본시장법 §11.1
   // analysis가 존재할 때만 폴백 허용. null이면 undefined → SentimentBadge 미표시
   const sentiment = analysis ? (analysis.sentiment ?? disclosure.sentiment) : undefined;
+  const reactionCfg = analysis?.expected_reaction
+    ? EXPECTED_REACTION_CONFIG[analysis.expected_reaction] ?? EXPECTED_REACTION_CONFIG.FLAT
+    : null;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -111,13 +112,9 @@ export default function DisclosureDetailPage() {
               ) : (
                 <>
                   <p className="text-[15px] leading-relaxed text-foreground">{analysis.summary}</p>
-                  {analysis.expected_reaction && (
-                    <div className={`mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold ${
-                      analysis.expected_reaction === "UP"   ? "bg-[color:var(--color-sentiment-positive)]/10 text-[color:var(--color-sentiment-positive)]" :
-                      analysis.expected_reaction === "DOWN" ? "bg-[color:var(--color-sentiment-negative)]/10 text-[color:var(--color-sentiment-negative)]" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {analysis.expected_reaction === "UP" ? "▲ 상승 예상" : analysis.expected_reaction === "DOWN" ? "▼ 하락 예상" : "― 보합 예상"}
+                  {reactionCfg && (
+                    <div className={`mt-4 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold ${reactionCfg.colorClass}`}>
+                      {reactionCfg.label}
                       {analysis.rationale && <span className="font-normal text-muted-foreground"> · {analysis.rationale}</span>}
                     </div>
                   )}
@@ -202,7 +199,7 @@ export default function DisclosureDetailPage() {
           )}
 
           {/* 면책 고지 — 모든 분석 화면 상시 노출 필수 (CLAUDE.md §6-6) */}
-          <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? "mailto:support@dartcommons.kr"} />
+          <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? `mailto:${SUPPORT_EMAIL}`} />
 
           {analysis && (
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm text-xs text-muted-foreground">
@@ -218,7 +215,7 @@ export default function DisclosureDetailPage() {
 
       {/* 모바일 면책 고지 — analysis 없어도 신고 경로 표시(CLAUDE.md §6-6 신고 경로 동반 의무) */}
       <div className="mt-6 lg:hidden">
-        <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? "mailto:support@dartcommons.kr"} />
+        <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? `mailto:${SUPPORT_EMAIL}`} />
       </div>
     </div>
   );
