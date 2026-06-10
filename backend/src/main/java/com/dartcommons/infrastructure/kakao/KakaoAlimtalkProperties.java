@@ -21,6 +21,8 @@ public record KakaoAlimtalkProperties(
         @NotBlank String apiKey,
         @NotBlank String senderKey,
         @NotBlank String templateCode,
+        @DefaultValue("dc_otp_v1") String otpTemplateCode,
+        @DefaultValue("[DartCommons] 인증번호: #{code} (5분 이내 입력)") String otpMessageTemplate,
         @DefaultValue("10000") int timeoutMs,
         @DefaultValue("3") int maxRetries
 ) {

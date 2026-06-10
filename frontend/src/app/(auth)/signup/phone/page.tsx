@@ -2,22 +2,24 @@
 
 // [목적] 휴대폰 인증 화면(D8/m12, STEP 3/4) — 알림톡 수신 번호 인증. "나중에" 스킵 허용
 // [이유] 카카오 알림톡 발송을 위한 번호 인증. 선택 사항이므로 스킵 시 이메일로 대체
-// [사이드 임팩트] POST /users/me/phone/verify 호출. 성공·스킵 모두 /signup/profile로 이동
-// [수정 시 고려사항] 번호는 평문 콘솔 출력 금지(개인정보). 백엔드에서 AES-256-GCM 암호화 저장
+// [사이드 임팩트] POST /users/me/phone/verify (OTP 발송) + POST /users/me/phone/verify/confirm (검증).
+//   rate limit 429 → "잠시 후 다시 시도" 표시. 성공·스킵 모두 /signup/profile로 이동.
+// [수정 시 고려사항] 번호는 평문 콘솔 출력 금지(개인정보). 백엔드에서 AES-256-GCM 암호화 저장.
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { OnboardingStepper } from "@/components/layout/OnboardingStepper";
 import { OTPInput } from "@/components/domain/OTPInput";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/lib/stores/authStore";
+import { useSendPhoneOtp, useConfirmPhoneOtp } from "@/lib/api/auth";
+import { ApiException } from "@/lib/api/client";
 
 const TIMER_SECONDS = 3 * 60;
 
 export default function PhonePage() {
   const router = useRouter();
-  const { user } = useAuthStore();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"phone" | "code">("phone");
@@ -25,28 +27,67 @@ export default function PhonePage() {
   const [phoneError, setPhoneError] = useState("");
   const [codeError, setCodeError] = useState("");
 
+  const sendOtp    = useSendPhoneOtp();
+  const confirmOtp = useConfirmPhoneOtp();
+
   useEffect(() => {
     if (step !== "code" || seconds <= 0) return;
     const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [step, seconds]);
 
-  const handlePhoneSubmit = () => {
+  const handlePhoneSubmit = async () => {
     const cleaned = phone.replace(/\D/g, "");
     if (!/^010\d{8}$/.test(cleaned)) {
       setPhoneError("010으로 시작하는 11자리 번호를 입력해주세요.");
       return;
     }
     setPhoneError("");
-    setStep("code");
-    setSeconds(TIMER_SECONDS);
-    // TODO: POST /users/me/phone/verify — 인증번호 발송
+    try {
+      await sendOtp.mutateAsync(cleaned);
+      setStep("code");
+      setSeconds(TIMER_SECONDS);
+    } catch (e) {
+      const status = e instanceof ApiException ? e.body.status : 0;
+      if (status === 429) {
+        toast.error("잠시 후 다시 시도해주세요. (발송 횟수 초과)");
+      } else {
+        toast.error("인증번호 발송에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (code.length < 6) { setCodeError("6자리 인증번호를 모두 입력해주세요."); return; }
-    // TODO: POST /users/me/phone/verify — 코드 검증
-    router.push("/signup/profile");
+    try {
+      await confirmOtp.mutateAsync(code);
+      router.push("/signup/profile");
+    } catch (e) {
+      const status = e instanceof ApiException ? e.body.status : 0;
+      if (status === 410) {
+        setCodeError("인증번호가 만료됐습니다. 다시 요청해주세요.");
+        setStep("phone");
+      } else {
+        setCodeError("인증번호가 일치하지 않습니다.");
+      }
+    }
+  };
+
+  const handleResend = async () => {
+    const cleaned = phone.replace(/\D/g, "");
+    try {
+      await sendOtp.mutateAsync(cleaned);
+      setCode("");
+      setCodeError("");
+      setSeconds(TIMER_SECONDS);
+    } catch (e) {
+      const status = e instanceof ApiException ? e.body.status : 0;
+      if (status === 429) {
+        toast.error("잠시 후 다시 시도해주세요. (발송 횟수 초과)");
+      } else {
+        toast.error("재전송에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
   };
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -77,8 +118,14 @@ export default function PhonePage() {
               aria-describedby={phoneError ? "phone-error" : undefined}
               className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 aria-invalid:border-destructive disabled:opacity-60"
             />
-            <Button type="button" onClick={handlePhoneSubmit} disabled={step === "code"} size="sm" className="shrink-0 self-stretch px-4">
-              인증요청
+            <Button
+              type="button"
+              onClick={handlePhoneSubmit}
+              disabled={step === "code" || sendOtp.isPending}
+              size="sm"
+              className="shrink-0 self-stretch px-4"
+            >
+              {sendOtp.isPending ? "발송 중…" : "인증요청"}
             </Button>
           </div>
           {phoneError && <p id="phone-error" className="text-xs text-destructive" role="alert">{phoneError}</p>}
@@ -95,8 +142,12 @@ export default function PhonePage() {
                   남은 시간 <span className="font-mono font-bold text-destructive" aria-live="polite">{mm}:{ss}</span>
                 </span>
                 {seconds <= 0 && (
-                  <button type="button" onClick={() => { setStep("phone"); setSeconds(TIMER_SECONDS); }}
-                    className="font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={sendOtp.isPending}
+                    className="font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                  >
                     재전송
                   </button>
                 )}
@@ -116,7 +167,13 @@ export default function PhonePage() {
               </div>
             </div>
 
-            <Button onClick={handleVerify} className="w-full">인증 완료하고 계속하기</Button>
+            <Button
+              onClick={handleVerify}
+              disabled={confirmOtp.isPending}
+              className="w-full"
+            >
+              {confirmOtp.isPending ? "확인 중…" : "인증 완료하고 계속하기"}
+            </Button>
           </>
         )}
 

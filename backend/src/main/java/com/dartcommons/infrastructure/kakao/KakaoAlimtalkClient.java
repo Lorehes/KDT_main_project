@@ -81,6 +81,30 @@ public class KakaoAlimtalkClient {
         return true;
     }
 
+    /**
+     * 휴대폰 OTP 인증번호 발송. OTP 템플릿(otpTemplateCode) 사용 — 일반 알림톡과 별도 심사.
+     * 카카오 비즈니스 채널에 OTP 템플릿 등록 필요 (예: "[DartCommons] 인증번호 #{code}, 5분 내 입력").
+     */
+    @Retryable(
+            retryFor = RestClientException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 10_000)
+    )
+    public boolean sendOtp(String phoneNumber, String code) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            throw new IllegalArgumentException("phoneNumber must not be blank");
+        }
+        log.debug("Kakao Alimtalk OTP send attempt: phone=[REDACTED] code=[REDACTED]");
+        String message = props.otpMessageTemplate().replace("#{code}", code);
+        var request = new AlimtalkRequest(props.senderKey(), props.otpTemplateCode(), phoneNumber, message);
+        restClient.post()
+                .uri(SEND_PATH)
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+        return true;
+    }
+
     /*
      * 확인 필요: 실제 request body 필드명은 카카오 비즈메시지 REST API 가이드 참조.
      * 현재는 일반적으로 알려진 JSON 형식 사용.

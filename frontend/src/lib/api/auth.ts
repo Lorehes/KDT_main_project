@@ -1,7 +1,8 @@
-// [목적] 인증·사용자 API 타입 + TanStack Query 훅 (signup, login, oauth, me, logout, phone)
+// [목적] 인증·사용자 API 타입 + TanStack Query 훅 (signup, login, oauth, me, logout, phone OTP, consent)
 // [이유] BE SignupRequest는 flat boolean 동의 필드 구조. api_spec 명세는 배열이나 BE 구현이 우선.
 //   login/signup 성공 후 /api/auth/session Route Handler로 httpOnly 쿠키를 기록해 미들웨어 세션 연동
-// [사이드 임팩트] useSignup/useLogin 모두 성공 시 authStore.setUser + /api/auth/session 쿠키 기록
+// [사이드 임팩트] useSignup/useLogin 모두 성공 시 authStore.setUser + /api/auth/session 쿠키 기록.
+//   useSendPhoneOtp → BE Caffeine rate limit(1분 1회, 시간당 5회). useConfirmPhoneOtp 성공 시 fetchMe()로 phone_verified 갱신.
 // [수정 시 고려사항] BE가 Set-Cookie를 직접 발급하도록 변경 시 /api/auth/session 호출 제거.
 //   BE UpdateMeRequest는 nickname 단일 필드(@NotBlank) — investment_experience/preferred_time은 BE 미지원으로 제거됨
 
@@ -112,10 +113,29 @@ export function useUpdateMe() {
   });
 }
 
-export function usePhoneVerify() {
+/** OTP 발송 — POST /users/me/phone/verify. 429 RATE_LIMIT_EXCEEDED 시 오류 toast 필요. */
+export function useSendPhoneOtp() {
   return useMutation({
-    mutationFn: (body: { phone: string; code: string }) =>
-      apiClient("/users/me/phone/verify", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (phoneNumber: string) =>
+      apiClient<void>("/users/me/phone/verify", {
+        method: "POST",
+        body: JSON.stringify({ phone_number: phoneNumber }),
+      }),
+  });
+}
+
+/** OTP 검증 — POST /users/me/phone/verify/confirm. 성공 시 fetchMe()로 phone_verified 갱신. */
+export function useConfirmPhoneOtp() {
+  const { fetchMe } = useAuthStore();
+  return useMutation({
+    mutationFn: (code: string) =>
+      apiClient<void>("/users/me/phone/verify/confirm", {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      }),
+    onSuccess: async () => {
+      await fetchMe();
+    },
   });
 }
 

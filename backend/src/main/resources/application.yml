@@ -124,6 +124,7 @@ dartcommons:
       api-key: ${KAKAO_ALIMTALK_API_KEY:placeholder}
       sender-key: ${KAKAO_SENDER_KEY:placeholder}
       template-code: ${KAKAO_ALIMTALK_TEMPLATE_CODE:placeholder}
+      otp-template-code: ${KAKAO_OTP_TEMPLATE_CODE:dc_otp_v1}
       timeout-ms: ${KAKAO_ALIMTALK_TIMEOUT_MS:10000}
       max-retries: ${KAKAO_ALIMTALK_MAX_RETRIES:3}
   # 이메일 발송자 주소 (notification-dispatcher Spec Wave 1 — 폴백 채널)
@@ -140,6 +141,42 @@ dartcommons:
     # 결정 2: 0.6 미만 → is_withheld=true (판단 보류).
     # 운영 조정은 SystemConfig 키 analysis.stage2.confidence_threshold 후속 검토.
     confidence-threshold: ${LLM_CONFIDENCE_THRESHOLD:0.6}
+
+# 요금제 플랜 정보 (PricingProperties — 통합기획서 §8.1 BM 데이터 기반)
+# 가격 변경 시 코드 수정 없이 이 값만 조정 후 재기동. 투자 권유 표현 금지(CLAUDE.md §7).
+pricing:
+  plans:
+    - tier: FREE
+      price: 0
+      currency: KRW
+      features:
+        - "보유 종목 3개"
+        - "호재/중립/악재 분류 + 한 줄 요약"
+        - "일 5건 카카오 알림톡"
+      recommended-for: "공시 입문 투자자"
+      monthly-free-quota: 5
+    - tier: PRO
+      price: 9900
+      currency: KRW
+      features:
+        - "무제한 종목 등록"
+        - "상세 해석 (영향 이유·예상 방향·주의사항)"
+        - "과거 유사 공시 + 주가 반응 차트"
+        - "무제한 알림 + 중요도 필터"
+        - "공시 히스토리 3개월"
+      recommended-for: "적극적 정보 수집을 원하는 투자자"
+      monthly-free-quota: 0
+    - tier: PREMIUM
+      price: 29900
+      currency: KRW
+      features:
+        - "Pro 전체 기능"
+        - "섹터·경쟁사 공시 분석"
+        - "포트폴리오 리스크 스코어"
+        - "텔레그램 봇 / 웹훅 API"
+        - "AI Q&A — 공시 대응 전략 문의"
+      recommended-for: "다수 종목을 보유한 장기 투자자"
+      monthly-free-quota: 0
 
 logging:
   level:

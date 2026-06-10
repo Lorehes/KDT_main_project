@@ -29,4 +29,14 @@ public interface ConsentLogRepository extends JpaRepository<ConsentLogEntity, Lo
     Optional<ConsentLogEntity> findLatestByUserIdAndType(
             @Param("userId") Long userId,
             @Param("type") ConsentLogEntity.ConsentType type);
+
+    /** 사용자의 모든 consent_type 최신 행을 단일 쿼리로 조회 — getStatus() N+1 제거. */
+    @Query("""
+            SELECT c FROM ConsentLogEntity c
+            WHERE c.userId = :userId
+              AND c.agreedAt = (
+                    SELECT MAX(c2.agreedAt) FROM ConsentLogEntity c2
+                    WHERE c2.userId = c.userId AND c2.consentType = c.consentType)
+            """)
+    List<ConsentLogEntity> findLatestAllByUserId(@Param("userId") Long userId);
 }

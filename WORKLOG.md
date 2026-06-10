@@ -2,12 +2,40 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-10
+updated: 2026-06-10 (2)
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-10 | mvp-missing-endpoints — Wave 1~3 + 리뷰 수정 전체 완료
+
+**산출**:
+- **V17 마이그레이션**: `users.phone_verified BOOLEAN NOT NULL DEFAULT FALSE` 추가 (phone_number_enc 등록과 OTP 인증 완료 분리)
+- **PhoneVerificationService**: Caffeine 5분 TTL OTP 캐시 + 2단 rate limit(1분 1회 / 시간당 5회) + SecureRandom 6자리 + 시도 5회 초과 brute-force 차단(AtomicInteger attempts 카운터)
+- **OTP 발송**: KakaoAlimtalkClient.sendOtp() — `otpMessageTemplate` yml 외부화로 카카오 비즈니스 콘솔 템플릿 변경 무코드 적용
+- **UserController**: `POST /users/me/phone/verify`, `POST /users/me/phone/verify/confirm` 2개 엔드포인트 + UserMeResponse.phone_verified 노출
+- **ConsentController**: `POST /consents`, `GET /consents/status` — 재동의 흐름 + requires_renewal 판단
+- **ConsentService.getStatus()**: findLatestAllByUserId() 단일 쿼리로 N+1(4쿼리→1쿼리) 제거
+- **consent_logs 감사 정확도**: recordReConsents()가 사용자가 제출한 실제 버전(termsVersion/privacyVersion)을 기록 (기존: 서버 CURRENT_POLICY_VERSION 고정)
+- **PricingController**: GET /api/v1/pricing/plans — PricingProperties(@ConfigurationProperties) yml 바인딩, PUBLIC 엔드포인트
+- **application.yml pricing.plans**: FREE(0원)/PRO(9,900원)/PREMIUM(29,900원) 3티어 외부화
+- **FE**: useSendPhoneOtp/useConfirmPhoneOtp 훅, signup/phone TODO 2건 해소, lib/api/consent.ts, lib/api/pricing.ts, PricingClient 정적→useQuery 교체(staleTime 60s + skeleton + error state)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **SMS 게이트웨이**: Aligo 불채택 → KakaoAlimtalkClient 재사용. OTP 템플릿(dc_otp_v1) 카카오 비즈니스 콘솔 등록 필요(운영자 작업, 코드 외).
+- **phone_verified 명시 컬럼 채택**: `phoneNumberEnc != null`으로 파생하지 않음 — 번호 등록과 인증 완료를 독립 상태로 분리(재인증 플로우 대비).
+- **PricingProperties vs system_configs**: 가격 변경 빈도 낮음(월~분기) + 멀티 인스턴스 동기화 불필요 → yml @ConfigurationProperties 채택. 빈번한 변경 필요 시 Admin API + DB 이관.
+- **consent_logs 재동의 3종(TERMS/PRIVACY/MARKETING)**: 초기 가입 4종(+DISCLAIMER)과 다름. 재동의에서 DISCLAIMER는 버전 개념 없이 가입 시 1회만 수집.
+- **C1 분리**: signup/verify/page.tsx 이메일 OTP는 별도 Spec(auth-email-verify Draft)으로 분리 — 본 Spec 범위 외.
+
+### 미완료
+- **Wave 4(통합 테스트)**: PhoneVerificationService/ConsentService/PricingController Testcontainers 통합 테스트 — 다음 세션 또는 dc-test-verify로 처리
+- **auth-email-verify Spec**: Draft 상태. 이메일 OTP 흐름(POST /auth/email/send-otp + POST /auth/email/verify) 미구현 — signup/verify/page.tsx TODO 2건 잔존
+- **카카오 OTP 템플릿 등록**: 운영자 카카오 비즈니스 콘솔에서 dc_otp_v1 템플릿 등록 필요 (배포 전 선행)
 
 ---
 

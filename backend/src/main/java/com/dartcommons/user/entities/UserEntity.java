@@ -54,6 +54,11 @@ public class UserEntity {
     @Column(name = "phone_number_enc")
     private byte[] phoneNumberEnc;
 
+    /** OTP 인증 완료 여부(V17). phone_number_enc 저장과 독립 — 재인증 시 false 리셋 가능. */
+    @Column(name = "phone_verified", nullable = false)
+    @Builder.Default
+    private boolean phoneVerified = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "tier", nullable = false, length = 10)
     @Builder.Default
@@ -115,6 +120,12 @@ public class UserEntity {
     @PreUpdate
     private void preUpdate() {
         updatedAt = OffsetDateTime.now();
+    }
+
+    /** 전화번호 암호화 저장 + OTP 인증 완료 마킹. 번호 변경 시에도 이 메서드를 사용해 재인증 상태를 갱신. */
+    public void completePhoneVerification(byte[] encryptedPhone) {
+        this.phoneNumberEnc = encryptedPhone;
+        this.phoneVerified  = true;
     }
 
     public void updateNickname(String nickname) {
