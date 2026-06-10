@@ -45,7 +45,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | 0e163c8 | test(security): 보안테스트8건+Spec2개Done [6/8 S] | Shared/Docs | 6 | 8 | S | 보안테스트8건+Spec2개Done |
 | 2026-06-10 | Jin | 80d182e | chore(spec): 아키텍처정리Spec Done전환 [2/8 S] | Docs | 2 | 8 | S | 아키텍처정리Spec Done전환 |
 | 2026-06-10 | Jin | 40d045f | feat(frontend): API연동정합+인증부트스트랩+SonnerToast [6/7 M] | Frontend | 6 | 7 | M | API연동정합+인증부트스트랩+Toast |
-| 2026-06-10 | Jin | a300f18 | feat(user): MVP 가입OTP·동의·요금제API 완성 [7/8 L] | User/Infra/Frontend | 7 | 8 | L | MVP 가입OTP·동의·요금제API 완성 |
+| 2026-06-10 | Jin | a7b1cc1 | feat(user): MVP 가입OTP·동의·요금제API 완성 [7/8 L] | User/Infra/Frontend | 7 | 8 | L | MVP 가입OTP·동의·요금제API 완성 |
 <!-- SCORES -->
 
 ## 기간별 집계
