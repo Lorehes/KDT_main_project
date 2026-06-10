@@ -42,7 +42,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | 3aca87e | test(frontend): R10 Playwright E2E 인증플로우 4건 [6/9 M] | Frontend | 6 | 9 | M | R10 E2E 인증플로우 4건 |
 | 2026-06-10 | Jin | d83880c | fix(frontend): 투자자보호 sentiment가드+페이지네이션정합+런타임에러 [7/9 M] | Frontend/Disclosure | 7 | 9 | M | 투자자보호·런타임에러·페이지정합 |
 | 2026-06-10 | Jin | 7796f54 | refactor(arch): 아키텍처정리+도메인경계복구+테스트9건 [5/9 L] | Shared/Disclosure/Analysis/User/Frontend | 5 | 9 | L | 아키텍처정리+도메인경계복구+테스트9건 |
-| 2026-06-10 | Jin | 927592c | test(security): 보안테스트8건+Spec2개Done [6/8 S] | Shared/Docs | 6 | 8 | S | 보안테스트8건+Spec2개Done |
+| 2026-06-10 | Jin | 0e163c8 | test(security): 보안테스트8건+Spec2개Done [6/8 S] | Shared/Docs | 6 | 8 | S | 보안테스트8건+Spec2개Done |
 <!-- SCORES -->
 
 ## 기간별 집계
