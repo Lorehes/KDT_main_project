@@ -864,3 +864,22 @@ curl -u admin:<password> \
 
 ### 다음 세션 가장 큰 가치 — M1 Stage 2 LLM
 9.2만 건 데이터에 호재/악재 라벨 부여. `/dc-plan analysis-stage2-llm`부터 시작.
+
+---
+
+## 2026-06-10 | Wave 4 — Phone·동의·요금제 통합 테스트 완성
+
+**산출**:
+- `PhoneVerifyIntegrationTest` 8케이스: happy(ArgumentCaptor OTP캡처)/잘못된코드400/만료410/rate-limit429(1분1회)/brute-force429(5회후차단)/noAuth401/형식오류400/전화번호형식400
+- `ConsentIntegrationTest` 7케이스: signup후status조회/재동의204/status반영/버전형식400/NotBlank400/noAuth401×2
+- `PricingIntegrationTest` 4케이스: PUBLIC200/3티어검증/필드완전성/FREE=0·PREMIUM>0
+- `test/resources/application.yml`에 `pricing.plans` 추가 — 테스트 yml이 main을 대체하는 Spring Boot 동작으로 PricingProperties.plans()=null NPE 수정
+- 전체 **139/139** 통과 (0 실패)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **테스트 yml 주의**: Spring Boot 테스트 시 `src/test/resources/application.yml`이 `src/main/resources/application.yml`을 완전히 덮어씀(병합 아님). main에만 있는 설정은 테스트에서 누락됨 → 신규 `@ConfigurationProperties` 추가 시 테스트 yml에도 필수 값 동시 추가 필요.
+- **Caffeine OTP 캐시 테스트 격리**: `PhoneVerificationService`의 rate limit 캐시(minuteRateCache/hourRateCache)는 Spring 컨텍스트 공유. 각 테스트가 uniqueEmail()로 새 userId를 생성해 키 충돌 없이 격리됨.
+
+### 미완료 → 다음 세션
+- `auth-email-verify` — 가입 플로우 블로커. signup/verify/page.tsx TODO 2건 잔존. Spec Draft 상태.
+- `notification-read-status` — 알림 읽음 상태 DB 영속 (현재 Zustand 로컬 Set으로 임시 처리).

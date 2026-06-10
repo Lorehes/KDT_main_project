@@ -39,3 +39,27 @@ dartcommons:
   krx:
     api-key: test-key
     base-url: http://localhost
+
+pricing:
+  plans:
+    - tier: FREE
+      price: 0
+      currency: KRW
+      features:
+        - "보유 종목 3개"
+      recommended-for: "입문 투자자"
+      monthly-free-quota: 5
+    - tier: PRO
+      price: 9900
+      currency: KRW
+      features:
+        - "무제한 종목 등록"
+      recommended-for: "적극적 투자자"
+      monthly-free-quota: 0
+    - tier: PREMIUM
+      price: 29900
+      currency: KRW
+      features:
+        - "Pro 전체 기능"
+      recommended-for: "장기 투자자"
+      monthly-free-quota: 0
