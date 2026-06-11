@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-11
 ---
 
 # 알림 읽음 처리 Spec (백엔드 is_read + PATCH API)
 
-> 상태: Draft → **Approved** (2026-06-11, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-11, Wave 1 BE + Wave 2 FE 완료)
 
 ## 배경 / 목적
 

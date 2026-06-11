@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-11
 ---
 
 # 소셜 OAuth 실연동 Spec (카카오·구글)
 
-> 상태: Draft → **Approved** (2026-06-11, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-11, Wave 1 완료)
 
 ## 배경 / 목적
 
