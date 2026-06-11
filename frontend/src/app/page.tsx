@@ -96,7 +96,7 @@ export default function LandingPage() {
                   <ChevronRight className="size-4" aria-hidden />
                 </Link>
                 <Link
-                  href="/dashboard"
+                  href="/dashboard/preview"
                   className={
                     buttonVariants({ variant: "ghost", size: "lg" }) +
                     " border border-white/20 px-7 text-white hover:bg-white/10 hover:text-white"
