@@ -11,6 +11,23 @@ updated: 2026-06-11
 
 ---
 
+## 2026-06-11 | 디자인 명세서 정합성 수정 (dc-review-frontend)
+
+**문제 진단**:
+- CSP `connect-src` 에 경로 포함(`http://localhost:8080/api/v1`) → CSP 스펙상 경로 포함 시 정확한 URL만 허용, 하위 경로(`/users/me` 등) 전체 차단. 요금제 플랜 카드 미노출 + fetchMe 차단 원인
+- Tailwind v4 `@theme inline`의 `--color-primary: var(--primary)` var() 체인 불안정 → 모든 Primary 버튼 검정으로 렌더
+
+**수정 사항**:
+- `next.config.ts`: `new URL(apiUrl).origin`으로 경로 제거 → `http://localhost:8080` origin만 사용
+- `globals.css`: `--color-primary: var(--brand-blue)` 직접 참조로 고정
+- `page.tsx`: 히어로 placeholder sentiment 배지, Feature 아이콘 44px/11px-radius/blue-bg
+- `input.tsx`: 명세 기준 52px min-height, 1.5px border, 12px radius
+- `docs/개발명세서/design/`: 파일 재구성 + design_structure.md 전면 업데이트
+
+**결정**: CSP origin-only 방식 유지. 프로덕션에서도 `NEXT_PUBLIC_API_URL` origin 추출 자동 적용됨
+
+---
+
 ## 2026-06-11 | mvp-missing-endpoints — Spec Done 전환
 
 **산출**:

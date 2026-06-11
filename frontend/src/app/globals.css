@@ -45,8 +45,10 @@
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
+  --color-primary-foreground: oklch(0.985 0 0);
+  /* Tailwind v4에서 var() 체인(--color-primary→--primary→--brand-blue)이 불안정.
+     brand-blue를 직접 참조해 버튼·링 등 모든 primary 유틸리티가 확실히 파란색이 되도록 함. */
+  --color-primary: var(--brand-blue);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);

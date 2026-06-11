@@ -10,12 +10,22 @@
 
 import type { NextConfig } from "next";
 
-const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "";
+const isDev = process.env.NODE_ENV === "development";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+// CSP connect-src에는 경로 없이 origin만 사용해야 서브경로 요청이 허용됨.
+// "http://host/api/v1" (경로 포함) → /api/v1/users/me 등 하위 경로 전체 차단됨.
+const apiOrigin = apiUrl ? (() => { try { return new URL(apiUrl).origin; } catch { return ""; } })() : "";
+
+// dev: Turbopack이 인라인 스크립트·eval을 대량 사용 → 'unsafe-inline'+'unsafe-eval' 허용.
+// prod: 'unsafe-inline' 제거 → nonce 기반 CSP로 강화 예정.
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self'";
 
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self'",
-  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""} wss:`,
+  scriptSrc,
+  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""} wss: ws:`,
   "img-src 'self' data: https:",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",

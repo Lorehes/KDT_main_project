@@ -109,13 +109,18 @@ export default function LandingPage() {
 
             {/* 대시보드 미리보기 placeholder — W4 완료 후 실제 이미지로 교체 */}
             <div
-              className="hidden h-80 items-center justify-center rounded-2xl border border-white/10 bg-white/5 md:flex"
+              className="hero-preview hidden h-[380px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 md:flex"
               aria-label="대시보드 미리보기 이미지 (준비 중)"
               role="img"
             >
-              <p className="font-mono text-sm text-blue-300/60">
-                대시보드 미리보기 이미지
-              </p>
+              <div className="flex flex-col items-center gap-2 opacity-40">
+                <div className="flex gap-2">
+                  {["호재", "중립", "악재"].map((label, i) => (
+                    <span key={label} className={`rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white ${i === 0 ? "bg-[color:var(--color-sentiment-positive)]" : i === 1 ? "bg-[color:var(--color-sentiment-neutral)]" : "bg-[color:var(--color-sentiment-negative)]"}`}>{label}</span>
+                  ))}
+                </div>
+                <p className="font-mono text-[11px] text-blue-300/70">[ 대시보드 미리보기 ]</p>
+              </div>
             </div>
           </div>
         </section>
@@ -139,16 +144,17 @@ export default function LandingPage() {
             </div>
 
             <ul
-              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+              className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
               aria-label="주요 기능"
             >
               {FEATURES.map(({ icon: Icon, title, desc }) => (
                 <li key={title} className="flex flex-col gap-3">
-                  <div className="grid size-11 place-items-center rounded-xl bg-primary/10">
-                    <Icon className="size-5 text-primary" aria-hidden />
+                  {/* 명세 §4.4: 44px × 44px, border-radius 11px, bg #E8F1FE (blue-bg) */}
+                  <div className="grid size-11 shrink-0 place-items-center rounded-[11px] bg-[color:var(--color-brand-blue)]/10">
+                    <Icon className="size-5 text-[color:var(--color-brand-blue)]" aria-hidden />
                   </div>
                   <h3 className="text-[17px] font-bold text-foreground">{title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{desc}</p>
+                  <p className="text-[13.5px] leading-relaxed text-muted-foreground">{desc}</p>
                 </li>
               ))}
             </ul>
