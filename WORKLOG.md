@@ -11,6 +11,22 @@ updated: 2026-06-11
 
 ---
 
+## 2026-06-11 | mvp-missing-endpoints — Spec Done 전환
+
+**산출**:
+- `docs/specs/Approved/mvp-missing-endpoints.md` → `docs/specs/Done/` 이동 (git mv)
+- frontmatter `status: Done`, `updated: 2026-06-11` 갱신
+- 본문 상태 라인 → Done (phone verify·consent·pricing plans 구현 완료, 19 Testcontainers 통합 테스트 통과)
+- `docs/specs/README.md` MOC: Draft 섹션 제거 → Done 최상단 추가
+
+**확인 사항**:
+- PhoneVerifyIntegrationTest: 8 tests, 0 failures
+- ConsentIntegrationTest: 7 tests, 0 failures
+- PricingIntegrationTest: 4 tests, 0 failures
+- FE typecheck: 오류 없음
+
+---
+
 ## 2026-06-11 | frontend-oauth-social + notification-read-status — Wave 1 BE + Wave 2 FE 완료
 
 **산출**:

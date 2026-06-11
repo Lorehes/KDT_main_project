@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-11 (frontend-oauth-social, notification-read-status Done 전환)
+updated: 2026-06-11 (mvp-missing-endpoints Done 전환)
 ---
 
 # Specs MOC
@@ -28,13 +28,13 @@ docs/specs/
 **2026-06-09 코드 리뷰 후속 (수동 분석 + dc-review-code 종합 — 56개 이슈를 8개 Spec 으로 분리)**
 
 - [[performance-caching-staletime]] — 성능/캐싱: Caffeine portfolios/analysis + TanStack staleTime + size 제한 + 복합 인덱스
-- [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + TopBar 검색 결정
 
 ### Approved
 (없음)
 
 ### Done
+- [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans (2026-06-11)
 - [[frontend-oauth-social]] — 소셜 OAuth 실연동: 카카오·구글 콜백 Route Handler 구현 (2026-06-11)
 - [[notification-read-status]] — 알림 읽음 처리: is_read 컬럼 + PATCH API + TopBar 미읽음 카운트 (2026-06-11)
 - [[architecture-refactoring-cleanup]] — 아키텍처·유지보수성 정리: DTO 패키지·Tier enum·cross-domain·FE 중복 (2026-06-10)

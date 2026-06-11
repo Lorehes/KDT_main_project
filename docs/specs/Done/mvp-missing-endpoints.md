@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
-updated: 2026-06-10
+updated: 2026-06-11
 ---
 
 # MVP 미구현 엔드포인트 Spec (phone verify · consents · pricing plans)
 
-> 상태: Draft → **Approved** (2026-06-10, dc-tech-review 승인 · C1 이메일 verify [[auth-email-verify]]로 분리)
+> 상태: Draft → Approved (2026-06-10) → **Done** (2026-06-11, phone verify · consent · pricing plans 구현 완료 · 19 Testcontainers 통합 테스트 통과)
 
 ## 배경 / 목적
 
