@@ -48,7 +48,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | a7b1cc1 | feat(user): MVP 가입OTP·동의·요금제API 완성 [7/8 L] | User/Infra/Frontend | 7 | 8 | L | MVP 가입OTP·동의·요금제API 완성 |
 | 2026-06-10 | Jin | 24c663e | test(user): Phone·동의·요금제 Wave4 통합테스트 19건 [6/8 M] | User | 6 | 8 | M | Phone·동의·요금제 통합테스트 |
 | 2026-06-11 | Jin | 521badf | feat(user): 이메일OTP 가입검증 완성 [8/9 L] | User/Frontend | 8 | 9 | L | 이메일OTP 가입검증 완성 |
-| 2026-06-11 | Jin | 1b2d2fd | feat(notification,frontend): OAuth소셜실연동+알림읽음영속화 [8/9 L] | Notification/User/Frontend | 8 | 9 | L | OAuth소셜로그인+알림읽음영속화 |
+| 2026-06-11 | Jin | a1d773e | feat(notification,frontend): OAuth소셜실연동+알림읽음영속화 [8/9 L] | Notification/User/Frontend | 8 | 9 | L | OAuth소셜로그인+알림읽음영속화 |
 <!-- SCORES -->
 
 ## 기간별 집계
