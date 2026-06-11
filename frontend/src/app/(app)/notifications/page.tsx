@@ -2,15 +2,16 @@
 
 // [목적] 알림 센터(D24/m26) — 전체 알림 이력을 날짜 그룹·필터로 탐색
 // [이유] 하단 탭바 '알림' 탭의 핵심 화면. 발송된 모든 알림 인박스 역할
-// [사이드 임팩트] useNotifications 쿼리(전체). 읽음 처리는 로컬 Set 임시 처리(backend is_read 미구현)
+// [사이드 임팩트] useNotifications 쿼리(전체). 읽음 처리는 useMarkAsRead/useMarkAllAsRead mutation(서버 영속).
+//   is_read 서버 상태 기반 → 새로고침·탭 이동 후에도 읽음 상태 유지.
+//   mutation 성공 시 ["notifications", "unread-count"] 쿼리 자동 무효화.
 // [수정 시 고려사항] 날짜 그룹은 created_at 기준 클라이언트 파싱.
-//   백엔드 PATCH /notifications/{id}/read 추가 시 readIds Set → API 호출로 교체.
-//   안읽음 필터(UNREAD)는 로컬 필터로 구현(서버 필터 미지원)
+//   안읽음 필터(UNREAD)는 is_read 서버 상태 기반 로컬 필터.
 
 import { useState } from "react";
 import Link from "next/link";
 import { Settings2 } from "lucide-react";
-import { useNotifications } from "@/lib/api/notifications";
+import { useNotifications, useMarkAsRead, useMarkAllAsRead } from "@/lib/api/notifications";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -42,22 +43,23 @@ function groupByDate(notifications: Notification[]) {
 export default function NotificationsPage() {
   const { data, isLoading } = useNotifications();
   const [filter, setFilter] = useState<FilterType>("ALL");
-  const [readIds, setReadIds] = useState<Set<number>>(new Set());
+  const markAsRead    = useMarkAsRead();
+  const markAllAsRead = useMarkAllAsRead();
 
   const all = data?.content ?? [];
 
   const filtered = all.filter((n) => {
-    if (filter === "UNREAD") return !readIds.has(n.id);
+    if (filter === "UNREAD") return !n.is_read;
     if (filter === "POSITIVE") return n.sentiment === "POSITIVE";
     if (filter === "NEGATIVE") return n.sentiment === "NEGATIVE";
     return true;
   });
 
   const groups = groupByDate(filtered);
-  const unreadCount = all.filter((n) => !readIds.has(n.id)).length;
+  const unreadCount = all.filter((n) => !n.is_read).length;
 
-  const markRead = (id: number) => setReadIds((prev) => new Set([...prev, id]));
-  const markAllRead = () => setReadIds(new Set(all.map((n) => n.id)));
+  const handleMarkRead    = (id: number, isRead: boolean) => { if (!isRead) markAsRead.mutate(id); };
+  const handleMarkAllRead = () => markAllAsRead.mutate();
 
   return (
     <div className="flex flex-col gap-5">
@@ -73,8 +75,9 @@ export default function NotificationsPage() {
           {unreadCount > 0 && (
             <button
               type="button"
-              onClick={markAllRead}
-              className="text-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              onClick={handleMarkAllRead}
+              disabled={markAllAsRead.isPending}
+              className="text-sm font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
             >
               모두 읽음
             </button>
@@ -129,8 +132,8 @@ export default function NotificationsPage() {
             </div>
 
             <ul className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm" role="list">
-              {items.map((notif, idx) => {
-                const isRead = readIds.has(notif.id);
+              {items.map((notif) => {
+                const isRead = notif.is_read;
                 return (
                   <li
                     key={notif.id}
@@ -138,7 +141,7 @@ export default function NotificationsPage() {
                   >
                     <Link
                       href={`/disclosures/${notif.disclosure_id}`}
-                      onClick={() => markRead(notif.id)}
+                      onClick={() => handleMarkRead(notif.id, isRead)}
                       className="flex gap-3 px-5 py-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       aria-label={`${notif.corp_name} 공시 상세 보기${!isRead ? " (안읽음)" : ""}`}
                     >

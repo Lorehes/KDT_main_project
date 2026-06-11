@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 ---
 
 # 소셜 OAuth 실연동 Spec (카카오·구글)
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-11, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -92,4 +92,39 @@ export async function GET(req, { params }) {
 }
 ```
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-06-11)
+
+### 아키텍처 분해
+- **영향 레이어**: frontend 전용 (BE `GET /auth/oauth/{provider}/url` + `POST /auth/oauth/{provider}/callback` 이미 Done)
+- **신규**: `app/api/auth/callback/[provider]/route.ts` Route Handler
+- **수정**: `lib/api/auth.ts` (`initiateOAuth` 함수 추가), `signup/page.tsx`, `login/page.tsx`
+
+### 작업 카드
+| # | 작업 | 레이어 | 난이도 | 의존성 |
+|---|------|--------|--------|--------|
+| 1 | `initiateOAuth(provider)` 함수 추가 — `getOAuthUrl()` 호출 후 `window.location.href` 리다이렉트 | frontend/lib/api/auth.ts | 하 | - |
+| 2 | OAuth 콜백 Route Handler — `code`+`state` 수신 → BE callback POST → `storeTokenCookies` → `/dashboard` or `/signup/terms` 리다이렉트 | frontend/app/api/auth/callback/[provider]/route.ts | 중 | #1 |
+| 3 | `/signup` 카카오·구글 버튼 `alert` → `initiateOAuth` 교체 | frontend/signup/page.tsx | 하 | #1 |
+| 4 | `/login` 동일 교체 + `?error=oauth_failed` 쿼리 인라인 에러 표시 | frontend/login/page.tsx | 하 | #1 |
+
+### DB / 마이그레이션 영향
+- 없음 (BE OAuth2 인프라 V1·V14 이미 존재)
+
+### 외부 계약 영향
+- 카카오 개발자 콘솔 Redirect URI 등록 필요: `http://localhost:3000/api/auth/callback/kakao` (로컬), 프로덕션 도메인도 동일 패턴
+- 구글 OAuth2 클라이언트 Redirect URI 동일 패턴
+
+### 구현 주의사항
+- **콜백 핸들러 토큰 저장**: BE가 JSON body로 `access_token`/`refresh_token` 반환 → 기존 `storeTokenCookies` 패턴 재사용 (httpOnly 쿠키)
+- **R7 온보딩 분기**: BE가 `consents` 미완료 시 403 반환 → `res.ok === false && res.status === 403` 감지 → `/signup/terms` 리다이렉트
+- **state 없는 콜백 방어**: `code` 또는 `state` 없으면 즉시 `/login?error=oauth_failed`
+- **`getOAuthUrl` 도메인 검증**: 이미 `ALLOWED_OAUTH_DOMAINS` 화이트리스트 구현됨 — `initiateOAuth`는 이를 재사용
+
+### 리스크 & 법적 검토
+- Open Redirect: `getOAuthUrl`의 `ALLOWED_OAUTH_DOMAINS` 검증이 이미 방어함 (보안 리뷰 통과 수준)
+- 카카오 정책: 팝업 불가 → 전체 페이지 리다이렉트 방식만 허용 (Spec 권장 방향과 일치)
+- CSRF: BE가 state 발급·검증 1차 담당, FE는 state 없는 콜백만 추가 방어
+
+### 예상 wave 수
+- **1 wave** — 전체 FE 변경, BE 의존성 없음, 소규모
+

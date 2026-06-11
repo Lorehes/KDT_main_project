@@ -6,17 +6,20 @@ import lombok.*;
 import java.time.OffsetDateTime;
 
 /*
- * [목적] notifications 테이블(V6+V15) JPA 엔티티 — 알림 발송 이력 + PENDING→SENT/FAILED/RETRYING 상태머신.
+ * [목적] notifications 테이블(V6+V15+V18) JPA 엔티티 — 알림 발송 이력 + PENDING→SENT/FAILED/RETRYING 상태머신 + 읽음 처리.
  *       (user, disclosure, channel) 복합 UNIQUE(uq_notification_dedup)로 중복 발송 DB 2차 방어.
  * [이유] 발송 상태·재시도 횟수·오류 메시지를 영속화해 운영 모니터링·재시도 배치 기반 마련.
  *       Channel·Status enum은 V6 CHECK 제약과 @Enumerated(STRING)으로 동기화(CLAUDE.md §6-3).
  *       V15: messageBody/messageSubject 추가 → RetryJob이 Disclosure·AnalysisResult 재조회 없이 재발송 가능.
+ *       V18: isRead/readAt 추가 → FE 알림 읽음 상태 영속화. 새로고침·탭 이동 시에도 상태 유지.
  * [사이드 임팩트] NotificationDispatcher가 최초 PENDING save → 발송 결과에 따라 SENT/FAILED update.
  *               DataIntegrityViolationException(dedup 위반) → Dispatcher가 catch 후 skip.
  *               NotificationRetryJob이 PENDING/RETRYING 고착 레코드 재발송 + markRetrying() 호출.
+ *               markRead() 호출 후 isRead=true/readAt=now() — NotificationHistoryService가 IDOR 검증 후 호출.
  * [수정 시 고려사항] retry_count 증가는 markRetrying()으로 캡슐화 — 직접 필드 수정 금지.
  *                  error_message는 500자 truncate — 긴 스택트레이스는 로그에서 확인.
  *                  messageBody/messageSubject NULL 허용 — 기존 레코드 하위 호환(RetryJob에서 NULL 체크).
+ *                  markAllRead()는 Repository JPQL bulk UPDATE로 처리 — entity 레벨에서 N+1 금지.
  */
 @Entity
 @Table(name = "notifications")
@@ -65,6 +68,13 @@ public class NotificationEntity {
     @Column(name = "message_subject", length = 200)
     private String messageSubject;
 
+    @Column(name = "is_read", nullable = false)
+    @Builder.Default
+    private boolean isRead = false;
+
+    @Column(name = "read_at")
+    private OffsetDateTime readAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -91,5 +101,11 @@ public class NotificationEntity {
     public void storeMessage(String body, String subject) {
         this.messageBody    = body;
         this.messageSubject = subject;
+    }
+
+    /** 단건 읽음 처리. NotificationHistoryService에서 IDOR 검증(userId == n.userId) 후 호출. */
+    public void markRead() {
+        this.isRead = true;
+        this.readAt = OffsetDateTime.now();
     }
 }

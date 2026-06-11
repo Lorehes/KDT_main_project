@@ -2,8 +2,10 @@
 
 // [목적] 로그인 화면(D5 로그인 모드) — 기존 계정으로 로그인
 // [이유] /signup과 분리된 로그인 전용 페이지. 미들웨어가 인증 후 redirect 파라미터를 전달
-// [사이드 임팩트] 로그인 성공 시 authStore.setUser → redirect 파라미터 또는 /dashboard 이동
-// [수정 시 고려사항] 소셜 로그인은 /signup과 동일 OAuth 플로우. redirect 파라미터 처리로 딥링크 복원
+// [사이드 임팩트] 로그인 성공 시 authStore.setUser → redirect 파라미터 또는 /dashboard 이동.
+//   소셜 버튼: initiateOAuth(provider) → /api/auth/callback/[provider] 콜백 처리 후 /dashboard.
+//   ?error=oauth_failed 쿼리 파라미터 수신 시 인라인 에러 메시지 표시.
+// [수정 시 고려사항] redirect 파라미터 처리로 딥링크 복원. OAuth 에러 코드 다양화 시 error 값별 메시지 분기.
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,13 +15,15 @@ import { Suspense } from "react";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { loginSchema, type LoginFormValues } from "@/lib/schemas/authSchemas";
-import { useLogin } from "@/lib/api/auth";
+import { useLogin, initiateOAuth } from "@/lib/api/auth";
 import { ApiException } from "@/lib/api/client";
+import { toast } from "sonner";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const oauthError = searchParams.get("error");
   const { mutateAsync, isPending } = useLogin();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,8 +52,14 @@ function LoginForm() {
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">로그인</h1>
         </div>
 
+        {oauthError && (
+          <p className="rounded-lg bg-destructive/10 px-4 py-2.5 text-sm text-destructive" role="alert">
+            소셜 로그인에 실패했습니다. 다시 시도하거나 이메일로 로그인해주세요.
+          </p>
+        )}
+
         <div className="flex flex-col gap-2.5">
-          <button type="button" onClick={() => alert("카카오 OAuth — 백엔드 연동 후 활성화")}
+          <button type="button" onClick={() => initiateOAuth("kakao").catch(() => toast.error("소셜 로그인 연결에 실패했습니다. 잠시 후 다시 시도해주세요."))}
             className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[#FEE500] py-3 text-sm font-bold text-[#3C1E1E] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="카카오로 로그인">
             <span className="grid size-[22px] place-items-center rounded-md bg-[#3C1E1E]" aria-hidden>
@@ -59,7 +69,7 @@ function LoginForm() {
             </span>
             카카오로 로그인
           </button>
-          <button type="button" onClick={() => alert("구글 OAuth — 백엔드 연동 후 활성화")}
+          <button type="button" onClick={() => initiateOAuth("google").catch(() => toast.error("소셜 로그인 연결에 실패했습니다. 잠시 후 다시 시도해주세요."))}
             className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-background py-3 text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Google로 로그인">
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>

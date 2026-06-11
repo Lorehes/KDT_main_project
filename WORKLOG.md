@@ -2,12 +2,42 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-10 (2)
+updated: 2026-06-11
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-11 | frontend-oauth-social + notification-read-status — Wave 1 BE + Wave 2 FE 완료
+
+**산출**:
+- **V18 마이그레이션**: `notifications.is_read BOOLEAN NOT NULL DEFAULT FALSE` + `read_at TIMESTAMPTZ` + `idx_notifications_unread` partial index
+- **NotificationEntity**: `isRead`/`readAt` 필드 + `markRead()` 캡슐화 메서드
+- **NotificationRepository**: `countByUserIdAndIsReadFalse` + `markAllReadByUserId` bulk JPQL UPDATE
+- **NotificationResponse**: `is_read` 필드 추가 (FE 타입 1:1 대응)
+- **NotificationHistoryService**: `markRead(userId, id)` IDOR 방어(userId 소유권 검증 → 403) + 중복 save 방지 + `markAllRead` bulk UPDATE + `getUnreadCount`
+- **NotificationController**: `PATCH /{id}/read`, `PATCH /read-all`, `GET /unread-count` 3개 엔드포인트 추가
+- **OAuth Route Handler**: `/api/auth/callback/[provider]/route.ts` 신규 — code+state 검증 → BE callback → httpOnly 쿠키 직접 설정(self-fetch 제거) → `/dashboard`
+- **initiateOAuth**: `auth.ts`에 추가 — `getOAuthUrl` 도메인 검증 재사용 + 에러 시 toast 처리
+- **signup/login 페이지**: `alert` placeholder → `initiateOAuth` + `.catch(toast.error)` 교체
+- **login 페이지**: `?error=oauth_failed` 인라인 에러 표시 추가
+- **notifications.ts**: `is_read` 타입 추가 + `useMarkAsRead`/`useMarkAllAsRead`/`useUnreadCount` 훅 3종
+- **NotificationModal/NotificationsPage**: 로컬 Set → mutation 교체, `is_read` 서버 상태 기반
+- **TopBar**: `useUnreadCount` 연결 — 미읽음 있을 때만 점 표시
+- **NotificationReadIntegrationTest**: PATCH 읽음 처리·IDOR·전체읽음·unread-count 5건 Testcontainers 통합 테스트
+
+### 결정 (코드에 드러나지 않는 사항)
+- **OAuth BE 자동동의**: `AuthService.autoSignup()`이 소셜 신규 가입 시 약관 동의를 자동 처리 → FE callback에서 `/signup/terms` 분기 불필요(제거). 향후 명시적 동의 수집 필요 시 BE API 변경 필요.
+- **OAuth self-fetch 제거**: 기존 `/api/auth/session` self-fetch 패턴 대신 callback route에서 직접 쿠키 설정 — edge runtime 호환성 및 안정성 향상.
+- **unread-count 폴링**: staleTime 30초로 설정. WebSocket 도입 전까지 유지. 인증된 모든 페이지에서 TopBar가 폴링하므로 트래픽 영향 최소화.
+- **카카오 개발자 콘솔**: Redirect URI 등록 필요 (운영자 작업) — `http://localhost:3000/api/auth/callback/kakao`, 프로덕션 도메인도 동일 패턴.
+
+### 미완료 (다음 세션)
+- 두 Spec(`frontend-oauth-social`, `notification-read-status`) Done 전환 필요 (`/dc-spec-move`)
+- 카카오/구글 OAuth 실제 테스트는 개발자 콘솔 Redirect URI 등록 후 가능
 
 ---
 

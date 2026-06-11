@@ -4,8 +4,9 @@
 // [이유] 신규 사용자의 첫 온보딩 단계. 소셜 우선 + 이메일 폴백 구조
 // [사이드 임팩트] 이메일 제출 시 POST /auth/email/send-otp 호출 → 성공 후 signupStore 저장 + /signup/verify 이동.
 //   409(이미 가입) → toast.error. 429(rate limit) → toast.error. AuthLayout 스플릿 적용.
-// [수정 시 고려사항] 소셜 OAuth URL은 GET /auth/oauth/{provider}/url로 취득. 현재 placeholder 처리.
-//   "정보 제공 도구, 투자자문 아님" 고지는 폼 하단에 상시 노출 (자본시장법 §11.1)
+//   소셜 버튼 클릭 시 initiateOAuth(provider) → GET /auth/oauth/{provider}/url → window.location.href 리다이렉트.
+//   콜백은 /api/auth/callback/[provider]/route.ts에서 처리 → 성공 시 /dashboard, 약관 미동의 시 /signup/terms.
+// [수정 시 고려사항] "정보 제공 도구, 투자자문 아님" 고지는 폼 하단에 상시 노출 (자본시장법 §11.1)
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +17,7 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { signupSchema, type SignupFormValues } from "@/lib/schemas/authSchemas";
 import { useSignupStore } from "@/lib/stores/signupStore";
-import { useSendEmailOtp } from "@/lib/api/auth";
+import { useSendEmailOtp, initiateOAuth } from "@/lib/api/auth";
 import { ApiException } from "@/lib/api/client";
 
 export default function SignupPage() {
@@ -59,7 +60,7 @@ export default function SignupPage() {
         </div>
 
         <div className="flex flex-col gap-2.5">
-          <button type="button" onClick={() => alert("카카오 OAuth — 백엔드 연동 후 활성화")}
+          <button type="button" onClick={() => initiateOAuth("kakao").catch(() => toast.error("소셜 로그인 연결에 실패했습니다. 잠시 후 다시 시도해주세요."))}
             className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[#FEE500] py-3 text-sm font-bold text-[#3C1E1E] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="카카오로 1초 시작">
             <span className="grid size-[22px] place-items-center rounded-md bg-[#3C1E1E]" aria-hidden>
@@ -69,7 +70,7 @@ export default function SignupPage() {
             </span>
             카카오로 1초 시작
           </button>
-          <button type="button" onClick={() => alert("구글 OAuth — 백엔드 연동 후 활성화")}
+          <button type="button" onClick={() => initiateOAuth("google").catch(() => toast.error("소셜 로그인 연결에 실패했습니다. 잠시 후 다시 시도해주세요."))}
             className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-background py-3 text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Google로 계속하기">
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>

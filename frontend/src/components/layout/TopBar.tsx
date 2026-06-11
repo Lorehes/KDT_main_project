@@ -2,17 +2,21 @@
 
 // [목적] 웹 앱 상단 바 — 글로벌 검색·알림 벨·계정 메뉴 접근점
 // [이유] 모든 인증 페이지에서 공통으로 표시되는 상단 네비게이션
-// [사이드 임팩트] NotificationModal은 TopBar에서 직접 렌더(전역 state 연동 필요)
-// [수정 시 고려사항] 미읽음 알림 개수는 authStore 또는 별도 쿼리로 관리. 현재는 placeholder
+// [사이드 임팩트] NotificationModal은 TopBar에서 직접 렌더(전역 state 연동 필요).
+//   useUnreadCount: staleTime 30초 폴링 — 미읽음 있을 때만 빨간 점 표시.
+//   markAsRead/markAllAsRead mutation 성공 시 ["unread-count"] 쿼리 무효화 → 자동 갱신.
+// [수정 시 고려사항] WebSocket 도입 시 useUnreadCount 폴링 → 서버 푸시 구독으로 교체.
 
 import Link from "next/link";
 import { Bell, Search } from "lucide-react";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useUIStore } from "@/lib/stores/uiStore";
+import { useUnreadCount } from "@/lib/api/notifications";
 
 export function TopBar() {
   const { user } = useAuthStore();
   const { toggleNotifModal } = useUIStore();
+  const { data: unreadCount } = useUnreadCount();
   const initials = user?.nickname?.[0] ?? "?";
 
   return (
@@ -35,8 +39,9 @@ export function TopBar() {
           aria-label="알림 열기"
         >
           <Bell className="size-5 text-muted-foreground" />
-          {/* 미읽음 점 — 실제 카운트 연동은 W6에서 */}
-          <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-[color:var(--color-sentiment-negative)]" aria-hidden />
+          {(unreadCount ?? 0) > 0 && (
+            <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-[color:var(--color-sentiment-negative)]" aria-label={`미읽음 알림 ${unreadCount}건`} />
+          )}
         </button>
 
         <Link

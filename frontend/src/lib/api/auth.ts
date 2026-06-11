@@ -1,8 +1,10 @@
 // [목적] 인증·사용자 API 타입 + TanStack Query 훅 (signup, login, oauth, me, logout, phone OTP, consent)
 // [이유] BE SignupRequest는 flat boolean 동의 필드 구조. api_spec 명세는 배열이나 BE 구현이 우선.
 //   login/signup 성공 후 /api/auth/session Route Handler로 httpOnly 쿠키를 기록해 미들웨어 세션 연동
+//   initiateOAuth: getOAuthUrl()로 도메인 검증된 URL 취득 → window.location.href 전체 리다이렉트(카카오 팝업 불가 정책).
 // [사이드 임팩트] useSignup/useLogin 모두 성공 시 authStore.setUser + /api/auth/session 쿠키 기록.
 //   useSendPhoneOtp → BE Caffeine rate limit(1분 1회, 시간당 5회). useConfirmPhoneOtp 성공 시 fetchMe()로 phone_verified 갱신.
+//   initiateOAuth: 호출 즉시 페이지 이동 — 이후 콜백은 /api/auth/callback/[provider]/route.ts 에서 처리.
 // [수정 시 고려사항] BE가 Set-Cookie를 직접 발급하도록 변경 시 /api/auth/session 호출 제거.
 //   BE UpdateMeRequest는 nickname 단일 필드(@NotBlank) — investment_experience/preferred_time은 BE 미지원으로 제거됨
 
@@ -177,4 +179,14 @@ export async function getOAuthUrl(provider: "kakao" | "google" | "naver"): Promi
     throw new Error(`OAuth URL이 허용되지 않은 도메인입니다. provider=${provider}`);
   }
   return url;
+}
+
+/**
+ * OAuth 인가 시작 — URL 취득 후 전체 페이지 리다이렉트.
+ * 카카오는 팝업 불가(카카오 정책) → window.location.href 사용.
+ * URL은 getOAuthUrl() 에서 ALLOWED_OAUTH_DOMAINS 화이트리스트 검증 완료.
+ */
+export async function initiateOAuth(provider: "kakao" | "google"): Promise<void> {
+  const url = await getOAuthUrl(provider);
+  window.location.href = url;
 }

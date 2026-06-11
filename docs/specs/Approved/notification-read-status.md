@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 ---
 
 # 알림 읽음 처리 Spec (백엔드 is_read + PATCH API)
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-11, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -94,4 +94,52 @@ CREATE INDEX idx_notifications_unread ON notifications (user_id, is_read) WHERE 
 - `read-all`: 트랜잭션 안에서 bulk UPDATE → 응답 204
 - FE: mutation 성공 시 `["notifications"]` 쿼리 무효화 → 자동 리페치
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-06-11)
+
+### 아키텍처 분해
+- **영향 레이어**: backend(`notification` 도메인, `user` 도메인 일부) + frontend(알림 관련 4파일)
+- **신규**: `V18__add_is_read_to_notifications.sql`, `NotificationReadService.java` (또는 `NotificationHistoryService` 확장)
+- **수정**: `NotificationEntity`, `NotificationRepository`, `NotificationResponse`, `NotificationController`, `notifications.ts`, `NotificationModal.tsx`, `notifications/page.tsx`, `TopBar.tsx`
+
+### 작업 카드
+| # | 작업 | 레이어 | 난이도 | 의존성 |
+|---|------|--------|--------|--------|
+| 1 | `V18__add_is_read_to_notifications.sql` — `is_read BOOLEAN NOT NULL DEFAULT FALSE` + `read_at TIMESTAMPTZ` + partial index | backend/migration | 하 | - |
+| 2 | `NotificationEntity` `isRead`·`readAt` 필드 + `markRead()` 메서드 추가 | backend/notification/entities | 하 | #1 |
+| 3 | `NotificationRepository` — `countByUserIdAndIsReadFalse`, bulk UPDATE `markAllReadByUserId` JPQL 추가 | backend/notification/repositories | 하 | #2 |
+| 4 | `NotificationResponse` — `isRead` 필드 추가, `from()` 팩토리 반영 | backend/user/dto | 하 | #2 |
+| 5 | `NotificationHistoryService` — `markRead(userId, id)`, `markAllRead(userId)`, `getUnreadCount(userId)` 추가 (IDOR: userId 소유권 검증) | backend/user/services | 중 | #3 #4 |
+| 6 | `NotificationController` — `PATCH /{id}/read`, `PATCH /read-all`, `GET /unread-count` 엔드포인트 추가 | backend/user/controllers | 하 | #5 |
+| 7 | `notifications.ts` — `Notification` 타입 `is_read` 추가 + `useMarkAsRead`, `useMarkAllAsRead`, `useUnreadCount` 훅 | frontend/lib/api | 하 | #6 |
+| 8 | `NotificationModal.tsx` — 로컬 Set → `useMarkAsRead`/`useMarkAllAsRead` mutation 교체 | frontend/components | 하 | #7 |
+| 9 | `notifications/page.tsx` — 동일 교체 + `is_read` 서버 상태 반영 | frontend/app | 하 | #7 |
+| 10 | `TopBar.tsx` — `useUnreadCount()` 연결, 항상 보이는 점 → 실데이터 조건부 표시 | frontend/components | 하 | #7 |
+
+### DB / 마이그레이션 영향
+- **Spec 오류 수정**: Spec에 V17로 기재됐으나 `V17__add_phone_verified_to_users.sql`이 이미 존재 → **V18** 사용
+- `V18__add_is_read_to_notifications.sql`:
+  ```sql
+  ALTER TABLE notifications ADD COLUMN is_read BOOLEAN NOT NULL DEFAULT FALSE;
+  ALTER TABLE notifications ADD COLUMN read_at TIMESTAMPTZ;
+  CREATE INDEX idx_notifications_unread ON notifications (user_id, is_read) WHERE is_read = FALSE;
+  ```
+- `ddl-auto: validate` 통과를 위해 Entity 필드 추가 필수 (#2와 동시 적용)
+
+### 외부 계약 영향
+- 없음 (카카오/DART/LLM 무관)
+
+### 구현 주의사항
+- **IDOR 방어**: `markRead(userId, id)` — `WHERE id = ? AND user_id = ?` 조건 필수. 타인 알림 읽음 처리 차단
+- **bulk UPDATE**: `markAllRead`는 `UPDATE notifications SET is_read=true, read_at=now() WHERE user_id=? AND is_read=false` 단일 쿼리 — N+1 금지
+- **FE 캐시 무효화**: mutation 성공 시 `["notifications"]` + `["unread-count"]` 쿼리 invalidate
+- **unread-count 폴링**: `useUnreadCount`는 `staleTime: 30_000` (30초) — WebSocket은 MVP 이후
+
+### 리스크 & 법적 검토
+- IDOR(Insecure Direct Object Reference): PATCH `/{id}/read`에서 `userId` 소유권 미검증 시 타인 알림 조작 가능 → `@AuthenticationPrincipal` + WHERE 조건 필수 (P0)
+- 대량 읽음 처리 성능: bulk UPDATE로 해결, 인덱스(`idx_notifications_unread`) partial로 효율 확보
+- Flyway 불변 원칙: V18 이상 신규 번호 사용, V1~V17 절대 수정 금지
+
+### 예상 wave 수
+- **Wave 1**: BE (#1~#6) — 마이그레이션 + Entity + Repository + Service + Controller
+- **Wave 2**: FE (#7~#10) — API 훅 + 컴포넌트 3종 교체
+

@@ -2,26 +2,25 @@
 
 // [목적] 알림 모달/시트(D23/m25) — 벨 클릭 시 최근 알림 4건 팝오버(웹) / 상단 시트(모바일)
 // [이유] TopBar 벨 버튼에서 즉시 최근 알림을 확인. uiStore.notifModalOpen으로 전역 제어
-// [사이드 임팩트] useNotifications({size:4}) 쿼리 사용. 읽음 처리는 로컬 Set으로 임시 관리
-//   (백엔드 is_read 컬럼 미존재 — W6 Tech Review 결정)
-// [수정 시 고려사항] 웹: Popover(relative+absolute). 모바일: Sheet(top). 읽음 API 추가 시 Set → PATCH 교체.
-//   Popover 바깥 클릭 닫힘은 useEffect + document click listener로 처리
+// [사이드 임팩트] useNotifications({size:4}) 쿼리 사용. 읽음 처리는 useMarkAsRead/useMarkAllAsRead mutation.
+//   mutation 성공 시 ["notifications", "unread-count"] 쿼리 자동 무효화 → TopBar 카운트 즉시 갱신.
+//   is_read는 서버 상태 기반 — 새로고침·탭 이동 후에도 읽음 상태 유지.
+// [수정 시 고려사항] 웹: Popover(relative+absolute). 모바일: Sheet(top).
+//   Popover 바깥 클릭 닫힘은 useEffect + document click listener로 처리.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { useNotifications } from "@/lib/api/notifications";
+import { useNotifications, useMarkAsRead, useMarkAllAsRead } from "@/lib/api/notifications";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
-import { cn } from "@/lib/utils";
 
 export function NotificationModal() {
   const { notifModalOpen, toggleNotifModal } = useUIStore();
   const { data } = useNotifications({ size: 4 });
   const notifications = data?.content ?? [];
-
-  // 로컬 읽음 상태 — 백엔드 is_read 미구현으로 클라이언트 임시 처리
-  const [readIds, setReadIds] = useState<Set<number>>(new Set());
+  const markAsRead    = useMarkAsRead();
+  const markAllAsRead = useMarkAllAsRead();
 
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +36,7 @@ export function NotificationModal() {
     return () => document.removeEventListener("mousedown", handler);
   }, [notifModalOpen, toggleNotifModal]);
 
-  const markAllRead = () => setReadIds(new Set(notifications.map((n) => n.id)));
+  const handleMarkAllRead = () => markAllAsRead.mutate();
 
   if (!notifModalOpen) return null;
 
@@ -56,16 +55,17 @@ export function NotificationModal() {
       <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
         <div className="flex items-center gap-2">
           <span className="text-base font-extrabold text-foreground">알림</span>
-          {notifications.filter((n) => !readIds.has(n.id)).length > 0 && (
+          {notifications.filter((n) => !n.is_read).length > 0 && (
             <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[color:var(--color-sentiment-negative)] px-1.5 text-[10px] font-extrabold text-white">
-              {notifications.filter((n) => !readIds.has(n.id)).length}
+              {notifications.filter((n) => !n.is_read).length}
             </span>
           )}
         </div>
         <button
           type="button"
-          onClick={markAllRead}
-          className="text-xs font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          onClick={handleMarkAllRead}
+          disabled={markAllAsRead.isPending}
+          className="text-xs font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
         >
           모두 읽음
         </button>
@@ -77,13 +77,13 @@ export function NotificationModal() {
           <li className="py-8 text-center text-sm text-muted-foreground">최근 알림이 없습니다.</li>
         ) : (
           notifications.map((notif) => {
-            const isRead = readIds.has(notif.id);
+            const isRead = notif.is_read;
             return (
               <li key={notif.id}>
                 <Link
                   href={`/disclosures/${notif.disclosure_id}`}
                   onClick={() => {
-                    setReadIds((prev) => new Set([...prev, notif.id]));
+                    if (!isRead) markAsRead.mutate(notif.id);
                     toggleNotifModal();
                   }}
                   className="flex gap-3 px-4 py-3.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
