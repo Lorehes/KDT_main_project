@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-10
-updated: 2026-06-10
+updated: 2026-06-11
 ---
 
 # 이메일 인증 OTP Spec (auth-email-verify)
 
-> 상태: **Draft** — [[mvp-missing-endpoints]] C1 분리 신규 생성 (2026-06-10)
+> 상태: **Approved** → 구현 완료 (2026-06-11) — [[mvp-missing-endpoints]] C1 분리 신규 생성 (2026-06-10)
 
 ## 배경 / 목적
 

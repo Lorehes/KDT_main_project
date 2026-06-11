@@ -883,3 +883,29 @@ curl -u admin:<password> \
 ### 미완료 → 다음 세션
 - `auth-email-verify` — 가입 플로우 블로커. signup/verify/page.tsx TODO 2건 잔존. Spec Draft 상태.
 - `notification-read-status` — 알림 읽음 상태 DB 영속 (현재 Zustand 로컬 Set으로 임시 처리).
+
+---
+
+## 2026-06-11 | auth-email-verify — 이메일 OTP 가입 검증 완성
+
+**산출**:
+- `EmailVerificationService` — OTP 6자리 생성·발송(JavaMailSender), 5분 TTL Caffeine 캐시, 1분 rate limit, **brute-force 5회 차단**(OtpEntry record + AtomicInteger), **발송 실패 시 캐시 무효화**
+- `EmailSendOtpRequest` / `EmailVerifyOtpRequest` DTO — Bean Validation(@Email, @Pattern 6자리)
+- `AuthController` — `POST /auth/email/send-otp`, `POST /auth/email/verify` 2개 엔드포인트 추가 (permitAll 범위 `/api/v1/auth/**` 자동 적용)
+- `AuthService.signup()` — R5 EMAIL_NOT_VERIFIED 422 가드 추가
+- 기존 통합테스트 6개 — `@MockitoBean EmailVerificationService` + `@BeforeEach isEmailVerified=true` 추가 (기존 플로우 회귀 방지)
+- FE `lib/api/auth.ts` — `useSendEmailOtp`, `useVerifyEmailOtp` 훅 추가
+- FE `signup/page.tsx` — 이메일 제출 시 send-otp API 호출 → 409/429/기타 toast 분기
+- FE `signup/verify/page.tsx` — TODO 2건 해소: `verifyEmailOtp.mutateAsync` + `sendEmailOtp.mutateAsync`(재전송), `isPending` 로딩 상태
+- Spec Draft → Approved 이동
+- 전체 **139/139** 통과
+
+### 결정 (코드에 드러나지 않는 사항)
+- **brute-force 방어 위치**: `verifyOtp()`에만 시도 카운터 적용. `sendOtp()`의 rate limit(1분 1회)은 별개 방어선. 5회 초과 시 캐시 무효화 → 사용자는 재전송 후 재시도.
+- **발송 실패 처리**: `mailClient.send()` 예외 시 캐시 무효화 후 재전파. rate limit 카운터는 그대로 → 실패해도 1분 후에야 재시도 가능(의도된 동작 — 스팸 방지).
+- **OAuth 경로 가드 미적용**: `AuthService.oauthCallback()`의 자동 회원가입에는 이메일 OTP 가드 없음 — OAuth 제공자가 이미 이메일 소유를 검증하므로 올바른 설계.
+- **단일 인스턴스 가정**: `verifiedEmailCache`는 인메모리 — k8s 전환 시 Redis 이관 필요.
+
+### 미완료 → 다음 세션
+- `auth-email-verify` 전용 통합 테스트(`EmailVerifyIntegrationTest`) — `@MockitoBean MailNotificationClient` + ArgumentCaptor 패턴으로 작성 권장
+- `notification-read-status` — 알림 읽음 상태 DB 영속 (FE Zustand 로컬 Set 임시 처리 상태)

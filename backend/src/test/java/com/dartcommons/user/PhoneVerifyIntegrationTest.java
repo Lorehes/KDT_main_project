@@ -4,9 +4,11 @@ import com.dartcommons.TestcontainersConfiguration;
 import com.dartcommons.disclosure.DisclosurePollingJob;
 import com.dartcommons.disclosure.services.DisclosureBackfillService;
 import com.dartcommons.infrastructure.kakao.KakaoAlimtalkClient;
+import com.dartcommons.user.services.EmailVerificationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,12 +55,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class PhoneVerifyIntegrationTest {
 
-    @MockitoBean DisclosurePollingJob      pollingJob;
-    @MockitoBean DisclosureBackfillService backfillService;
-    @MockitoBean KakaoAlimtalkClient       kakaoClient;
+    @MockitoBean DisclosurePollingJob        pollingJob;
+    @MockitoBean DisclosureBackfillService   backfillService;
+    @MockitoBean KakaoAlimtalkClient         kakaoClient;
+    @MockitoBean EmailVerificationService    emailVerificationService;
 
     @Autowired MockMvc      mockMvc;
     @Autowired ObjectMapper objectMapper;
+
+    @BeforeEach
+    void bypassEmailVerification() {
+        when(emailVerificationService.isEmailVerified(anyString())).thenReturn(true);
+    }
 
     private String uniqueEmail() {
         return "phone-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10) + "@test.com";

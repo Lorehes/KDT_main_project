@@ -47,6 +47,7 @@ updated: 2026-06-02
 | 2026-06-10 | Jin | 40d045f | feat(frontend): API연동정합+인증부트스트랩+SonnerToast [6/7 M] | Frontend | 6 | 7 | M | API연동정합+인증부트스트랩+Toast |
 | 2026-06-10 | Jin | a7b1cc1 | feat(user): MVP 가입OTP·동의·요금제API 완성 [7/8 L] | User/Infra/Frontend | 7 | 8 | L | MVP 가입OTP·동의·요금제API 완성 |
 | 2026-06-10 | Jin | 24c663e | test(user): Phone·동의·요금제 Wave4 통합테스트 19건 [6/8 M] | User | 6 | 8 | M | Phone·동의·요금제 통합테스트 |
+| 2026-06-11 | Jin | 2e92452 | feat(user): 이메일OTP 가입검증 완성 [8/9 L] | User/Frontend | 8 | 9 | L | 이메일OTP 가입검증 완성 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -54,5 +55,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 11 | 27 | 34 | 8.2 | 6.8 |
+| Jin | 1 | 28 | 35 | 8.3 | 6.9 |
 <!-- SUMMARY:END -->

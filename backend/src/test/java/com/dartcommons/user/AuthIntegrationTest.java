@@ -3,9 +3,11 @@ package com.dartcommons.user;
 import com.dartcommons.TestcontainersConfiguration;
 import com.dartcommons.disclosure.DisclosurePollingJob;
 import com.dartcommons.disclosure.services.DisclosureBackfillService;
+import com.dartcommons.user.services.EmailVerificationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,11 +49,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class AuthIntegrationTest {
 
-    @MockitoBean DisclosurePollingJob      pollingJob;
-    @MockitoBean DisclosureBackfillService backfillService;
+    @MockitoBean DisclosurePollingJob        pollingJob;
+    @MockitoBean DisclosureBackfillService   backfillService;
+    @MockitoBean EmailVerificationService    emailVerificationService;
 
     @Autowired MockMvc      mockMvc;
     @Autowired ObjectMapper objectMapper;
+
+    @BeforeEach
+    void bypassEmailVerification() {
+        // signup() R5 가드를 우회 — AuthIntegrationTest는 JWT/인증 플로우를 검증하며 이메일 OTP 플로우는 별도 테스트
+        when(emailVerificationService.isEmailVerified(anyString())).thenReturn(true);
+    }
 
     private String uniqueEmail() {
         return "auth-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10) + "@test.com";

@@ -2,7 +2,8 @@
 
 // [목적] 가입 진입 화면(D5/m02) — 소셜·이메일 가입 분기점
 // [이유] 신규 사용자의 첫 온보딩 단계. 소셜 우선 + 이메일 폴백 구조
-// [사이드 임팩트] signupStore에 이메일·비밀번호 저장 후 /signup/verify로 이동. AuthLayout 스플릿 적용
+// [사이드 임팩트] 이메일 제출 시 POST /auth/email/send-otp 호출 → 성공 후 signupStore 저장 + /signup/verify 이동.
+//   409(이미 가입) → toast.error. 429(rate limit) → toast.error. AuthLayout 스플릿 적용.
 // [수정 시 고려사항] 소셜 OAuth URL은 GET /auth/oauth/{provider}/url로 취득. 현재 placeholder 처리.
 //   "정보 제공 도구, 투자자문 아님" 고지는 폼 하단에 상시 노출 (자본시장법 §11.1)
 
@@ -10,24 +11,40 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { signupSchema, type SignupFormValues } from "@/lib/schemas/authSchemas";
 import { useSignupStore } from "@/lib/stores/signupStore";
+import { useSendEmailOtp } from "@/lib/api/auth";
+import { ApiException } from "@/lib/api/client";
 
 export default function SignupPage() {
   const router = useRouter();
   const { setEmail, setPassword } = useSignupStore();
+  const sendEmailOtp = useSendEmailOtp();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema as any), // Zod v4 ↔ @hookform/resolvers 타입 충돌 억제 (런타임 정상)
   });
 
-  const onSubmit = (data: SignupFormValues) => {
-    setEmail(data.email);
-    setPassword(data.password);
-    router.push("/signup/verify");
+  const onSubmit = async (data: SignupFormValues) => {
+    try {
+      await sendEmailOtp.mutateAsync(data.email);
+      setEmail(data.email);
+      setPassword(data.password);
+      router.push("/signup/verify");
+    } catch (e) {
+      const status = e instanceof ApiException ? e.body.status : 0;
+      if (status === 409) {
+        toast.error("이미 가입된 이메일입니다. 로그인해주세요.");
+      } else if (status === 429) {
+        toast.error("잠시 후 다시 시도해주세요. (발송 횟수 초과)");
+      } else {
+        toast.error("인증번호 발송에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
   };
 
   return (

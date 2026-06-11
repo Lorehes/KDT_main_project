@@ -3,8 +3,10 @@ package com.dartcommons.security;
 import com.dartcommons.TestcontainersConfiguration;
 import com.dartcommons.disclosure.DisclosurePollingJob;
 import com.dartcommons.disclosure.services.DisclosureBackfillService;
+import com.dartcommons.user.services.EmailVerificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -48,11 +52,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class SecurityHardeningIntegrationTest {
 
-    @MockitoBean DisclosurePollingJob      pollingJob;
-    @MockitoBean DisclosureBackfillService backfillService;
+    @MockitoBean DisclosurePollingJob        pollingJob;
+    @MockitoBean DisclosureBackfillService   backfillService;
+    @MockitoBean EmailVerificationService    emailVerificationService;
 
     @Autowired MockMvc      mockMvc;
     @Autowired ObjectMapper objectMapper;
+
+    @BeforeEach
+    void bypassEmailVerification() {
+        when(emailVerificationService.isEmailVerified(anyString())).thenReturn(true);
+    }
 
     // ─── CORS (R5) ─────────────────────────────────────────────────────────────
 

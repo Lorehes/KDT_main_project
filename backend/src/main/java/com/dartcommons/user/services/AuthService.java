@@ -60,12 +60,13 @@ public class AuthService {
             .maximumSize(10_000)
             .build();
 
-    private final UserRepository        userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtTokenProvider      jwtTokenProvider;
-    private final JwtProperties         jwtProperties;
-    private final PasswordEncoder       passwordEncoder;
-    private final ConsentService        consentService;
+    private final UserRepository          userRepository;
+    private final RefreshTokenRepository  refreshTokenRepository;
+    private final JwtTokenProvider        jwtTokenProvider;
+    private final JwtProperties           jwtProperties;
+    private final PasswordEncoder         passwordEncoder;
+    private final ConsentService          consentService;
+    private final EmailVerificationService emailVerificationService;
     private final Map<String, OAuthProviderClient> oauthProviders;
 
     public AuthService(UserRepository userRepository,
@@ -74,13 +75,15 @@ public class AuthService {
                        JwtProperties jwtProperties,
                        PasswordEncoder passwordEncoder,
                        ConsentService consentService,
+                       EmailVerificationService emailVerificationService,
                        List<OAuthProviderClient> oauthClients) {
-        this.userRepository         = userRepository;
-        this.refreshTokenRepository = refreshTokenRepository;
-        this.jwtTokenProvider       = jwtTokenProvider;
-        this.jwtProperties          = jwtProperties;
-        this.passwordEncoder        = passwordEncoder;
-        this.consentService         = consentService;
+        this.userRepository           = userRepository;
+        this.refreshTokenRepository   = refreshTokenRepository;
+        this.jwtTokenProvider         = jwtTokenProvider;
+        this.jwtProperties            = jwtProperties;
+        this.passwordEncoder          = passwordEncoder;
+        this.consentService           = consentService;
+        this.emailVerificationService = emailVerificationService;
         // Spring이 OAuthProviderClient 구현체(Kakao/Google/Naver) 전부를 List로 주입 → provider 이름으로 인덱싱
         this.oauthProviders = oauthClients.stream()
                 .collect(Collectors.toUnmodifiableMap(OAuthProviderClient::getProviderName, Function.identity()));
@@ -88,8 +91,12 @@ public class AuthService {
 
     // ── 이메일 인증 ────────────────────────────────────────────────────────
 
-    /** 이메일 회원가입. 이메일 중복 시 409. 동의 이력 동일 트랜잭션 INSERT. */
+    /** 이메일 회원가입. 이메일 중복 시 409. 이메일 미검증 시 422. 동의 이력 동일 트랜잭션 INSERT. */
     public AuthResponse signup(SignupRequest request) {
+        // R5: 이메일 OTP 검증 완료 마커 확인 — 미검증 가입 차단
+        if (!emailVerificationService.isEmailVerified(request.email())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "EMAIL_NOT_VERIFIED");
+        }
         if (userRepository.existsByEmailAndDeletedAtIsNull(request.email())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이메일이 이미 사용 중입니다");
         }

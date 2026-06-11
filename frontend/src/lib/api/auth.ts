@@ -139,6 +139,30 @@ export function useConfirmPhoneOtp() {
   });
 }
 
+// ─── 이메일 OTP ─────────────────────────────────────────────────────────────
+
+/** OTP 발송 — POST /auth/email/send-otp. 이미 가입된 이메일이면 409, rate limit 초과 시 429. */
+export function useSendEmailOtp() {
+  return useMutation({
+    mutationFn: (email: string) =>
+      apiClient<void>("/auth/email/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+  });
+}
+
+/** OTP 검증 — POST /auth/email/verify. 만료 시 410, 불일치 시 400, 성공 시 204. */
+export function useVerifyEmailOtp() {
+  return useMutation({
+    mutationFn: ({ email, code }: { email: string; code: string }) =>
+      apiClient<void>("/auth/email/verify", {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+      }),
+  });
+}
+
 /** R8: 허용된 OAuth 제공자 도메인 — BE 취약점 또는 MITM으로 악의적 URL이 반환될 경우 차단 */
 const ALLOWED_OAUTH_DOMAINS = [
   "https://accounts.kakao.com",
