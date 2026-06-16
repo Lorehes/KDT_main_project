@@ -51,6 +51,10 @@ updated: 2026-06-02
 | 2026-06-11 | Jin | a1d773e | feat(notification,frontend): OAuth소셜실연동+알림읽음영속화 [8/9 L] | Notification/User/Frontend | 8 | 9 | L | OAuth소셜로그인+알림읽음영속화 |
 | 2026-06-11 | Jin | 4947620 | chore(spec): mvp-missing-endpoints Done 전환 [2/8 S] | Docs | 2 | 8 | S | MVP미구현엔드포인트 Done전환 |
 | 2026-06-11 | Jin | 31cbdad | fix(frontend): 명세서 기반 디자인 정합성 수정 [6/8 M] | Frontend/Docs | 6 | 8 | M | CSP버그수정+Primary색상+명세UI정합 |
+| 2026-06-16 | Jin | d6b55f3 | fix(shared,user): JWT 쿠키 지원+OAuth 이메일 placeholder+Email rate복원 [8/7 S] | Shared/User | 8 | 7 | S | JWT 쿠키 지원+OAuth placeholder처리 |
+| 2026-06-16 | Jin | pending | fix(frontend): 온보딩 UI 개선 — 약관 필수동의+휴대폰 레이아웃 [5/7 S] | Frontend | 5 | 7 | S | 약관필수동의+휴대폰 입력 UI 개선 |
+| 2026-06-16 | Jin | pending | fix(frontend): auth 에러처리+공개경로 리다이렉트+레이아웃 반응형 [7/7 S] | Frontend | 7 | 7 | S | auth에러체크+공개경로guard+OTP반응형 |
+| 2026-06-16 | Jin | pending | chore(docs): AGE설계결정+마일스톤+gitignore+Vault MOC [3/8 S] | Docs | 3 | 8 | S | AGE 미저장 설계결정+MVP마일스톤 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -58,5 +62,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 4 | 31 | 38 | 8.2 | 6.9 |
+| Jin | 4 | 19 | 42 | 8.1 | 6.8 |
 <!-- SUMMARY:END -->

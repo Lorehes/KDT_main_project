@@ -81,6 +81,7 @@ public class EmailVerificationService {
             mailClient.send(email, OTP_SUBJECT, buildBody(code));
         } catch (Exception e) {
             otpCache.invalidate(email);
+            count.decrementAndGet();  // 발송 실패 시 rate counter 복원 — 재시도 허용
             log.warn("Email OTP send failed: email={}*** error={}", email.substring(0, Math.min(3, email.length())), e.getMessage());
             throw e;
         }

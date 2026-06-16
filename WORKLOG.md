@@ -2,12 +2,34 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-11
+updated: 2026-06-16
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-16 | 온보딩 UI 개선 + BE 인증 강화
+
+**작업 내용**:
+- JwtAuthenticationFilter에 `dr_session` 쿠키 2순위 토큰 추출 지원 추가 (기존 Bearer 헤더 전용 → 쿠키 폴백)
+- OAuth 이메일 미동의 사용자: 422 에러 대신 placeholder 이메일(`{provider}_{id}@oauth.placeholder`)로 자동 가입 처리
+- EmailVerificationService: OTP 발송 실패 시 rate counter 복원 — 재시도 허용
+- 약관동의 화면: "전체 동의합니다" → "필수 항목 전체 동의", toggleAll이 필수 항목만 토글하도록 수정
+- 휴대폰 인증 화면: 번호 입력 4:1 비율, 인증요청 버튼 높이 동일화, 문구 수정
+- `storeTokenCookies`에 응답 상태 검증 추가 — 쿠키 설정 실패 시 에러 명시
+- 401 인터셉터: 공개 경로(`/signup/**` 등)에서 refresh 실패 시 로그인 리다이렉트 생략
+- OAuth 카카오 도메인: `accounts.kakao.com` → `kauth.kakao.com` 수정
+- AuthLayout 좌측 패널 비율 `1:1` → `1:2` 조정
+- OTPInput 반응형 크기 개선 (모바일 h-12/w-11, sm: h-14/w-12)
+
+**설계 결정**:
+- AGE(만 14세 확인) 동의는 DB 미저장 결정 유지 — 사실 확인 선언이므로 법적 동의 이력 보관 불필요. 본인인증 도입 시 `consent_logs`에 `AGE_VERIFIED` 타입 추가로 대응 가능 (`docs/dev-log/design-decision-age-consent-ui-only.md` 참조)
+
+**미완료**:
+- phone/verify 첫 요청 401 근본 원인 미확정 — `dr_session` 쿠키가 BE로 전송되는지 Network 탭으로 확인 필요. BE 로그에서 `[JWT] Invalid token:` WARN 확인 권장
 
 ---
 

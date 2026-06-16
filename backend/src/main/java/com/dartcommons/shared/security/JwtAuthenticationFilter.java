@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 /*
@@ -69,9 +71,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String extractToken(HttpServletRequest request) {
+        // 1순위: Authorization: Bearer 헤더 (API 클라이언트, Swagger 등)
         String header = request.getHeader("Authorization");
         if (StringUtils.hasText(header) && header.startsWith(BEARER_PREFIX)) {
             return header.substring(BEARER_PREFIX.length()).trim();
+        }
+        // 2순위: dr_session 쿠키 (Next.js httpOnly 쿠키 기반 브라우저 세션)
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            return Arrays.stream(cookies)
+                    .filter(c -> "dr_session".equals(c.getName()))
+                    .map(Cookie::getValue)
+                    .filter(StringUtils::hasText)
+                    .findFirst()
+                    .orElse(null);
         }
         return null;
     }

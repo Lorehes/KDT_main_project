@@ -191,7 +191,8 @@ public class AuthService {
 
     /**
      * OAuth 콜백 처리 — state 검증 → 사용자 정보 조회 → 로그인 또는 자동 회원가입 → JWT 발급.
-     * state 만료/미존재: 400. 이메일 null(provider 미동의): 422. 이메일 중복(기존 이메일 계정): 409.
+     * state 만료/미존재: 400. 이메일 중복(기존 이메일 계정): 409.
+     * 이메일 미동의: placeholder({provider}_{providerId}@oauth.placeholder)로 자동 처리.
      */
     @Transactional
     public AuthResponse oauthCallback(String provider, String code, String state) {
@@ -214,11 +215,6 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "OAuth 인증 처리 중 오류가 발생했습니다");
         }
 
-        if (userInfo.email() == null || userInfo.email().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "이메일 정보를 제공하지 않았습니다. " + provider + " 앱에서 이메일 권한을 허용해주세요");
-        }
-
         UserEntity.OAuthProvider oauthProvider = toOAuthProvider(provider);
 
         // 3. oauth_id로 기존 사용자 조회 (로그인)
@@ -230,7 +226,9 @@ public class AuthService {
         }
 
         // 4. 신규 → 이메일 충돌 체크 후 자동 회원가입
-        if (userRepository.existsByEmailAndDeletedAtIsNull(userInfo.email())) {
+        // 이메일 미동의 케이스는 충돌 체크 스킵 (placeholder 사용)
+        boolean hasEmail = userInfo.email() != null && !userInfo.email().isBlank();
+        if (hasEmail && userRepository.existsByEmailAndDeletedAtIsNull(userInfo.email())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "이미 이메일로 가입된 계정입니다. 이메일 로그인을 이용해주세요");
         }
@@ -248,12 +246,16 @@ public class AuthService {
     /** OAuth 자동 회원가입 — TERMS/PRIVACY/DISCLAIMER 동의 true, MARKETING false 기본 처리. */
     private AuthResponse autoSignup(UserEntity.OAuthProvider oauthProvider, OAuthUserInfo userInfo) {
         OffsetDateTime now = OffsetDateTime.now();
+        // 이메일 미동의 시 placeholder 생성 — 실 서비스 전환 후 이메일 동의 활성화 시 제거
+        String email = (userInfo.email() != null && !userInfo.email().isBlank())
+                ? userInfo.email()
+                : oauthProvider.name().toLowerCase() + "_" + userInfo.providerId() + "@oauth.placeholder";
         String nickname = (userInfo.nickname() != null && !userInfo.nickname().isBlank())
                 ? userInfo.nickname()
-                : userInfo.email().split("@")[0];  // 닉네임 미제공 시 이메일 앞부분으로 폴백
+                : email.split("@")[0];
 
         UserEntity user = UserEntity.builder()
-                .email(userInfo.email())
+                .email(email)
                 .oauthProvider(oauthProvider)
                 .oauthId(userInfo.providerId())
                 .nickname(nickname)
