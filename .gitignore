@@ -114,3 +114,6 @@ chroma/
 *.pptx
 *.ppt
 docs/기획서/*.html
+*.zip
+*.keynote
+*발표*.*

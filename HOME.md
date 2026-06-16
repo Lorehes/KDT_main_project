@@ -30,6 +30,10 @@ updated: 2026-05-30
 
 - [[docs/specs/README|Specs MOC]] — Draft / Approved / Done 현황
 
+## 프로젝트 일정
+
+- [[docs/milestone-2026-mvp-launch|MVP 런치 마일스톤]] — 2026-06-16 ~ 07-03 배포 일정 · Go/No-Go 기준
+
 ## 운영 문서
 
 - [[docs/dev-log/README|변경 로그]] — `docs/dev-log/{backend,frontend}.jsonl`
