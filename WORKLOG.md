@@ -11,6 +11,18 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-16 (9차) | 종목 등록 진입 경로 수정
+
+**작업 내용**:
+- `signup/complete`: "등록"·"첫 종목 등록하기" 링크 `/portfolios/new` → `/portfolios`로 변경
+- `portfolios/new`: `code` 파라미터 없이 접근 시 `/portfolios`로 redirect (useEffect)
+
+**설계 결정**:
+- 진입 경로: `signup/complete` → `/portfolios` (StockSearchCombobox) → 종목 선택 → `/portfolios/new?code=...&name=...`
+- TopBar 장식용 search input(비기능)과 실제 StockSearchCombobox를 혼동하는 UX 문제 — 진입 경로 수정으로 우회
+
+---
+
 ## 2026-06-16 (8차) | 종목 등록 필수 입력 + 검색 UX 개선
 
 **작업 내용**:

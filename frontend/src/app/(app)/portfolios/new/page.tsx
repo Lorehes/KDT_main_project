@@ -9,7 +9,7 @@
 //   알림 on/off는 계정 전역 설정(/notifications/settings)으로 일원화 — per-stock 토글 MVP 제외(R3 옵션 A).
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { ArrowLeft, Bell } from "lucide-react";
@@ -31,6 +31,13 @@ function NewPortfolioForm() {
   const stockName = decodeURIComponent(params.get("name") ?? "");
 
   const { mutateAsync, isPending } = useCreatePortfolio();
+
+  // code 없이 직접 접근하면 종목 목록(검색)으로 redirect
+  useEffect(() => {
+    if (!stockCode) router.replace("/portfolios");
+  // stockCode는 마운트 시 한 번만 평가
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { register, handleSubmit, setError, formState: { errors } } = useForm<FormValues>({
     defaultValues: { avg_buy_price: "", quantity: "" },

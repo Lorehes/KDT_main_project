@@ -48,7 +48,7 @@ export default function CompletePage() {
           <ul className="flex flex-col gap-3">
             <ChecklistItem done label="계정 만들기" sub="완료" />
             <ChecklistItem done={false} label="보유 종목 등록" sub="3개까지 무료" action={
-              <Link href="/portfolios/new" className={buttonVariants({ size: "sm" }) + " shrink-0"}>
+              <Link href="/portfolios" className={buttonVariants({ size: "sm" }) + " shrink-0"}>
                 등록
               </Link>
             } />
@@ -60,7 +60,7 @@ export default function CompletePage() {
           </ul>
         </div>
 
-        <Link href="/portfolios/new" className={buttonVariants({ size: "lg" }) + " w-full max-w-xs"}>
+        <Link href="/portfolios" className={buttonVariants({ size: "lg" }) + " w-full max-w-xs"}>
           첫 종목 등록하기 →
         </Link>
         <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">

@@ -63,6 +63,7 @@ updated: 2026-06-02
 | 2026-06-16 | Jin | 4cae162 | docs(specs): 스펙 감사+신규3개+테크리뷰 [2/8 M] | Docs | 2 | 8 | M | 스펙 감사+신규3개+테크리뷰 |
 | 2026-06-16 | Jin | 97a6900 | feat(user,frontend): 포트폴리오 종목명+staleTime+알림토글제거 [6/8 M] | User/Frontend | 6 | 8 | M | 포트폴리오 종목명+staleTime+알림토글제거 |
 | 2026-06-16 | Jin | c717efe | fix(frontend): 종목등록 필수입력+검색UX개선 [5/8 S] | Frontend | 5 | 8 | S | 종목등록 필수입력+검색UX개선 |
+| 2026-06-16 | Jin | b41eb8d | fix(frontend): 종목등록 진입경로 수정+code없음 redirect [6/8 S] | Frontend | 6 | 8 | S | 종목등록 진입경로+redirect 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -70,5 +71,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 12 | 27 | 50 | 8.1 | 6.0 |
+| Jin | 13 | 28 | 51 | 8.1 | 6.0 |
 <!-- SUMMARY:END -->
