@@ -11,6 +11,23 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-16 (7차) | portfolio-management-e2e E2E 구현
+
+**작업 내용**:
+- Wave 1 (BE): `StockRepository.findByStockCodeIn()` bulk 추가, `PortfolioResponse.corpName` 필드 추가, `PortfolioService.listPortfolios()` N+1→bulk 리팩터
+- Wave 2 (FE): `usePortfolios()` `staleTime: 60_000`, `portfolios/new/page.tsx` 알림 토글 제거 → `/notifications/settings` 안내 링크
+- dc-review-code Medium 3건 수정: empty-check, `createPortfolio()` 이중 쿼리 통합(`existsByStockCode`→`findById`), 오해 유발 주석 교정
+
+**설계 결정**:
+- `findByStockCode()` 제거 → `findById(stockCode)` 사용 (Spring Data JPA PK 관용 패턴)
+- `createPortfolio()` stocks 이중 쿼리 → `findById()` 단일 조회 후 존재확인+corpName 추출 통합
+
+**다음 세션**:
+- `dashboard-real-data` Spec 구현 (Draft → /dc-tech-review 후 구현)
+- `kakao-notification-channel` Spec 구현
+
+---
+
 ## 2026-06-16 (6차) | 스펙 감사 + 신규 Spec 3개 + Tech Review
 
 **작업 내용**:

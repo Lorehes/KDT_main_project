@@ -5,7 +5,9 @@
 // [사이드 임팩트] 생성·수정·삭제 모두 ["portfolios"] 쿼리 무효화로 자동 리페치.
 //   useDeletePortfolio·useUpdatePortfolio onError → Sonner toast.error 발화.
 //   useCreatePortfolio는 portfolios/new에서 mutateAsync+try/catch로 폼 에러 처리 — onError 없음.
-// [수정 시 고려사항] BE PortfolioResponse에 corp_name 없음 — optional 처리. stocks JOIN 추가 후 non-optional 가능
+//   staleTime: 60_000 → 포커스 복귀 시 1분 이내 재요청 억제 (포트폴리오는 빈번 변경 없음).
+// [수정 시 고려사항] corp_name은 nullable 유지 — stocks 마스터 미등재 엣지케이스 대비(BE corpName: null 허용).
+//   staleTime 연장 시 알림 설정 변경 후 목록 반영 지연 가능 — invalidateQueries로 강제 무효화 가능.
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -14,7 +16,7 @@ import { apiClient, ApiException } from "./client";
 export interface Portfolio {
   id: number;
   stock_code: string;
-  corp_name?: string;      // BE PortfolioResponse 미포함 — stocks JOIN 후 추가 예정
+  corp_name?: string;      // nullable — BE stocks 마스터 미등재 엣지케이스 대비
   avg_buy_price?: number;  // BigDecimal → number (AES-256 복호화 후 반환)
   quantity?: number;
   memo?: string;
@@ -35,6 +37,7 @@ export function usePortfolios() {
   return useQuery({
     queryKey: ["portfolios"],
     queryFn: () => apiClient<Portfolio[]>("/portfolios"),
+    staleTime: 60_000,
   });
 }
 

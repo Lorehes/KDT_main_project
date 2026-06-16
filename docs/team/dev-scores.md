@@ -61,6 +61,7 @@ updated: 2026-06-02
 | 2026-06-16 | Jin | b3dfd34 | chore(frontend): signup 콜백 주석 업데이트+devlog 정정 [3/8 S] | Frontend | 3 | 8 | S | signup 주석 업데이트+devlog 정정 |
 | 2026-06-16 | Jin | 6118a6f | fix(frontend): 모바일 auth 헤딩 반응형+로그인 문구 개선 [4/8 S] | Frontend | 4 | 8 | S | 모바일 auth 헤딩 반응형+문구개선 |
 | 2026-06-16 | Jin | 4cae162 | docs(specs): 스펙 감사+신규3개+테크리뷰 [2/8 M] | Docs | 2 | 8 | M | 스펙 감사+신규3개+테크리뷰 |
+| 2026-06-16 | Jin | 0110625 | feat(user,frontend): 포트폴리오 종목명+staleTime+알림토글제거 [6/8 M] | User/Frontend | 6 | 8 | M | 포트폴리오 종목명+staleTime+알림토글제거 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -68,5 +69,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 10 | 25 | 48 | 8.1 | 6.2 |
+| Jin | 11 | 26 | 49 | 8.1 | 6.1 |
 <!-- SUMMARY:END -->

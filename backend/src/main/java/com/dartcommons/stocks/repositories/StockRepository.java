@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -16,7 +17,9 @@ import java.util.Set;
  * [사이드 임팩트] findAllStockCodes()를 Caffeine 캐시(@Cacheable("stocks"))로 감싸면
  *               분기 동기화 잡(StockMasterSyncJob)에서 evict 필요. 본 Spec 범위 외(후속).
  *               search()가 추가됨 — StockSearchController(user 도메인)가 read-only 직접 의존(CLAUDE.md §3-2 마스터 예외).
+ *               findByStockCode()/findByStockCodeIn() 추가 — PortfolioService의 corp_name 조회용(bulk N+1 방지).
  * [수정 시 고려사항] existsByStockCode는 인덱스(PK) 직격 — 단건 조회 시 사용.
+ *                  findByStockCodeIn은 IN 절 — IN 리스트 크기가 수천 건 초과 시 native query 분할 고려.
  *                  대량 upsert는 @Modifying + native query(ON CONFLICT) 권장 — Hibernate persist는 SELECT 후 INSERT.
  *                  market/sector 필터 조회가 필요하면 findByMarket 등 메서드 추가.
  */
@@ -31,6 +34,9 @@ public interface StockRepository extends JpaRepository<Stock, String> {
 
     /** 단건 멱등 체크 — 커버 종목 추가 등 단발 조회용. */
     boolean existsByStockCode(String stockCode);
+
+    /** corp_name 일괄 조회 — PortfolioService.listPortfolios() N+1 방지용 bulk fetch. */
+    List<Stock> findByStockCodeIn(Collection<String> stockCodes);
 
     /**
      * 종목명(대소문자 무시 포함) 또는 종목코드(포함)로 검색. Pageable로 결과 20개 제한.

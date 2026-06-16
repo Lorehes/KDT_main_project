@@ -1,17 +1,18 @@
 "use client";
 
-// [목적] 종목 등록 상세 화면(D13/m22) — 매수 평균가·수량 입력 + 알림 on/off + 저장
+// [목적] 종목 등록 상세 화면(D13/m22) — 매수 평균가·수량 입력 + 저장
 // [이유] 선택 종목의 매수 정보를 입력해 손익 계산 기반을 마련. 매수가·수량은 선택 입력
 // [사이드 임팩트] POST /portfolios 호출 후 ["portfolios"] 쿼리 무효화 → 목록 자동 갱신.
 //   매수가·수량은 평문 console.log 절대 금지 — 백엔드에서 AES-256-GCM 암호화 저장(CLAUDE.md §7)
 // [수정 시 고려사항] edit=true 모드(기존 종목 수정)는 PATCH /portfolios/{id} 사용 — 현재 미구현.
 //   Free 3종목 초과 시 422 에러 인라인 표시. 동일 종목 중복 등록 시 409 인라인 표시.
+//   알림 on/off는 계정 전역 설정(/notifications/settings)으로 일원화 — per-stock 토글 MVP 제외(R3 옵션 A).
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { ArrowLeft, Bell, BellOff } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCreatePortfolio } from "@/lib/api/portfolios";
 import { ApiException } from "@/lib/api/client";
@@ -21,7 +22,6 @@ import { cn } from "@/lib/utils";
 interface FormValues {
   avg_buy_price: string;
   quantity: string;
-  notify_enabled: boolean;
 }
 
 function NewPortfolioForm() {
@@ -32,16 +32,13 @@ function NewPortfolioForm() {
 
   const { mutateAsync, isPending } = useCreatePortfolio();
 
-  const { register, handleSubmit, watch, setValue, setError, formState: { errors } } = useForm<FormValues>({
-    defaultValues: { avg_buy_price: "", quantity: "", notify_enabled: true },
+  const { register, handleSubmit, setError, formState: { errors } } = useForm<FormValues>({
+    defaultValues: { avg_buy_price: "", quantity: "" },
   });
-
-  const notifyEnabled = watch("notify_enabled");
 
   const onSubmit = async (data: FormValues) => {
     if (!stockCode) { router.push("/portfolios"); return; }
 
-    // notify_enabled는 BE PortfolioRequest 미지원 — 전송 제외. 알림은 계정 전역 설정으로 관리.
     const body = {
       stock_code: stockCode,
       avg_buy_price: data.avg_buy_price ? Number(data.avg_buy_price) : undefined,
@@ -146,34 +143,19 @@ function NewPortfolioForm() {
             {errors.quantity && <p className="text-xs text-destructive" role="alert">{errors.quantity.message}</p>}
           </div>
 
-          {/* 알림 on/off */}
-          <div className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3.5">
-            <div className="flex items-center gap-2.5">
-              {notifyEnabled
-                ? <Bell className="size-4 text-primary" aria-hidden />
-                : <BellOff className="size-4 text-muted-foreground" aria-hidden />
-              }
-              <span className="text-sm font-semibold text-foreground">공시 알림 받기</span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={notifyEnabled}
-              aria-label="공시 알림 on/off"
-              onClick={() => setValue("notify_enabled", !notifyEnabled)}
-              className={cn(
-                "relative h-6 w-11 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                notifyEnabled ? "bg-primary" : "bg-border",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform",
-                  notifyEnabled ? "translate-x-5" : "translate-x-0.5",
-                )}
-                aria-hidden
-              />
-            </button>
+          {/* 알림 설정 안내 */}
+          <div className="flex items-center gap-2.5 rounded-xl border border-border bg-background px-4 py-3.5 text-sm text-muted-foreground">
+            <Bell className="size-4 shrink-0" aria-hidden />
+            <span>
+              공시 알림은{" "}
+              <Link
+                href="/notifications/settings"
+                className="font-semibold text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                알림 설정
+              </Link>
+              에서 종목별로 관리할 수 있습니다.
+            </span>
           </div>
 
           <div className="flex gap-3 pt-1">
