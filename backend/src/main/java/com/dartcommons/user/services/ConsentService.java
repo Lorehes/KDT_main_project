@@ -24,14 +24,21 @@ import java.util.stream.Collectors;
  *       requires_renewal 산출로 FE가 재동의 흐름을 트리거할 수 있게 함.
  * [사이드 임팩트] AuthService.signup()이 recordSignupConsents() 호출 — 회원가입 트랜잭션 내 4개 INSERT.
  *               getStatus()는 읽기 전용 — 트랜잭션 propagation REQUIRED이나 dirty read 없음.
+ *               hasRequiredConsents()는 OAuth 로그인마다 호출 — countAgreedRequiredConsents() 단일 쿼리로 최적화됨.
+ *               REQUIRED_CONSENT_TYPES 변경 시 FE terms/page.tsx TERMS_ITEMS, OAuthConsentRequest @AssertTrue와 동기화 필수.
  * [수정 시 고려사항] CURRENT_POLICY_VERSION 변경 시 기존 사용자 getStatus() 응답이 requires_renewal=true 됨.
  *                  메이저 버전 변경 시 별도 스케줄러/이메일 발송으로 사용자 안내 병행 권장.
+ *                  필수 항목 추가(예: AGE 동의 API화) 시 REQUIRED_CONSENT_TYPES에 추가하면 hasRequiredConsents() 자동 반영.
  */
 @Service
 @Transactional
 public class ConsentService {
 
     static final String CURRENT_POLICY_VERSION = "v1.0";
+
+    /** 필수 동의 타입 목록 — FE terms/page.tsx, OAuthConsentRequest @AssertTrue 항목과 동기화 유지. */
+    static final List<ConsentType> REQUIRED_CONSENT_TYPES =
+            List.of(ConsentType.TERMS, ConsentType.PRIVACY, ConsentType.DISCLAIMER);
 
     private final ConsentLogRepository consentLogRepository;
 
@@ -71,6 +78,17 @@ public class ConsentService {
                 .agreed(agreed)
                 .policyVersion(CURRENT_POLICY_VERSION)
                 .build();
+    }
+
+    /**
+     * REQUIRED_CONSENT_TYPES(TERMS·PRIVACY·DISCLAIMER) 모두 최신 기록이 agreed=true인지 확인.
+     * 전용 countAgreedRequiredConsents() 쿼리 사용 — 4개 타입 전체 로드 대신 필요 타입만 조회(DB I/O 절감).
+     * OAuth 로그인마다 호출되므로 단일 COUNT 쿼리로 최적화.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasRequiredConsents(Long userId) {
+        long agreed = consentLogRepository.countAgreedRequiredConsents(userId, REQUIRED_CONSENT_TYPES);
+        return agreed == REQUIRED_CONSENT_TYPES.size();
     }
 
     /** (user_id, consent_type) 기준 최신 동의 상태 조회. */

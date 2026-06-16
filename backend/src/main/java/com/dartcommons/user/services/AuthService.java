@@ -40,13 +40,18 @@ import java.util.stream.Collectors;
  *       refresh rotation: 갱신마다 기존 해시 삭제 + 신규 발급 → 토큰 재사용 방지.
  *       "인증 실패" 단일 메시지: 이메일 존재 여부를 노출하지 않아 계정 열거 공격 차단.
  *       OAuth state CSRF: Caffeine 캐시(TTL 5분)로 state UUID 저장, 콜백에서 대조 후 삭제.
- * [사이드 임팩트] signup / OAuth 자동회원가입은 ConsentService.recordSignupConsents()와 동일 트랜잭션 — 롤백 시 동의 이력도 함께 롤백.
+ *       OAuth 신규 가입은 계정만 생성(동의 보류) + is_new_user=true 반환 → FE가 /signup/terms?oauth=true 로 유도.
+ *       동의는 사용자가 직접 화면에서 수락 후 POST /users/me/oauth-consent 별도 호출(UserController 처리).
+ * [사이드 임팩트] 이메일 signup은 ConsentService.recordSignupConsents()와 동일 트랜잭션 — 롤백 시 동의 이력도 함께 롤백.
+ *               OAuth autoSignup은 계정 생성만 수행 — consent_logs 없는 상태로 남을 수 있음.
+ *               oauthCallback에서 기존 사용자 중 hasRequiredConsents()=false 이면 is_new_user=true 재반환 → 약관 동의 재유도.
  *               OAuth 콜백에서 동일 이메일 기존 계정 존재 시 409(수동 이메일 로그인 유도).
  *               refresh 실패(만료/미존재) 시 해당 hash 삭제 없이 401 반환.
  *               logout은 access token을 무효화하지 않음 — 만료(30분) 대기.
  * [수정 시 고려사항] OAuth 계정 연동(이메일 충돌 시 자동 연결) 허용 정책 전환 시 oauthCallback의 충돌 처리 로직 수정.
  *                  로그인 시도 횟수 제한(rate-limit) 추가 시 AuthController AOP/Bucket4j 레이어.
  *                  다중 기기 로그인은 user_id당 refresh_tokens 복수 허용(현재 구조 지원).
+ *                  OAuth 동의 미완료 계정 정리가 필요하면 배치로 hasRequiredConsents()=false + created_at 경과 기준 삭제.
  */
 @Service
 @Transactional
@@ -217,12 +222,22 @@ public class AuthService {
 
         UserEntity.OAuthProvider oauthProvider = toOAuthProvider(provider);
 
-        // 3. oauth_id로 기존 사용자 조회 (로그인)
+        // 3. oauth_id로 기존 사용자 조회 (로그인 또는 약관 동의 미완료 재진입)
         java.util.Optional<UserEntity> existing =
                 userRepository.findByOauthProviderAndOauthIdAndDeletedAtIsNull(oauthProvider, userInfo.providerId());
         if (existing.isPresent()) {
-            log.info("oauth login: provider={} userId={}", provider, existing.get().getId());
-            return issueTokenPair(existing.get());
+            UserEntity user = existing.get();
+            // 약관 동의 미완료 시 is_new_user=true 반환 → FE가 /signup/terms?oauth=true 로 재유도
+            boolean hasConsent = consentService.hasRequiredConsents(user.getId());
+            if (hasConsent) {
+                log.info("oauth login: provider={} userId={}", provider, user.getId());
+                return issueTokenPair(user);
+            } else {
+                log.info("oauth consent-incomplete re-entry: provider={} userId={}", provider, user.getId());
+                // 동의 미완료 재진입 시 기존 refresh_token 전부 삭제 — 반복 진입에 의한 토큰 누적 방지
+                refreshTokenRepository.deleteByUserId(user.getId());
+                return issueTokenPairAsNew(user);
+            }
         }
 
         // 4. 신규 → 이메일 충돌 체크 후 자동 회원가입
@@ -243,7 +258,11 @@ public class AuthService {
 
     // ── private helpers ────────────────────────────────────────────────────
 
-    /** OAuth 자동 회원가입 — TERMS/PRIVACY/DISCLAIMER 동의 true, MARKETING false 기본 처리. */
+    /**
+     * OAuth 자동 회원가입 — 계정만 생성, 동의 이력은 기록하지 않음.
+     * 동의는 FE /signup/terms?oauth=true 화면에서 사용자가 직접 동의 후 POST /users/me/oauth-consent 호출.
+     * is_new_user=true 반환 → FE가 약관 동의 페이지로 리다이렉트.
+     */
     private AuthResponse autoSignup(UserEntity.OAuthProvider oauthProvider, OAuthUserInfo userInfo) {
         OffsetDateTime now = OffsetDateTime.now();
         // 이메일 미동의 시 placeholder 생성 — 실 서비스 전환 후 이메일 동의 활성화 시 제거
@@ -264,10 +283,8 @@ public class AuthService {
                 .build();
         userRepository.save(user);
 
-        consentService.recordSignupConsents(user.getId(), true, true, true, false);
-
-        log.info("oauth auto-signup: provider={} userId={}", oauthProvider, user.getId());
-        return issueTokenPair(user);
+        log.info("oauth auto-signup (consent pending): provider={} userId={}", oauthProvider, user.getId());
+        return issueTokenPairAsNew(user);
     }
 
     private OAuthProviderClient resolveProvider(String provider) {
@@ -289,8 +306,16 @@ public class AuthService {
     }
 
     private AuthResponse issueTokenPair(UserEntity user) {
-        String rawRefresh = jwtTokenProvider.generateRawRefreshToken();
-        String tokenHash  = jwtTokenProvider.hashRefreshToken(rawRefresh);
+        return issueTokenPairInternal(user, false);
+    }
+
+    private AuthResponse issueTokenPairAsNew(UserEntity user) {
+        return issueTokenPairInternal(user, true);
+    }
+
+    private AuthResponse issueTokenPairInternal(UserEntity user, boolean isNewUser) {
+        String rawRefresh  = jwtTokenProvider.generateRawRefreshToken();
+        String tokenHash   = jwtTokenProvider.hashRefreshToken(rawRefresh);
         long   expiresAtMs = jwtTokenProvider.refreshExpiresAtMs();
 
         RefreshTokenEntity token = RefreshTokenEntity.builder()
@@ -303,6 +328,8 @@ public class AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(
                 user.getId(), user.getEmail(), user.getTier().name());
 
-        return AuthResponse.of(accessToken, rawRefresh, jwtProperties.accessTtlMinutes());
+        return isNewUser
+                ? AuthResponse.ofNew(accessToken, rawRefresh, jwtProperties.accessTtlMinutes())
+                : AuthResponse.of(accessToken, rawRefresh, jwtProperties.accessTtlMinutes());
     }
 }

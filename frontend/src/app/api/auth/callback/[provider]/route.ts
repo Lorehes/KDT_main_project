@@ -1,10 +1,11 @@
 // [목적] OAuth 콜백 Route Handler — provider(kakao/google)가 리다이렉트한 code+state를 수신해 BE 토큰 교환 후 쿠키 저장.
 // [이유] Next.js 서버사이드에서 처리해야 httpOnly 쿠키를 안전하게 기록 가능.
-//   BE POST /auth/oauth/{provider}/callback 응답 = AuthResponse(access_token, refresh_token).
+//   BE POST /auth/oauth/{provider}/callback 응답 = AuthResponse(access_token, refresh_token, is_new_user).
 //   쿠키 TTL은 /api/auth/session/route.ts 와 동일 값 유지 (30분 access / 14일 refresh).
 // [사이드 임팩트] code 또는 state 미존재 → CSRF 가능성으로 즉시 /login?error=oauth_failed.
 //   BE 오류(400/409/500 등) → /login?error=oauth_failed.
-//   BE autoSignup은 소셜 신규 가입 시 약관 동의를 자동 처리(AuthService.autoSignup 참고) — 별도 /signup/terms 이동 불필요.
+//   is_new_user=true(신규 가입 또는 약관 동의 미완료) → 토큰 쿠키 저장 후 /signup/terms?oauth=true 리다이렉트.
+//   is_new_user=false(기존 사용자) → /dashboard 리다이렉트.
 // [수정 시 고려사항] 네이버 provider 추가 시 이 핸들러는 자동 지원(동적 라우트 [provider]).
 //   TTL 변경 시 /api/auth/session/route.ts 와 동시에 수정 필요.
 
@@ -50,11 +51,13 @@ export async function GET(
     return NextResponse.redirect(new URL("/login?error=oauth_failed", req.url));
   }
 
-  const tokens: { access_token: string; refresh_token: string } = await callbackRes.json();
+  const tokens: { access_token: string; refresh_token: string; is_new_user: boolean } =
+    await callbackRes.json();
 
-  // httpOnly 쿠키를 리다이렉트 응답에 직접 설정 (self-fetch 제거 — edge runtime 호환)
+  // is_new_user=true: 신규 가입 또는 약관 동의 미완료 → 약관 동의 화면으로 유도
   const isProd = process.env.NODE_ENV === "production";
-  const redirect = NextResponse.redirect(new URL("/dashboard", req.url));
+  const redirectPath = tokens.is_new_user ? "/signup/terms?oauth=true" : "/dashboard";
+  const redirect = NextResponse.redirect(new URL(redirectPath, req.url));
 
   redirect.cookies.set("dr_session", tokens.access_token, {
     httpOnly: true,

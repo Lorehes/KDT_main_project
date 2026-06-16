@@ -11,6 +11,31 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-16 (3차) | OAuth 소셜 가입 약관동의 버그 수정 + 코드리뷰 후속 최적화
+
+**작업 내용**:
+- **버그 수정 (핵심)**: 카카오 회원가입 버튼 클릭 시 약관 동의 없이 바로 대시보드로 이동하는 버그 수정
+  - BE `AuthService.oauthCallback()`: 신규 OAuth 사용자 즉시 가입+토큰 발급(autoSignup) → 계정만 생성(동의 보류) + `is_new_user=true` 반환으로 변경
+  - BE `ConsentService.hasRequiredConsents()`: TERMS·PRIVACY·DISCLAIMER 동의 이력 확인 (기존 사용자도 동의 미완료 시 재유도)
+  - FE `route.ts`: `is_new_user=true` 시 `/signup/terms?oauth=true` 리다이렉트 (기존 무조건 `/dashboard`)
+  - FE `terms/page.tsx`: `isOAuth=true` 소셜 모드 분기 — `useOAuthConsent()` 훅으로 `POST /users/me/oauth-consent` 호출
+  - BE `UserController.recordOAuthConsent()`: 신규 엔드포인트 + 멱등성(이미 동의 완료 시 204 즉시 반환)
+- **P0 수정 (코드리뷰)**: `hasRequiredConsents()`에 DISCLAIMER 추가 (자본시장법 §11.1) + 동의 재진입 시 refresh_tokens 누적 방지(deleteByUserId 선행)
+- **최적화**: `countAgreedRequiredConsents()` 전용 JPQL 쿼리 — 4타입 전체 로드 대신 3타입만 COUNT, `REQUIRED_CONSENT_TYPES` 상수 중앙화
+- **Suspense 경계**: `terms/page.tsx` `TermsPageWrapper` 추가 (Next.js 15 `useSearchParams` 빌드 경고 해소)
+- **Spec 문서**: `oauth-consent-enforcement.md` (middleware consent 강제화), `oauth-consent-data-integrity.md` (배치 정리+캐싱+agreed_at 불일치) — 향후 작업 계획
+
+**설계 결정**:
+- OAuth 자동 가입 시 `consent_logs` 미기록(동의 보류) → users 행은 생성되지만 동의 없는 상태. 이탈 시 "좀비 계정" 남을 수 있음 — `oauth-consent-data-integrity` Spec에서 배치 정리로 해소 예정.
+- `?oauth=true` URL 파라미터 신뢰 방식은 단기 MVP 해법. 정식 해법은 `oauth-consent-enforcement` Spec의 JWT claims 인코딩 방식.
+- `REQUIRED_CONSENT_TYPES` 상수를 `ConsentService`에 정의 — FE `TERMS_ITEMS`, `OAuthConsentRequest @AssertTrue`와 동기화 포인트.
+
+**미완료 (Spec 기록)**:
+- `oauth-consent-enforcement`: FE middleware consent 강제 체크 + JWT claims `consent_completed` 인코딩 + `OAuthTermsPage` 분리
+- `oauth-consent-data-integrity`: V19 마이그레이션(agreed_at nullable) + Caffeine 캐시(TTL 1h) + 미완료 계정 배치 정리(@Scheduled)
+
+---
+
 ## 2026-06-16 (2차) | 휴대폰 인증 UX 개선 + Kakao 개발 모드 + OAuth 버그
 
 **작업 내용**:

@@ -168,6 +168,30 @@ export function useVerifyEmailOtp() {
   });
 }
 
+// ─── 소셜 약관 동의 ──────────────────────────────────────────────────────────
+
+export interface OAuthConsentBody {
+  termsAgreed: boolean;
+  privacyAgreed: boolean;
+  disclaimerAgreed: boolean;
+  marketingAgreed: boolean;
+}
+
+/**
+ * 소셜 로그인 신규 가입 후 약관 동의 저장 — POST /users/me/oauth-consent.
+ * /signup/terms?oauth=true 화면에서 호출. 인증 쿠키(dr_session) 필요.
+ * 204 No Content 반환 → onSuccess에서 router.push("/signup/phone").
+ */
+export function useOAuthConsent() {
+  return useMutation({
+    mutationFn: (body: OAuthConsentBody) =>
+      apiClient<void>("/users/me/oauth-consent", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+  });
+}
+
 /** R8: 허용된 OAuth 제공자 도메인 — BE 취약점 또는 MITM으로 악의적 URL이 반환될 경우 차단 */
 const ALLOWED_OAUTH_DOMAINS = [
   "https://kauth.kakao.com",

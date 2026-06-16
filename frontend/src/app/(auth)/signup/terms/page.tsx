@@ -1,22 +1,26 @@
 "use client";
 
-// [목적] 약관 동의 화면(D7/m11, STEP 2/4) — 필수 4종 + 선택 1종 동의 수집 + 자본시장법 고지
-// [이유] DISCLAIMER(정보 제공 도구 동의)는 자본시장법 제6조·제17조 리스크 방어를 위한 필수 동의
-// [사이드 임팩트] 동의 수집 후 signupStore에 저장. POST /auth/signup API 호출은 terms 단계에서 수행.
-//   email 미존재(페이지 새로고침 등) 시 useEffect redirect → /signup 첫 단계로 복귀(R5).
+// [목적] 약관 동의 화면(D7/m11, STEP 2/4) — 필수 4종 + 선택 1종 동의 수집 + 자본시장법 고지.
+//   이메일 가입(기본 모드)과 소셜 가입(?oauth=true 모드) 양쪽을 처리.
+// [이유] DISCLAIMER(정보 제공 도구 동의)는 자본시장법 제6조·제17조 리스크 방어를 위한 필수 동의.
+//   소셜 가입 시 BE autoSignup이 계정만 생성(동의 보류) → 이 화면에서 동의 수집 후 POST /users/me/oauth-consent 호출.
+// [사이드 임팩트] 이메일 모드: 동의 수집 후 signupStore에 저장 → POST /auth/signup 호출 → /signup/phone.
+//   소셜 모드(?oauth=true): signupStore 의존 없음 → POST /users/me/oauth-consent 호출 → /signup/phone.
+//   email 미존재(이메일 모드에서 새로고침 등) 시 useEffect redirect → /signup 첫 단계로 복귀(R5).
+//   default export가 Suspense 래퍼(TermsPageWrapper) — useSearchParams() 사용으로 인한 Next.js 15
+//   빌드 경고 억제 및 정적 최적화 유지. 실제 로직은 TermsPage 내부 컴포넌트에 위치.
 // [수정 시 고려사항] 필수 동의 미완료 시 버튼 비활성화. 동의 시각은 BE created_at으로 로깅됨.
-//   BE SignupRequest는 flat boolean 구조(termsAgreed/privacyAgreed/disclaimerAgreed/marketingAgreed).
-//   api_spec의 consents 배열 구조와 다름 — BE 구현 우선. AGE는 로컬 UI 전용(API 미전송).
-//   nickname 미입력 시 email?.split 앞부분을 기본값으로 사용(BE @NotBlank 충족 + R5 optional chaining)
+//   소셜 모드에서 oauth-consent 실패 시 에러 메시지 표시 후 재시도 — 이탈 시 계정은 남고 동의 없는 상태.
+//   재접속 시 oauthCallback이 hasRequiredConsents() 확인 후 다시 is_new_user=true 반환 → 이 화면으로 재유도.
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { OnboardingStepper } from "@/components/layout/OnboardingStepper";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSignupStore } from "@/lib/stores/signupStore";
-import { useSignup } from "@/lib/api/auth";
+import { useSignup, useOAuthConsent } from "@/lib/api/auth";
 import { ApiException } from "@/lib/api/client";
 
 const TERMS_ITEMS: { key: string; label: string; required: boolean; link?: string; apiKey?: keyof { termsAgreed: boolean; privacyAgreed: boolean; disclaimerAgreed: boolean; marketingAgreed: boolean } }[] = [
@@ -27,17 +31,23 @@ const TERMS_ITEMS: { key: string; label: string; required: boolean; link?: strin
   { key: "MARKETING",  label: "마케팅 정보 수신 (혜택·이벤트)", required: false, apiKey: "marketingAgreed" },
 ];
 
-export default function TermsPage() {
+function TermsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isOAuth = searchParams.get("oauth") === "true";
+
   const { email, password, nickname, setConsents } = useSignupStore();
-  const { mutateAsync, isPending } = useSignup();
+  const { mutateAsync: signupMutate, isPending: signupPending } = useSignup();
+  const { mutateAsync: oauthConsentMutate, isPending: oauthPending } = useOAuthConsent();
+  const isPending = signupPending || oauthPending;
+
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
 
-  // R5: store가 비어 있으면(페이지 새로고침 등) 가입 첫 단계로 redirect — email 없이 API 호출 시 TypeError 방지
+  // R5: 이메일 모드에서만 store 체크 — 소셜 모드(?oauth=true)는 signupStore 불필요
   useEffect(() => {
-    if (!email) router.replace("/signup");
-  }, [email, router]);
+    if (!isOAuth && !email) router.replace("/signup");
+  }, [isOAuth, email, router]);
 
   const toggle = (key: string) => setChecked((p) => ({ ...p, [key]: !p[key] }));
   const toggleAll = () => {
@@ -51,23 +61,32 @@ export default function TermsPage() {
 
   const handleContinue = async () => {
     if (!requiredDone) return;
-    setConsents(checked);
-
-    // BE SignupRequest flat boolean 구조에 맞게 전송
-    // nickname @NotBlank 충족 위해 미입력 시 email 앞부분 사용
-    // R5: email?.split — store 클리어 직후 redirect 전 짧은 순간 email이 없을 수 있어 optional chaining
-    const resolvedNickname = (nickname || "").trim() || email?.split("@")[0] || "사용자";
+    // 이메일 모드에서만 signupStore에 동의 상태 저장 — 소셜 모드는 직접 API 호출로 처리
+    if (!isOAuth) setConsents(checked);
 
     try {
-      await mutateAsync({
-        email,
-        password,
-        nickname: resolvedNickname,
-        termsAgreed:       !!checked["TERMS"],
-        privacyAgreed:     !!checked["PRIVACY"],
-        disclaimerAgreed:  !!checked["DISCLAIMER"],
-        marketingAgreed:   !!checked["MARKETING"],
-      });
+      if (isOAuth) {
+        // 소셜 가입 모드: 이미 계정이 있고 토큰 쿠키도 있음 → 동의만 저장
+        await oauthConsentMutate({
+          termsAgreed:      !!checked["TERMS"],
+          privacyAgreed:    !!checked["PRIVACY"],
+          disclaimerAgreed: !!checked["DISCLAIMER"],
+          marketingAgreed:  !!checked["MARKETING"],
+        });
+      } else {
+        // 이메일 가입 모드: 동의 저장 + 계정 생성 동시 처리
+        // R5: email?.split — store 클리어 직후 redirect 전 짧은 순간 email이 없을 수 있어 optional chaining
+        const resolvedNickname = (nickname || "").trim() || email?.split("@")[0] || "사용자";
+        await signupMutate({
+          email,
+          password,
+          nickname: resolvedNickname,
+          termsAgreed:      !!checked["TERMS"],
+          privacyAgreed:    !!checked["PRIVACY"],
+          disclaimerAgreed: !!checked["DISCLAIMER"],
+          marketingAgreed:  !!checked["MARKETING"],
+        });
+      }
       router.push("/signup/phone");
     } catch (e) {
       const msg = e instanceof ApiException ? e.body.message : "가입에 실패했습니다. 다시 시도해주세요.";
@@ -134,6 +153,15 @@ export default function TermsPage() {
         </Button>
       </div>
     </AuthLayout>
+  );
+}
+
+/** useSearchParams() 사용으로 인해 Suspense 경계 필수 — Next.js 15 정적 최적화 유지 */
+export default function TermsPageWrapper() {
+  return (
+    <Suspense>
+      <TermsPage />
+    </Suspense>
   );
 }
 
