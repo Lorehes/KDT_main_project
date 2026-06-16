@@ -5,7 +5,7 @@
 // [사이드 임팩트] 이메일 제출 시 POST /auth/email/send-otp 호출 → 성공 후 signupStore 저장 + /signup/verify 이동.
 //   409(이미 가입) → toast.error. 429(rate limit) → toast.error. AuthLayout 스플릿 적용.
 //   소셜 버튼 클릭 시 initiateOAuth(provider) → GET /auth/oauth/{provider}/url → window.location.href 리다이렉트.
-//   콜백은 /api/auth/callback/[provider]/route.ts에서 처리 → 성공 시 /dashboard, 약관 미동의 시 /signup/terms.
+//   콜백은 /api/auth/callback/[provider]/route.ts에서 처리 → 신규면 /signup/terms?oauth=true, 기존이면 /dashboard.
 // [수정 시 고려사항] "정보 제공 도구, 투자자문 아님" 고지는 폼 하단에 상시 노출 (자본시장법 §11.1)
 
 import { useForm } from "react-hook-form";
