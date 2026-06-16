@@ -11,6 +11,29 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-16 (6차) | 스펙 감사 + 신규 Spec 3개 + Tech Review
+
+**작업 내용**:
+- 전체 스펙 현황 감사 (Done 18개, Approved 1개, Draft 7개)
+- `auth-email-verify` Approved → Done 이동 (주석에 "구현 완료" 기록됐으나 폴더 미이동 상태였음)
+- 신규 Spec 3개 작성 (dc-plan 스킬, 실제 코드 탐색 기반):
+  - `portfolio-management-e2e` (Approved) — corp_name 추가·staleTime·알림 토글 제거
+  - `dashboard-real-data` (Draft) — 오늘 날짜 필터·Free 5건 제한·Skeleton
+  - `kakao-notification-channel` (Draft) — dev모드 fix·SMTP 설정·Wave3 카카오
+- `portfolio-management-e2e` Tech Review 완료 → Approved 승인
+
+**설계 결정**:
+- per-stock `notify_enabled` → **옵션 A** 선택: 폼 토글 제거 + 알림 설정 링크 안내
+- `corp_name` N+1 방지: `StockRepository.findByStockCodeIn()` bulk 조회 패턴
+- 랜딩 페이지 히어로 placeholder → **W4 이후 스크린샷 교체** 유지
+
+**다음 세션**:
+- `/dc-implement portfolio-management-e2e` Wave 1(BE): StockRepository·PortfolioService·PortfolioResponse
+- Wave 2(FE): usePortfolios staleTime·portfolios/new 알림 토글 제거
+- 이후: `dashboard-real-data`, `kakao-notification-channel` 순서
+
+---
+
 ## 2026-06-16 (5차) | 모바일 auth 페이지 반응형 heading + 로그인 문구 개선
 
 **작업 내용**:

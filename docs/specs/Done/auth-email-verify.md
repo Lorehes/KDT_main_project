@@ -1,8 +1,8 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-10
-updated: 2026-06-11
+updated: 2026-06-16
 ---
 
 # 이메일 인증 OTP Spec (auth-email-verify)

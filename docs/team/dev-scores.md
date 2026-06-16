@@ -60,6 +60,7 @@ updated: 2026-06-02
 | 2026-06-16 | Jin | 9202dd9 | fix(user,frontend): OAuth 가입 약관동의 버그 수정+최적화 [8/8 L] | User/Frontend | 8 | 8 | L | OAuth 가입 약관동의 버그 수정+최적화 |
 | 2026-06-16 | Jin | b3dfd34 | chore(frontend): signup 콜백 주석 업데이트+devlog 정정 [3/8 S] | Frontend | 3 | 8 | S | signup 주석 업데이트+devlog 정정 |
 | 2026-06-16 | Jin | 6118a6f | fix(frontend): 모바일 auth 헤딩 반응형+로그인 문구 개선 [4/8 S] | Frontend | 4 | 8 | S | 모바일 auth 헤딩 반응형+문구개선 |
+| 2026-06-16 | Jin | 4cae162 | docs(specs): 스펙 감사+신규3개+테크리뷰 [2/8 M] | Docs | 2 | 8 | M | 스펙 감사+신규3개+테크리뷰 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -67,5 +68,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 9 | 24 | 47 | 8.1 | 6.4 |
+| Jin | 10 | 25 | 48 | 8.1 | 6.2 |
 <!-- SUMMARY:END -->
