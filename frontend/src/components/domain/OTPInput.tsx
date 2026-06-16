@@ -43,7 +43,7 @@ export function OTPInput({ value, onChange, disabled, className }: OTPInputProps
   };
 
   return (
-    <div className={cn("flex gap-2.5", className)} role="group" aria-label="6자리 인증번호 입력">
+    <div className={cn("flex gap-2 sm:gap-2.5", className)} role="group" aria-label="6자리 인증번호 입력">
       {Array.from({ length: LENGTH }).map((_, i) => (
         <input
           key={i}
@@ -59,7 +59,7 @@ export function OTPInput({ value, onChange, disabled, className }: OTPInputProps
           onPaste={handlePaste}
           aria-label={`인증번호 ${i + 1}번째 자리`}
           className={cn(
-            "font-mono h-16 flex-1 rounded-xl border text-center text-2xl font-bold text-foreground transition-colors focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40",
+            "font-mono h-12 w-11 shrink-0 rounded-xl border text-center text-xl font-bold text-foreground transition-colors focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-14 sm:w-12 sm:text-2xl",
             digits[i] ? "border-primary bg-primary/5" : "border-border bg-background",
             disabled && "opacity-50",
           )}

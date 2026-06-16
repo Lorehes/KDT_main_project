@@ -61,9 +61,16 @@ async function performRefresh(): Promise<void> {
       credentials: "include",
     });
     if (!refreshRes.ok) {
-      // refresh 실패 → 쿠키 클리어 후 로그인 페이지로 이동
+      // refresh 실패 → 쿠키 클리어
       await fetch(`${SITE_ORIGIN}${LOGOUT_PATH}`, { method: "POST" }).catch(() => {});
-      if (typeof window !== "undefined") window.location.href = LOGIN_PATH;
+      // 공개 경로(랜딩·로그인·회원가입 등)에서는 리다이렉트 생략 — 비로그인 방문자의 정상 흐름
+      if (typeof window !== "undefined") {
+        const PUBLIC_PATHS = ["/", "/pricing", "/login", "/signup", "/dashboard/preview"];
+        const isPublic = PUBLIC_PATHS.some(
+          (p) => window.location.pathname === p || window.location.pathname.startsWith(p + "/")
+        );
+        if (!isPublic) window.location.href = LOGIN_PATH;
+      }
       throw new ApiException({
         status: 401,
         code: "SESSION_EXPIRED",

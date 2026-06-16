@@ -15,7 +15,7 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ heading, subtext, children }: AuthLayoutProps) {
   return (
-    <div className="grid min-h-screen md:grid-cols-2">
+    <div className="grid min-h-screen md:grid-cols-[1fr_2fr]">
       {/* 좌측 피치 패널 — 웹만 */}
       <aside className="hidden flex-col justify-between bg-[color:var(--color-brand-navy)] p-16 text-white md:flex">
         <div className="flex items-center gap-2.5">

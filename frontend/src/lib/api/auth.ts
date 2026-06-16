@@ -45,7 +45,7 @@ export interface UpdateMeBody {
 // ─── 헬퍼 — 토큰 → httpOnly 쿠키 저장 ──────────────────────────────────────
 
 async function storeTokenCookies(tokens: AuthTokenResponse): Promise<void> {
-  await fetch(SESSION_PATH, {
+  const res = await fetch(SESSION_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -53,6 +53,9 @@ async function storeTokenCookies(tokens: AuthTokenResponse): Promise<void> {
       refresh_token: tokens.refresh_token,
     }),
   });
+  if (!res.ok) {
+    throw new Error(`[storeTokenCookies] 쿠키 설정 실패: ${res.status}`);
+  }
 }
 
 // ─── 훅 ─────────────────────────────────────────────────────────────────────
@@ -167,7 +170,7 @@ export function useVerifyEmailOtp() {
 
 /** R8: 허용된 OAuth 제공자 도메인 — BE 취약점 또는 MITM으로 악의적 URL이 반환될 경우 차단 */
 const ALLOWED_OAUTH_DOMAINS = [
-  "https://accounts.kakao.com",
+  "https://kauth.kakao.com",
   "https://accounts.google.com",
   "https://nid.naver.com",
 ] as const;
