@@ -43,7 +43,7 @@ function LoginForm() {
 
   return (
     <AuthLayout
-      heading={<>다시 <span className="text-[color:var(--color-brand-sky)]">만나서 반가워요</span></>}
+      heading={<>공시레이더에 <span className="text-[color:var(--color-brand-sky)]">오신 걸 환영해요</span></>}
       subtext="보유 종목의 공시를 호재·악재로 즉시 확인하세요."
     >
       <div className="flex flex-col gap-6">

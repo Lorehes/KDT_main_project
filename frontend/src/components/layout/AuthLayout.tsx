@@ -1,7 +1,10 @@
 // [목적] 온보딩 스플릿 레이아웃 — 좌측 네이비 피치 패널 + 우측 폼 영역
 // [이유] 가입 4단계 모든 화면이 동일한 브랜드 피치 + 폼 2단 구조를 공유
-// [사이드 임팩트] (auth) 그룹 내 각 온보딩 page에서 직접 import하여 사용
-// [수정 시 고려사항] 모바일(< md)에서는 좌측 패널 숨김, 폼만 풀화면. 좌측 카피는 page마다 다름
+// [사이드 임팩트] (auth) 그룹 내 각 온보딩 page에서 직접 import하여 사용.
+//   모바일에서는 좌측 패널 대신 폼 상단에 heading/subtext를 인라인으로 표시하므로,
+//   heading prop 변경 시 모바일/데스크톱 양쪽에 영향을 줌.
+// [수정 시 고려사항] 모바일 heading 영역 스타일 변경 시 데스크톱 aside 패널과 톤 일관성 유지.
+//   heading에 brand-sky 색상이 포함된 경우 라이트 배경 위 대비 확인 필요.
 
 import { BrandMark } from "./BrandMark";
 
@@ -38,8 +41,25 @@ export function AuthLayout({ heading, subtext, children }: AuthLayoutProps) {
       </aside>
 
       {/* 우측 폼 영역 */}
-      <main className="flex items-center justify-center bg-background p-8 md:p-16">
-        <div className="w-full max-w-[460px]">{children}</div>
+      <main className="flex items-start justify-center bg-background p-8 md:items-center md:p-16">
+        <div className="w-full max-w-[460px]">
+          {/* 모바일 전용 브랜드 헤딩 — md 이상에서는 좌측 패널이 표시하므로 숨김 */}
+          <div className="mb-8 pb-6 border-b border-border md:hidden">
+            <div className="mb-4 flex items-center gap-2">
+              <BrandMark size={26} />
+              <span className="text-xs font-semibold tracking-widest text-muted-foreground">
+                DART 실시간 · 30초 이내 해석
+              </span>
+            </div>
+            <h2 className="text-[26px] font-extrabold leading-[1.15] tracking-tight text-foreground">
+              {heading}
+            </h2>
+            {subtext && (
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{subtext}</p>
+            )}
+          </div>
+          {children}
+        </div>
       </main>
     </div>
   );

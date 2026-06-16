@@ -11,6 +11,22 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-16 (5차) | 모바일 auth 페이지 반응형 heading + 로그인 문구 개선
+
+**작업 내용**:
+- `AuthLayout.tsx`: 모바일에서 좌측 aside 패널이 숨겨져 heading이 노출되지 않던 문제 수정
+  - `main`에 `items-start md:items-center` 적용 (모바일 상단 정렬, 데스크톱 수직 중앙 유지)
+  - `md:hidden` 브랜드 헤딩 블록 추가 (BrandMark + 태그라인 + heading + subtext)
+  - 공유 컴포넌트 1곳 수정으로 6개 auth 페이지(signup·terms·verify·profile·phone·login) 자동 적용
+- `login/page.tsx`: heading "다시 만나서 반가워요" → "공시레이더에 오신 걸 환영해요"
+- `signup/complete/page.tsx`: AuthLayout 미사용 독자 레이아웃 `items-start md:items-center` 적용
+
+**설계 결정**:
+- 랜딩 페이지 히어로 우측 대시보드 placeholder는 **W4 완료 후 실제 스크린샷으로 교체** 예정 — 현재 유지
+- `complete` 페이지는 AuthLayout을 쓰지 않는 독자 레이아웃으로 분리 유지 (성공 화면 특성)
+
+---
+
 ## 2026-06-16 (4차) | OAuth signup/login 분기 검토 및 설계 결정
 
 **작업 내용**:

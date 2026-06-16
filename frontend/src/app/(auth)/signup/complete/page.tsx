@@ -26,7 +26,7 @@ export default function CompletePage() {
   const nickname = user?.nickname ?? "투자자";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+    <div className="flex min-h-screen items-start justify-center bg-muted/30 p-6 pt-12 md:items-center">
       <div className="flex w-full max-w-[540px] flex-col items-center gap-7 text-center">
         {/* 체크 아이콘 */}
         <div className="grid size-24 place-items-center rounded-full bg-[color:var(--color-sentiment-positive)]" aria-hidden>
