@@ -11,6 +11,20 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-16 (8차) | 종목 등록 필수 입력 + 검색 UX 개선
+
+**작업 내용**:
+- `portfolios/new/page.tsx`: avg_buy_price·quantity 선택→필수 변경 (required 유효성, `*` 표시, 에러 border, placeholder 구체화, min 1)
+- `StockSearchCombobox.tsx`: `isSearching = (query !== debouncedQ) || isLoading` — debounce 300ms 동안 빈 드롭다운 대신 "검색 중..." 표시, `aria-live="polite"` 추가
+
+**설계 결정**:
+- BE `CreatePortfolioBody`는 `avg_buy_price?: number` optional 유지 (BE API 변경 없음) — FE 폼에서만 required 강제
+
+**다음 세션**:
+- `dashboard-real-data` Spec 구현
+
+---
+
 ## 2026-06-16 (7차) | portfolio-management-e2e E2E 구현
 
 **작업 내용**:

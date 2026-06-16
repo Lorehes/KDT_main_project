@@ -1,7 +1,7 @@
 "use client";
 
 // [목적] 종목 등록 상세 화면(D13/m22) — 매수 평균가·수량 입력 + 저장
-// [이유] 선택 종목의 매수 정보를 입력해 손익 계산 기반을 마련. 매수가·수량은 선택 입력
+// [이유] 선택 종목의 매수 정보를 입력해 손익 계산 기반을 마련. 매수가·수량은 필수 입력(손익 계산 필요)
 // [사이드 임팩트] POST /portfolios 호출 후 ["portfolios"] 쿼리 무효화 → 목록 자동 갱신.
 //   매수가·수량은 평문 console.log 절대 금지 — 백엔드에서 AES-256-GCM 암호화 저장(CLAUDE.md §7)
 // [수정 시 고려사항] edit=true 모드(기존 종목 수정)는 PATCH /portfolios/{id} 사용 — 현재 미구현.
@@ -41,8 +41,8 @@ function NewPortfolioForm() {
 
     const body = {
       stock_code: stockCode,
-      avg_buy_price: data.avg_buy_price ? Number(data.avg_buy_price) : undefined,
-      quantity: data.quantity ? Number(data.quantity) : undefined,
+      avg_buy_price: Number(data.avg_buy_price),
+      quantity: Number(data.quantity),
     };
 
     // avg_buy_price·quantity는 절대 console.log 금지 — 금융 개인정보
@@ -95,21 +95,23 @@ function NewPortfolioForm() {
           {/* 매수 평균가 */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="avg_buy_price" className="text-sm font-semibold text-foreground">
-              매수 평균가 <span className="font-normal text-muted-foreground">(선택)</span>
+              매수 평균가 <span className="text-destructive" aria-hidden>*</span>
             </label>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+            <div className={`flex items-center gap-2 rounded-xl border bg-background px-4 py-3 focus-within:ring-2 focus-within:ring-primary/20 ${errors.avg_buy_price ? "border-destructive focus-within:border-destructive" : "border-border focus-within:border-primary"}`}>
               <input
                 id="avg_buy_price"
                 type="number"
                 inputMode="decimal"
-                min="0"
+                min="1"
                 step="1"
-                placeholder="0"
+                placeholder="예: 75000"
                 autoComplete="off"
-                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                aria-required="true"
                 aria-describedby="price-hint"
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                 {...register("avg_buy_price", {
-                  min: { value: 0, message: "0 이상이어야 합니다" },
+                  required: "매수 평균가를 입력해주세요",
+                  min: { value: 1, message: "1 이상이어야 합니다" },
                 })}
               />
               <span className="shrink-0 text-sm text-muted-foreground">원</span>
@@ -121,21 +123,23 @@ function NewPortfolioForm() {
           {/* 보유 수량 */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="quantity" className="text-sm font-semibold text-foreground">
-              보유 수량 <span className="font-normal text-muted-foreground">(선택)</span>
+              보유 수량 <span className="text-destructive" aria-hidden>*</span>
             </label>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+            <div className={`flex items-center gap-2 rounded-xl border bg-background px-4 py-3 focus-within:ring-2 focus-within:ring-primary/20 ${errors.quantity ? "border-destructive focus-within:border-destructive" : "border-border focus-within:border-primary"}`}>
               <input
                 id="quantity"
                 type="number"
                 inputMode="numeric"
-                min="0"
+                min="1"
                 step="1"
-                placeholder="0"
+                placeholder="예: 10"
                 autoComplete="off"
+                aria-required="true"
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                 {...register("quantity", {
-                  min: { value: 0, message: "0 이상이어야 합니다" },
-                  validate: (v) => !v || Number.isInteger(Number(v)) || "정수를 입력해주세요",
+                  required: "보유 수량을 입력해주세요",
+                  min: { value: 1, message: "1 이상이어야 합니다" },
+                  validate: (v) => Number.isInteger(Number(v)) || "정수를 입력해주세요",
                 })}
               />
               <span className="shrink-0 text-sm text-muted-foreground">주</span>

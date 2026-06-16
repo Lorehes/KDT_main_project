@@ -2,8 +2,9 @@
 
 // [목적] 종목명/코드 자동완성 검색 — 실시간 드롭다운
 // [이유] 종목 등록 시 직접 코드 입력 대신 검색으로 종목을 선택하는 UX
-// [사이드 임팩트] GET /stocks/search (PUBLIC) 호출. 디바운스는 컴포넌트 레벨에서 처리
-// [수정 시 고려사항] 검색 결과는 최대 10건. 미커버 종목은 /stocks/coverage-requests로 요청(W5에서 추가)
+// [사이드 임팩트] GET /stocks/search (PUBLIC) 호출. 디바운스는 컴포넌트 레벨에서 처리.
+//   query !== debouncedQ(debounce 대기 중)일 때 "검색 중..." 표시 — 빈 드롭다운으로 보이는 UX 개선.
+// [수정 시 고려사항] 검색 결과는 최대 20건. 미커버 종목은 /stocks/coverage-requests로 요청(W5에서 추가)
 
 import { useState, useCallback, useRef } from "react";
 import { Search, ChevronDown } from "lucide-react";
@@ -35,6 +36,9 @@ export function StockSearchCombobox({ onSelect, placeholder = "종목명 또는 
   const [open, setOpen] = useState(false);
 
   const { data, isLoading } = useStockSearch(debouncedQ);
+
+  // debounce 대기 중이거나 API 호출 중이면 true
+  const isSearching = (query.trim().length >= 1 && query !== debouncedQ) || isLoading;
 
   const handleChange = (q: string) => {
     setQuery(q);
@@ -74,13 +78,13 @@ export function StockSearchCombobox({ onSelect, placeholder = "종목명 또는 
           aria-label="종목 검색 결과"
           className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-background shadow-md"
         >
-          {isLoading && (
-            <li className="px-4 py-3 text-sm text-muted-foreground">검색 중...</li>
+          {isSearching && (
+            <li className="px-4 py-3 text-sm text-muted-foreground" role="status" aria-live="polite">검색 중...</li>
           )}
-          {!isLoading && data?.length === 0 && (
+          {!isSearching && data?.length === 0 && (
             <li className="px-4 py-3 text-sm text-muted-foreground">검색 결과가 없습니다</li>
           )}
-          {data?.map((stock) => (
+          {!isSearching && data?.map((stock) => (
             <li key={stock.stock_code} role="option" aria-selected={false}>
               <button
                 type="button"
