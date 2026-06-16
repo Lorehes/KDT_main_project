@@ -62,7 +62,7 @@ updated: 2026-06-02
 | 2026-06-16 | Jin | 6118a6f | fix(frontend): 모바일 auth 헤딩 반응형+로그인 문구 개선 [4/8 S] | Frontend | 4 | 8 | S | 모바일 auth 헤딩 반응형+문구개선 |
 | 2026-06-16 | Jin | 4cae162 | docs(specs): 스펙 감사+신규3개+테크리뷰 [2/8 M] | Docs | 2 | 8 | M | 스펙 감사+신규3개+테크리뷰 |
 | 2026-06-16 | Jin | 97a6900 | feat(user,frontend): 포트폴리오 종목명+staleTime+알림토글제거 [6/8 M] | User/Frontend | 6 | 8 | M | 포트폴리오 종목명+staleTime+알림토글제거 |
-| 2026-06-16 | Jin | 8dd0980 | fix(frontend): 종목등록 필수입력+검색UX개선 [5/8 S] | Frontend | 5 | 8 | S | 종목등록 필수입력+검색UX개선 |
+| 2026-06-16 | Jin | c717efe | fix(frontend): 종목등록 필수입력+검색UX개선 [5/8 S] | Frontend | 5 | 8 | S | 종목등록 필수입력+검색UX개선 |
 <!-- SCORES -->
 
 ## 기간별 집계
