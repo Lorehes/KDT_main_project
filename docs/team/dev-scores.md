@@ -58,7 +58,7 @@ updated: 2026-06-02
 | 2026-06-16 | Jin | ffbe092 | fix(infra,user): Kakao dev모드+rate limit 롤백+개발 rate스킵 [7/8 S] | Infra/User | 7 | 8 | S | Kakao placeholder모드+rate롤백 |
 | 2026-06-16 | Jin | 0e2a632 | fix(frontend): 휴대폰UX+OTP만료+프로필토글+OAuth URL버그 [7/7 M] | Frontend | 7 | 7 | M | 번호포맷+OTP만료UX+OAuth URL수정 |
 | 2026-06-16 | Jin | 9202dd9 | fix(user,frontend): OAuth 가입 약관동의 버그 수정+최적화 [8/8 L] | User/Frontend | 8 | 8 | L | OAuth 가입 약관동의 버그 수정+최적화 |
-| 2026-06-16 | Jin | 1dedd8c | chore(frontend): signup 콜백 주석 업데이트+devlog 정정 [3/8 S] | Frontend | 3 | 8 | S | signup 주석 업데이트+devlog 정정 |
+| 2026-06-16 | Jin | b3dfd34 | chore(frontend): signup 콜백 주석 업데이트+devlog 정정 [3/8 S] | Frontend | 3 | 8 | S | signup 주석 업데이트+devlog 정정 |
 <!-- SCORES -->
 
 ## 기간별 집계
