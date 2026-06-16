@@ -11,6 +11,25 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-16 (2차) | 휴대폰 인증 UX 개선 + Kakao 개발 모드 + OAuth 버그
+
+**작업 내용**:
+- KakaoAlimtalkClient: `isDevMode()` 메서드 추가 + senderKey=placeholder 시 실제 API 호출 생략, BE 콘솔에 OTP 출력
+- PhoneVerificationService: Kakao 발송 실패 시 rate limit counter 롤백 (EmailVerificationService 동일 패턴), 개발 모드 rate limit 전체 스킵
+- phone/page.tsx: 번호 자동 포맷팅 `010-XXXX-XXXX`, 숫자만 입력/11자리 제한, OTP 만료 `expired` 상태 추가 — 타이머 00:00 도달·410 서버 응답 시 OTP 섹션 유지하며 "인증번호 다시 보내기" 버튼으로 전환, 만료 시 인증완료 버튼 비활성화
+- profile/page.tsx: 초기 미선택 상태로 변경(기존 기본값 제거), 선택된 옵션 재클릭 시 해제 토글
+- `callback/[provider]/route.ts`: `API_URL` 미설정 버그 → `NEXT_PUBLIC_API_URL` 사용 (API URL 이중 조립 방지)
+- TopBar.tsx: OAuth 리다이렉트 후 `isLoading` 중 pulse 스켈레톤 표시 — "?"/사용자 null 플래시 제거
+
+**설계 결정**:
+- Kakao dev 모드 판별 기준: `KAKAO_SENDER_KEY=placeholder` (환경변수 기본값). 실 키 설정 즉시 운영 모드 전환, 코드 변경 불필요.
+- OTP 만료 상태에서 OTP 섹션을 유지하는 이유: 번호 변경 후 재발송 편의. 섹션 사라짐 → 재입력 혼란 방지
+
+**미완료**:
+- 401 초기 요청 실패 근본 원인 미확정 — dr_session 쿠키가 BE로 전송되는지 Chrome Network 탭 확인 권장 (BE 로그 `[JWT] Invalid token:` WARN 없으면 쿠키 미전송). 현재 interceptor refresh 우회로 동작 중.
+
+---
+
 ## 2026-06-16 | 온보딩 UI 개선 + BE 인증 강화
 
 **작업 내용**:

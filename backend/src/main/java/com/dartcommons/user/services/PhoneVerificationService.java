@@ -79,6 +79,11 @@ public class PhoneVerificationService {
             log.info("Phone OTP sent: userId={}", userId);
         } catch (Exception e) {
             otpCache.invalidate(userId);
+            // rate counter 복원 — Kakao 발송 실패 시 재시도 허용 (EmailVerificationService 동일 패턴)
+            AtomicInteger mc = minuteRateCache.getIfPresent(userId);
+            if (mc != null) mc.decrementAndGet();
+            AtomicInteger hc = hourRateCache.getIfPresent(userId);
+            if (hc != null) hc.decrementAndGet();
             log.warn("Phone OTP send failed: userId={} error={}", userId, e.getMessage());
             throw e;
         }
@@ -111,6 +116,8 @@ public class PhoneVerificationService {
     }
 
     private void checkRateLimit(Long userId) {
+        // placeholder(개발) 모드에서는 rate limit 스킵 — 반복 테스트 편의
+        if (kakaoClient.isDevMode()) return;
         // 1분 1회
         AtomicInteger minuteCount = minuteRateCache.get(userId, k -> new AtomicInteger(0));
         if (minuteCount.incrementAndGet() > 1) {

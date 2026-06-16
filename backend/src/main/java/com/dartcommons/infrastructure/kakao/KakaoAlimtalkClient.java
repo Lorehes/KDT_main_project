@@ -55,6 +55,11 @@ public class KakaoAlimtalkClient {
                 .build();
     }
 
+    /** placeholder senderKey면 개발 모드 — 실제 Kakao API 호출 없이 콘솔 출력으로 대체. */
+    public boolean isDevMode() {
+        return "placeholder".equals(props.senderKey());
+    }
+
     /**
      * 알림톡 단건 발송. 성공 시 true, 실패(재시도 소진) 시 RestClientException throw.
      * 수신자 전화번호는 하이픈 없는 11자리 숫자 문자열(예: "01012345678").
@@ -93,6 +98,11 @@ public class KakaoAlimtalkClient {
     public boolean sendOtp(String phoneNumber, String code) {
         if (phoneNumber == null || phoneNumber.isBlank()) {
             throw new IllegalArgumentException("phoneNumber must not be blank");
+        }
+        // 개발 환경 placeholder 모드 — 실제 Kakao API 호출 없이 콘솔에 OTP 출력 (운영 전 Kakao 비즈채널 등록 필요)
+        if ("placeholder".equals(props.senderKey())) {
+            log.info("[DEV] Kakao Alimtalk OTP (placeholder mode) phone=[REDACTED] code={}", code);
+            return true;
         }
         log.debug("Kakao Alimtalk OTP send attempt: phone=[REDACTED] code=[REDACTED]");
         String message = props.otpMessageTemplate().replace("#{code}", code);
