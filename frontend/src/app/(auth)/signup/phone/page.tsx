@@ -96,7 +96,7 @@ export default function PhonePage() {
   return (
     <AuthLayout
       heading={<>알림톡<br /><span className="text-[color:var(--color-brand-sky)]">받을 번호</span></>}
-      subtext="카카오 알림톡(오픈율 40~60%) 발송을 위해 휴대폰 인증이 필요해요. 선택 시 이메일로 대체됩니다."
+      subtext="카카오 알림톡 발송을 위해 휴대폰 인증이 필요해요. 미 인증 시 일부 서비스가 제공되지 않을 수 있습니다."
     >
       <div className="flex flex-col gap-7">
         <OnboardingStepper currentStep={3} />
@@ -116,17 +116,18 @@ export default function PhonePage() {
               disabled={step === "code"}
               aria-invalid={!!phoneError}
               aria-describedby={phoneError ? "phone-error" : undefined}
-              className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 aria-invalid:border-destructive disabled:opacity-60"
+              className="[flex:4] min-w-0 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 aria-invalid:border-destructive disabled:opacity-60"
             />
-            <Button
-              type="button"
-              onClick={handlePhoneSubmit}
-              disabled={step === "code" || sendOtp.isPending}
-              size="sm"
-              className="shrink-0 self-stretch px-4"
-            >
-              {sendOtp.isPending ? "발송 중…" : "인증요청"}
-            </Button>
+            <div className="flex-1 self-stretch flex">
+              <Button
+                type="button"
+                onClick={handlePhoneSubmit}
+                disabled={step === "code" || sendOtp.isPending}
+                className="h-full w-full px-5"
+              >
+                {sendOtp.isPending ? "발송 중…" : "인증요청"}
+              </Button>
+            </div>
           </div>
           {phoneError && <p id="phone-error" className="text-xs text-destructive" role="alert">{phoneError}</p>}
         </div>

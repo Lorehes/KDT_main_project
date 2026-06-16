@@ -41,14 +41,13 @@ export default function TermsPage() {
 
   const toggle = (key: string) => setChecked((p) => ({ ...p, [key]: !p[key] }));
   const toggleAll = () => {
-    const allChecked = TERMS_ITEMS.every((t) => checked[t.key]);
-    const next: Record<string, boolean> = {};
-    TERMS_ITEMS.forEach((t) => { next[t.key] = !allChecked; });
+    const requiredAllChecked = TERMS_ITEMS.filter((t) => t.required).every((t) => checked[t.key]);
+    const next: Record<string, boolean> = { ...checked };
+    TERMS_ITEMS.filter((t) => t.required).forEach((t) => { next[t.key] = !requiredAllChecked; });
     setChecked(next);
   };
 
   const requiredDone = TERMS_ITEMS.filter((t) => t.required).every((t) => checked[t.key]);
-  const allDone = TERMS_ITEMS.every((t) => checked[t.key]);
 
   const handleContinue = async () => {
     if (!requiredDone) return;
@@ -94,12 +93,12 @@ export default function TermsPage() {
             onClick={toggleAll}
             className={cn(
               "flex w-full items-center gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors",
-              allDone ? "border-primary bg-primary/5" : "border-border",
+              requiredDone ? "border-primary bg-primary/5" : "border-border",
             )}
-            aria-pressed={allDone}
+            aria-pressed={requiredDone}
           >
-            <Checkbox checked={allDone} />
-            <span className="text-base font-extrabold text-foreground">전체 동의합니다</span>
+            <Checkbox checked={requiredDone} />
+            <span className="text-base font-extrabold text-foreground">필수 항목 전체 동의</span>
           </button>
 
           <div className="mt-1 flex flex-col divide-y divide-border px-2">
