@@ -27,8 +27,8 @@ const TIME_OPTIONS = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [experience, setExperience] = useState("INTERMEDIATE");
-  const [time, setTime] = useState("REALTIME");
+  const [experience, setExperience] = useState("");
+  const [time, setTime] = useState("");
 
   const handleSubmit = () => {
     // TODO: BE UpdateMeRequest에 investment_experience·preferred_time 추가 후 아래 호출 복원.
@@ -54,7 +54,7 @@ export default function ProfilePage() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setExperience(value)}
+                onClick={() => setExperience((prev) => prev === value ? "" : value)}
                 aria-pressed={experience === value}
                 className={cn(
                   "flex items-center gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -81,7 +81,7 @@ export default function ProfilePage() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setTime(value)}
+                onClick={() => setTime((prev) => prev === value ? "" : value)}
                 aria-pressed={time === value}
                 className={cn(
                   "flex-1 rounded-full border-[1.5px] py-2.5 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

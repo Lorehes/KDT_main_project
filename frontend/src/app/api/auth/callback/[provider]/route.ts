@@ -10,7 +10,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.API_URL ?? "http://localhost:8080";
+// NEXT_PUBLIC_API_URL = "http://localhost:8080/api/v1" — 서버 라우트에서도 접근 가능 (빌드 타임 임베드)
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 const ACCESS_TTL_SECONDS  = 30 * 60;          // 30분 — /api/auth/session/route.ts 와 동기화
 const REFRESH_TTL_SECONDS = 14 * 24 * 3600;   // 14일
 
@@ -36,7 +37,7 @@ export async function GET(
 
   let callbackRes: Response;
   try {
-    callbackRes = await fetch(`${API_URL}/api/v1/auth/oauth/${provider}/callback`, {
+    callbackRes = await fetch(`${BASE_URL}/auth/oauth/${provider}/callback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, state }),

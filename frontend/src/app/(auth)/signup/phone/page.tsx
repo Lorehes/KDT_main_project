@@ -18,12 +18,19 @@ import { ApiException } from "@/lib/api/client";
 
 const TIMER_SECONDS = 3 * 60;
 
+function formatPhone(digits: string): string {
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+
 export default function PhonePage() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [seconds, setSeconds] = useState(TIMER_SECONDS);
+  const [expired, setExpired] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [codeError, setCodeError] = useState("");
 
@@ -36,6 +43,14 @@ export default function PhonePage() {
     return () => clearTimeout(t);
   }, [step, seconds]);
 
+  // 타이머 00:00 도달 시 만료 처리
+  useEffect(() => {
+    if (step === "code" && seconds === 0 && !expired) {
+      setExpired(true);
+      setCodeError("인증번호가 만료됐습니다. 다시 요청해주세요.");
+    }
+  }, [step, seconds, expired]);
+
   const handlePhoneSubmit = async () => {
     const cleaned = phone.replace(/\D/g, "");
     if (!/^010\d{8}$/.test(cleaned)) {
@@ -45,6 +60,9 @@ export default function PhonePage() {
     setPhoneError("");
     try {
       await sendOtp.mutateAsync(cleaned);
+      setCode("");
+      setCodeError("");
+      setExpired(false);
       setStep("code");
       setSeconds(TIMER_SECONDS);
     } catch (e) {
@@ -66,7 +84,7 @@ export default function PhonePage() {
       const status = e instanceof ApiException ? e.body.status : 0;
       if (status === 410) {
         setCodeError("인증번호가 만료됐습니다. 다시 요청해주세요.");
-        setStep("phone");
+        setExpired(true);
       } else {
         setCodeError("인증번호가 일치하지 않습니다.");
       }
@@ -111,9 +129,13 @@ export default function PhonePage() {
               type="tel"
               inputMode="numeric"
               placeholder="010-0000-0000"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              disabled={step === "code"}
+              value={formatPhone(phone)}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 11);
+                setPhone(digits);
+                if (phoneError) setPhoneError("");
+              }}
+              disabled={step === "code" && !expired}
               aria-invalid={!!phoneError}
               aria-describedby={phoneError ? "phone-error" : undefined}
               className="[flex:4] min-w-0 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 aria-invalid:border-destructive disabled:opacity-60"
@@ -122,10 +144,10 @@ export default function PhonePage() {
               <Button
                 type="button"
                 onClick={handlePhoneSubmit}
-                disabled={step === "code" || sendOtp.isPending}
-                className="h-full w-full px-5"
+                disabled={(step === "code" && !expired) || sendOtp.isPending}
+                className="h-full w-full px-5 text-xs sm:text-sm"
               >
-                {sendOtp.isPending ? "발송 중…" : "인증요청"}
+                {sendOtp.isPending ? "발송 중…" : expired ? "인증번호 다시 보내기" : "인증요청"}
               </Button>
             </div>
           </div>
@@ -136,23 +158,13 @@ export default function PhonePage() {
           <>
             <div className="flex flex-col gap-3">
               <label className="text-sm font-semibold text-foreground">인증번호</label>
-              <OTPInput value={code} onChange={(v) => { setCode(v); setCodeError(""); }} />
+              <OTPInput value={code} onChange={(v) => { setCode(v); setCodeError(""); }} disabled={expired} />
               {codeError && <p className="text-xs text-destructive" role="alert">{codeError}</p>}
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
+              {!expired && (
+                <div className="text-sm text-muted-foreground">
                   남은 시간 <span className="font-mono font-bold text-destructive" aria-live="polite">{mm}:{ss}</span>
-                </span>
-                {seconds <= 0 && (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={sendOtp.isPending}
-                    className="font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                  >
-                    재전송
-                  </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* 카카오 채널 추가 안내 */}
@@ -170,7 +182,7 @@ export default function PhonePage() {
 
             <Button
               onClick={handleVerify}
-              disabled={confirmOtp.isPending}
+              disabled={confirmOtp.isPending || expired}
               className="w-full"
             >
               {confirmOtp.isPending ? "확인 중…" : "인증 완료하고 계속하기"}

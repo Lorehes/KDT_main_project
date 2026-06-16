@@ -14,10 +14,10 @@ import { useUIStore } from "@/lib/stores/uiStore";
 import { useUnreadCount } from "@/lib/api/notifications";
 
 export function TopBar() {
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const { toggleNotifModal } = useUIStore();
   const { data: unreadCount } = useUnreadCount();
-  const initials = user?.nickname?.[0] ?? "?";
+  const initials = user?.nickname?.[0] ?? "";
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-7">
@@ -50,11 +50,22 @@ export function TopBar() {
           aria-label="계정 설정"
         >
           <div className="grid size-[38px] place-items-center rounded-[11px] bg-[color:var(--color-brand-navy)] font-extrabold text-sm text-white">
-            {initials}
+            {isLoading ? (
+              <span className="size-3 rounded-full bg-white/40 animate-pulse" aria-hidden />
+            ) : initials}
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-bold text-foreground">{user?.nickname ?? "사용자"}</p>
-            <p className="text-[11px] text-muted-foreground">{user?.tier ?? "Free"} 멤버</p>
+            {isLoading ? (
+              <div className="flex flex-col gap-1">
+                <div className="h-3 w-16 rounded bg-muted animate-pulse" />
+                <div className="h-2.5 w-10 rounded bg-muted animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-foreground">{user?.nickname ?? "사용자"}</p>
+                <p className="text-[11px] text-muted-foreground">{user?.tier ?? "Free"} 멤버</p>
+              </>
+            )}
           </div>
         </Link>
       </div>
