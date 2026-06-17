@@ -11,6 +11,18 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-17 (11차) | 온보딩 a11y 버튼 라벨 + middleware 보호
+
+**작업 내용**:
+- `signup/complete/page.tsx`: "등록"·"설정"·"첫 종목 등록하기 →" 버튼 `aria-label` 추가 (`buttonsWithoutLabel` 3→0), 모바일 하단 여백 `pt-12` → `py-12` 대칭화
+- `middleware.ts`: `PUBLIC_PATHS` prefix 매칭 → 온보딩 단계별 명시 열거. `/signup/complete` 보호 라우트로 전환 (미인증 → `/login` 리다이렉트)
+
+**설계 결정**:
+- `/signup/complete`는 세션 생성 이후 진입하므로 인증 필수. prefix catch-all(`/signup/`) 방식은 /complete까지 public으로 처리해 미인증 직접 접근이 가능했음 → 명시 열거로 수정
+- 온보딩 단계(`/signup/verify`~`/signup/profile`)는 계정 생성 전이므로 public 유지
+
+---
+
 ## 2026-06-17 (10차) | 온보딩 체크리스트 Sheet/Dialog 전환
 
 **작업 내용**:

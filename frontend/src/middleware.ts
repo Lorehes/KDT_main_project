@@ -3,11 +3,23 @@
 // [사이드 임팩트] (public)·(auth)·/_next·/api 경로는 통과. 새 보호 라우트 추가 시 matcher 갱신 필요
 // [수정 시 고려사항] Zustand authStore의 토큰은 클라이언트 메모리에만 존재하므로
 //   서버 측 검사는 httpOnly 쿠키 'dr_session' 유무로만 판단. 실제 유효성은 API가 검증.
+//   /signup/complete는 가입 완료 후(세션 존재) 진입하므로 보호 라우트 — PUBLIC_PATHS에서 제외.
+//   온보딩 각 단계(/signup/verify~profile)는 세션 없이도 접근 가능해야 하므로 명시 열거.
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/pricing", "/login", "/signup", "/dashboard/preview"];
+const PUBLIC_PATHS = [
+  "/",
+  "/pricing",
+  "/login",
+  "/signup",
+  "/signup/verify",
+  "/signup/terms",
+  "/signup/phone",
+  "/signup/profile",
+  "/dashboard/preview",
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

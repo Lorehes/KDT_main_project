@@ -457,7 +457,7 @@ export default function CompletePage() {
 
   return (
     <>
-      <div className="flex min-h-screen items-start justify-center bg-muted/30 p-6 pt-12 md:items-center">
+      <div className="flex min-h-screen items-start justify-center bg-muted/30 px-6 py-12 md:items-center">
         <div className="flex w-full max-w-[540px] flex-col items-center gap-7 text-center">
           {/* 체크 아이콘 */}
           <div
@@ -486,7 +486,7 @@ export default function CompletePage() {
                 label="보유 종목 등록"
                 sub="3개까지 무료"
                 action={
-                  <Button size="sm" className="shrink-0" onClick={() => setPortfolioSheetOpen(true)}>
+                  <Button size="sm" className="shrink-0" aria-label="보유 종목 등록" onClick={() => setPortfolioSheetOpen(true)}>
                     등록
                   </Button>
                 }
@@ -496,7 +496,7 @@ export default function CompletePage() {
                 label="알림 채널 설정"
                 sub="카카오 알림톡"
                 action={
-                  <Button variant="outline" size="sm" className="shrink-0" onClick={() => setNotifDialogOpen(true)}>
+                  <Button variant="outline" size="sm" className="shrink-0" aria-label="알림 채널 설정" onClick={() => setNotifDialogOpen(true)}>
                     설정
                   </Button>
                 }
@@ -515,6 +515,7 @@ export default function CompletePage() {
           ) : (
             <button
               type="button"
+              aria-label="첫 종목 등록하기"
               onClick={() => setPortfolioSheetOpen(true)}
               className={buttonVariants({ size: "lg" }) + " w-full max-w-xs"}
             >
