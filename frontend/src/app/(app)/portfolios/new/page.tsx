@@ -66,6 +66,8 @@ function NewPortfolioForm() {
         } else {
           setError("root", { message: e.body.message ?? "등록에 실패했습니다." });
         }
+      } else {
+        setError("root", { message: "네트워크 오류가 발생했습니다. 다시 시도해주세요." });
       }
     }
   };

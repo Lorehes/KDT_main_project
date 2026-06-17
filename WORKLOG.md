@@ -11,6 +11,23 @@ updated: 2026-06-16
 
 ---
 
+## 2026-06-17 (10차) | 온보딩 체크리스트 Sheet/Dialog 전환
+
+**작업 내용**:
+- `signup/complete/page.tsx`: "등록"·"설정" 링크를 `PortfolioSheet`(2-step)·`NotifDialog`(간소화)로 전환
+- `PortfolioSheet`: StockSearchCombobox(Step1) → RHF 폼(Step2), POST /portfolios, Free422/중복409 에러처리, Sheet 닫힘 시 상태 초기화
+- `NotifDialog`: 채널·빈도 설정, PUT /notifications/settings, `enabled:true` 강제, 설정 fetch 실패 에러 상태
+- `portfolios/new/page.tsx`: 네트워크 오류 catch else 분기 추가 (공통 버그 수정)
+- Sheet side 뷰포트 반응형 (sm 미만 bottom / sm 이상 right), mediaQuery 클린업
+
+**설계 결정**:
+- `enabled:true` 강제 포함 — 온보딩 저장 = 알림 활성화 의도 확정 (Tech Review 리스크#2)
+- Sheet/Dialog 온보딩 1회성 UI → `page.tsx` 단일 파일 인라인 구현 (공유 컴포넌트화 불필요)
+- `portfolioDone`·`notifDone` 리로드 시 초기화 허용 (온보딩 맥락 1회성)
+- `NotifDialog` type_filter·off_hours_allowed는 서버 기존값 그대로 전송 (미노출 필드 변경 방지)
+
+---
+
 ## 2026-06-16 (9차) | 종목 등록 진입 경로 수정
 
 **작업 내용**:
