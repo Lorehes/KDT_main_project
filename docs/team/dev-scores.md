@@ -64,7 +64,7 @@ updated: 2026-06-02
 | 2026-06-16 | Jin | 97a6900 | feat(user,frontend): 포트폴리오 종목명+staleTime+알림토글제거 [6/8 M] | User/Frontend | 6 | 8 | M | 포트폴리오 종목명+staleTime+알림토글제거 |
 | 2026-06-16 | Jin | c717efe | fix(frontend): 종목등록 필수입력+검색UX개선 [5/8 S] | Frontend | 5 | 8 | S | 종목등록 필수입력+검색UX개선 |
 | 2026-06-16 | Jin | 476f436 | fix(frontend): 종목등록 진입경로 수정+code없음 redirect [6/8 S] | Frontend | 6 | 8 | S | 종목등록 진입경로+redirect 수정 |
-| 2026-06-17 | Jin | f66ab47 | feat(frontend): 온보딩 체크리스트 Sheet/Dialog 전환 [6/8 S] | Frontend | 6 | 8 | S | 온보딩 체크리스트 인라인 완료 |
+| 2026-06-17 | Jin | e438705 | feat(frontend): 온보딩 체크리스트 Sheet/Dialog 전환 [6/8 S] | Frontend | 6 | 8 | S | 온보딩 체크리스트 인라인 완료 |
 <!-- SCORES -->
 
 ## 기간별 집계
