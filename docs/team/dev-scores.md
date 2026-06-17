@@ -67,6 +67,7 @@ updated: 2026-06-02
 | 2026-06-17 | Jin | e438705 | feat(frontend): 온보딩 체크리스트 Sheet/Dialog 전환 [6/8 S] | Frontend | 6 | 8 | S | 온보딩 체크리스트 인라인 완료 |
 | 2026-06-17 | Jin | f579be2 | fix(frontend): 온보딩 a11y 버튼라벨+middleware 보호 [5/8 S] | Frontend | 5 | 8 | S | 버튼aria-label+/complete보호 |
 | 2026-06-17 | Jin | ad2bbcc | fix(shared,frontend): 온보딩 409 버그 수정 — BE 에러계약+FE 상태파생 [7/8 S] | Shared/Frontend | 7 | 8 | S | 온보딩 409 에러 근본 수정 |
+| 2026-06-17 | Jin | d81e826 | feat(user,frontend): OAuth 온보딩 전 절차 완료 강제 — onboarding_completed_at [7/8 M] | User/Frontend | 7 | 8 | M | OAuth 온보딩 전 절차 완료 강제 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -74,5 +75,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 3 | 31 | 54 | 8.1 | 5.9 |
+| Jin | 4 | 32 | 55 | 8.1 | 5.9 |
 <!-- SUMMARY:END -->

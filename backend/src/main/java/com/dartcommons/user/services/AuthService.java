@@ -44,14 +44,16 @@ import java.util.stream.Collectors;
  *       동의는 사용자가 직접 화면에서 수락 후 POST /users/me/oauth-consent 별도 호출(UserController 처리).
  * [사이드 임팩트] 이메일 signup은 ConsentService.recordSignupConsents()와 동일 트랜잭션 — 롤백 시 동의 이력도 함께 롤백.
  *               OAuth autoSignup은 계정 생성만 수행 — consent_logs 없는 상태로 남을 수 있음.
- *               oauthCallback에서 기존 사용자 중 hasRequiredConsents()=false 이면 is_new_user=true 재반환 → 약관 동의 재유도.
+ *               oauthCallback에서 기존 사용자 is_new_user 판단 = onboarding_completed_at NULL 여부(V10).
+ *               hasRequiredConsents() 기반 판단은 약관만 체크 → phone/profile/complete 미완료도 returning user로 처리하는 버그.
+ *               onboarding_completed_at 전환으로 /signup/complete 도달 전까지는 is_new_user=true 반환.
  *               OAuth 콜백에서 동일 이메일 기존 계정 존재 시 409(수동 이메일 로그인 유도).
  *               refresh 실패(만료/미존재) 시 해당 hash 삭제 없이 401 반환.
  *               logout은 access token을 무효화하지 않음 — 만료(30분) 대기.
  * [수정 시 고려사항] OAuth 계정 연동(이메일 충돌 시 자동 연결) 허용 정책 전환 시 oauthCallback의 충돌 처리 로직 수정.
  *                  로그인 시도 횟수 제한(rate-limit) 추가 시 AuthController AOP/Bucket4j 레이어.
  *                  다중 기기 로그인은 user_id당 refresh_tokens 복수 허용(현재 구조 지원).
- *                  OAuth 동의 미완료 계정 정리가 필요하면 배치로 hasRequiredConsents()=false + created_at 경과 기준 삭제.
+ *                  온보딩 미완료 계정 정리가 필요하면 배치로 onboarding_completed_at IS NULL + created_at 경과 기준 삭제.
  */
 @Service
 @Transactional
@@ -227,14 +229,14 @@ public class AuthService {
                 userRepository.findByOauthProviderAndOauthIdAndDeletedAtIsNull(oauthProvider, userInfo.providerId());
         if (existing.isPresent()) {
             UserEntity user = existing.get();
-            // 약관 동의 미완료 시 is_new_user=true 반환 → FE가 /signup/terms?oauth=true 로 재유도
-            boolean hasConsent = consentService.hasRequiredConsents(user.getId());
-            if (hasConsent) {
+            // onboarding_completed_at 기준: NOT NULL = 온보딩 완료(기존 사용자), NULL = 온보딩 미완료
+            // hasRequiredConsents() 대신 onboarding_completed_at 사용 — 약관 동의 후에도 complete까지 가야 returning user 처리
+            if (user.getOnboardingCompletedAt() != null) {
                 log.info("oauth login: provider={} userId={}", provider, user.getId());
                 return issueTokenPair(user);
             } else {
-                log.info("oauth consent-incomplete re-entry: provider={} userId={}", provider, user.getId());
-                // 동의 미완료 재진입 시 기존 refresh_token 전부 삭제 — 반복 진입에 의한 토큰 누적 방지
+                log.info("oauth onboarding-incomplete re-entry: provider={} userId={}", provider, user.getId());
+                // 온보딩 미완료 재진입 시 기존 refresh_token 전부 삭제 — 반복 진입에 의한 토큰 누적 방지
                 refreshTokenRepository.deleteByUserId(user.getId());
                 return issueTokenPairAsNew(user);
             }

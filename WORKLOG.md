@@ -11,6 +11,24 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-17 (13차) | OAuth 온보딩 전 절차 완료 강제 (onboarding_completed_at)
+
+**작업 내용**:
+- `V10__add_onboarding_completed_at.sql`: `users.onboarding_completed_at TIMESTAMPTZ` 추가. 기존 사용자(consent_logs 존재) → `created_at` 백필
+- `UserEntity.java`: `onboardingCompletedAt` 필드 + `completeOnboarding()` 메서드(멱등)
+- `UserService.java`: `completeOnboarding(Long userId)` 추가
+- `UserController.java`: `POST /api/v1/users/me/onboarding-complete` 신규 (204, 멱등)
+- `AuthService.java`: `oauthCallback` returning user 판단을 `hasRequiredConsents()` → `onboardingCompletedAt != null`으로 전환
+- `auth.ts`: `useCompleteOnboarding()` 뮤테이션 추가
+- `signup/complete/page.tsx`: 마운트 시 `completeOnboarding()` 호출
+
+**설계 결정**:
+- `is_new_user` 기준을 약관 동의(consent_logs)에서 온보딩 완료(/signup/complete 도달)로 전환. 약관 이후 phone/profile/complete를 건너뛰고 대시보드로 이동하는 경로를 차단
+- 기존 사용자 백필: consent_logs 존재 = 온보딩 완료로 간주 → `onboarding_completed_at = created_at`. 기존 사용자 경험 유지
+- 이메일 사용자도 `/signup/complete` 진입 시 마킹 (멱등) — 이메일 로그인에는 `is_new_user` 체크 없으므로 부작용 없음
+
+---
+
 ## 2026-06-17 (12차) | 온보딩 종목 등록 409 버그 수정
 
 **작업 내용**:

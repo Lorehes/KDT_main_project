@@ -192,6 +192,18 @@ export function useOAuthConsent() {
   });
 }
 
+/**
+ * 온보딩 완료 마킹 — /signup/complete 진입 시 호출.
+ * POST /users/me/onboarding-complete → 204. 이미 완료된 경우 멱등(204).
+ * 이후 OAuth 로그인 시 is_new_user=false → 대시보드 진입.
+ */
+export function useCompleteOnboarding() {
+  return useMutation({
+    mutationFn: () =>
+      apiClient<void>("/users/me/onboarding-complete", { method: "POST" }),
+  });
+}
+
 /** R8: 허용된 OAuth 제공자 도메인 — BE 취약점 또는 MITM으로 악의적 URL이 반환될 경우 차단 */
 const ALLOWED_OAUTH_DOMAINS = [
   "https://kauth.kakao.com",

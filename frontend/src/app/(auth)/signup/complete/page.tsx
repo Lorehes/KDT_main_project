@@ -31,6 +31,7 @@ import { StockSearchCombobox } from "@/components/domain/StockSearchCombobox";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useSignupStore } from "@/lib/stores/signupStore";
 import { useCreatePortfolio, usePortfolios } from "@/lib/api/portfolios";
+import { useCompleteOnboarding } from "@/lib/api/auth";
 import {
   useNotificationSettings,
   useUpdateNotificationSettings,
@@ -427,6 +428,7 @@ function NotifDialog({ open, onOpenChange, onSuccess, settings, isSettingsLoadin
 export default function CompletePage() {
   const { user, fetchMe } = useAuthStore();
   const { clear } = useSignupStore();
+  const { mutate: completeOnboarding } = useCompleteOnboarding();
 
   const [portfolioSheetOpen, setPortfolioSheetOpen] = useState(false);
   const [notifDialogOpen, setNotifDialogOpen]       = useState(false);
@@ -443,7 +445,9 @@ export default function CompletePage() {
   useEffect(() => {
     clear();
     fetchMe();
-  // clear·fetchMe는 안정적 참조
+    // 온보딩 완료 마킹 — OAuth is_new_user 판단 전환. 이미 완료된 경우 멱등(204).
+    completeOnboarding();
+  // clear·fetchMe·completeOnboarding은 안정적 참조
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

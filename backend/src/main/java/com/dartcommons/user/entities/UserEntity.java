@@ -7,9 +7,10 @@ import lombok.*;
 import java.time.OffsetDateTime;
 
 /*
- * [목적] users 테이블(V1+V7 마이그레이션) JPA 엔티티 — 사용자·인증·BM 등급·알림 설정 루트 엔티티.
+ * [목적] users 테이블(V1+V7+V10 마이그레이션) JPA 엔티티 — 사용자·인증·BM 등급·알림 설정 루트 엔티티.
  * [이유] soft delete(deleted_at) + OAuth2 계정(password_hash nullable) 지원.
- *       V7 알림 빈도/필터/거래시간외 컬럼 포함(V7__add_notification_settings_to_users.sql).
+ *       V7 알림 빈도/필터/거래시간외 컬럼 포함.
+ *       V10 onboarding_completed_at: OAuth 로그인 is_new_user 판단 기준. NULL=미완료, NOT NULL=완료.
  *       Enum은 VARCHAR+CHECK DB 제약과 @Enumerated(STRING) 동기화(db_schema §3.1, CLAUDE.md §6-3).
  * [사이드 임팩트] portfolios/notifications/consent_logs/feedbacks가 users.id FK 참조.
  *               soft delete 후 email UNIQUE 충돌 가능 — findByEmailAndDeletedAtIsNull 사용 필수.
@@ -106,6 +107,10 @@ public class UserEntity {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    /** OAuth 로그인 is_new_user 판단 기준. NULL=온보딩 미완료, NOT NULL=완료. V10 마이그레이션 추가. */
+    @Column(name = "onboarding_completed_at")
+    private OffsetDateTime onboardingCompletedAt;
+
     /** soft delete — deleted_at 설정으로 논리 삭제. 실제 행 삭제는 GDPR 정책 배치 담당. */
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
@@ -140,6 +145,13 @@ public class UserEntity {
         this.notifyFrequency  = frequency;
         this.notifyTypeFilter = typeFilter;
         this.offHoursAllowed  = offHoursAllowed;
+    }
+
+    /** 온보딩 완료 마킹 — /signup/complete 도달 시 1회 설정. 이미 설정된 경우 멱등 처리. */
+    public void completeOnboarding() {
+        if (this.onboardingCompletedAt == null) {
+            this.onboardingCompletedAt = OffsetDateTime.now();
+        }
     }
 
     public void softDelete() {

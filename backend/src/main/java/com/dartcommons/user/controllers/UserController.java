@@ -91,4 +91,15 @@ public class UserController {
                 request.disclaimerAgreed(),
                 request.marketingAgreed());
     }
+
+    /**
+     * 온보딩 완료 마킹 — /signup/complete 진입 시 FE가 호출.
+     * onboarding_completed_at 설정 → 이후 OAuth 로그인 시 is_new_user=false(대시보드 진입).
+     * 이미 완료된 경우 멱등 처리(204). 인증 필수(dr_session 쿠키).
+     */
+    @PostMapping("/me/onboarding-complete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void completeOnboarding(@AuthenticationPrincipal Long userId) {
+        userService.completeOnboarding(userId);
+    }
 }
