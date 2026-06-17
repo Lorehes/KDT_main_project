@@ -248,11 +248,11 @@ export default function CompletePage() {
 
   return (
     <>
-      <div className="flex min-h-screen items-start justify-center bg-muted/30 px-6 py-12 md:items-center">
+      <div className="flex min-h-screen items-start justify-center bg-muted/30 px-6 py-12 md:py-20">
         <div className="flex w-full max-w-[540px] flex-col items-center gap-7 text-center">
-          {/* 체크 아이콘 */}
+          {/* 체크 아이콘 — 온보딩 완료 성공 표시: sentiment-positive(주식 빨강)가 아닌 primary(파란색)로 범용 성공 의미 전달 */}
           <div
-            className="grid size-24 place-items-center rounded-full bg-[color:var(--color-sentiment-positive)]"
+            className="grid size-24 place-items-center rounded-full bg-primary"
             aria-hidden
           >
             <Check className="size-11 text-white" strokeWidth={2.8} />

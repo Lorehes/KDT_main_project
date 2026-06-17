@@ -11,6 +11,22 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-17 (15차) | dc-review-frontend Low 수정 + 랜딩 히어로 목업 스펙 작성
+
+**작업 내용**:
+- `signup/complete/page.tsx` — L-1: 체크 원 `bg-[color:var(--color-sentiment-positive)]`→`bg-primary` (온보딩 성공 아이콘을 주식 관례 빨강 대신 파란색으로). L-2: `md:items-center` 제거+`md:py-20` 추가 (PC에서 콘텐츠 수직 중앙 부유 해소)
+- `docs/specs/Draft/landing-hero-mockup-enhancement.md` 신규 — 히어로 우측 placeholder를 시뮬레이션 공시 카드 목업으로 교체하는 스펙. 허구 데이터 면책 조항·진입 애니메이션·Tailwind 토큰 제약 포함
+- `docs/specs/README.md` — 신규 스펙 Draft 섹션 등재
+
+**설계 결정**:
+- sentiment-positive(oklch 25°, 주황-적색)는 KR 주식 상승 관례색이지만 비금융 맥락(온보딩 완료)에 쓰면 경고/오류로 오인 가능 → `bg-primary`(파랑)로 범용 성공 의미 전달
+- 랜딩 목업 스펙은 접근법 A(page.tsx 인라인) 권장 — LP 전용 비주얼이라 분리 오버헤드 불필요
+
+**미완료**:
+- `landing-hero-mockup-enhancement` 스펙은 Draft 상태 — `/dc-tech-review landing-hero-mockup-enhancement` 후 구현
+
+---
+
 ## 2026-06-17 (14차) | 코드 리뷰 전수 수정 (code-review-fixes-onboarding-portfolio)
 
 **작업 내용**:
