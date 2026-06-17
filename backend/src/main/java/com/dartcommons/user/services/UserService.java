@@ -46,11 +46,7 @@ public class UserService {
         return UserMeResponse.from(user);
     }
 
-    /**
-     * 온보딩 완료 마킹 — /signup/complete 진입 시 호출.
-     * OAuth 로그인의 is_new_user 판단 기준: onboarding_completed_at NULL → is_new_user=true.
-     * 이미 완료된 경우 멱등 처리(UserEntity.completeOnboarding() 내부 guard).
-     */
+    /** 온보딩 완료 마킹 — /signup/complete 진입 시 호출. 멱등(UserEntity 내부 guard). */
     public void completeOnboarding(Long userId) {
         UserEntity user = findActiveUser(userId);
         user.completeOnboarding();

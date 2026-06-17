@@ -4,6 +4,7 @@
 // [사이드 임팩트] useMarkAsRead/useMarkAllAsRead mutation 성공 시 ["notifications", "unread-count"] 쿼리 invalidate.
 //   useUnreadCount: staleTime 30초 폴링 — TopBar 벨 뱃지 실데이터. WebSocket 도입 시 대체 가능.
 //   useUpdateNotificationSettings·useTestNotification onError → Sonner toast.error 발화.
+//   useNotificationSettings: staleTime 60초 — 포커스 복귀마다 불필요한 설정 refetch 방지.
 // [수정 시 고려사항] useTestNotification은 설정 검증용 — 실제 알림 발송 트리거.
 //   WebSocket 연결 시 useUnreadCount 폴링 → 서버 푸시 이벤트 구독으로 교체.
 
@@ -59,6 +60,7 @@ export function useNotificationSettings() {
   return useQuery({
     queryKey: ["notification-settings"],
     queryFn: () => apiClient<NotificationSettings>("/notifications/settings"),
+    staleTime: 60_000,
   });
 }
 

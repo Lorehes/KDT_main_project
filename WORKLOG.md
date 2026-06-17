@@ -11,6 +11,26 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-17 (14차) | 코드 리뷰 전수 수정 (code-review-fixes-onboarding-portfolio)
+
+**작업 내용**:
+- `V10→V20 rename`: Flyway V10 충돌(seed_stocks.sql과 동일 버전) → `git mv`로 V20으로 이동. 백필 조건 강화(TERMS AND PRIVACY 양쪽 동시 필요)
+- `AuthService.java`: OAuth 재진입 경로에서 `deleteByUserId` 제거. 멀티디바이스 세션 전체 삭제 위험 → 미사용 토큰은 `deleteExpiredTokens()` 배치 위임. Caffeine JVM-단위 CSRF 캐시 경고 주석 추가
+- `GlobalExceptionHandler.java`: `ex.getReason()` 클라이언트 노출 차단(400/401/403/404/429/5xx → generic). 409/410/422는 도메인 메시지로 사용 허용(주석 명확화). 410 `RESOURCE_GONE` code 케이스 추가
+- `PortfolioRequest.java`: `@DecimalMax` (avgBuyPrice 999999999, quantity 100000000) — FE max validation과 정합
+- `UserService.java`: 클래스 레벨 `@Transactional`과 중복된 메서드 레벨 제거
+- `useSheetSide.ts`: `useState` lazy initializer 도입 — desktop 첫 렌더 flash 제거. `typeof window` SSR guard
+- `PortfolioSheet.tsx`: `useId()`로 동적 id 생성(WCAG §4.1.1 중복 id 제거). RHF max validation 추가
+- `signup/complete/page.tsx`: `useSheetSide` 훅 적용, `completeOnboarding onError` toast, `settingsError.body.status === 401` 타입 안전 401 탐지, `PortfolioSheet contentClassName` 추가(모바일 min-height 정합), eslint-disable 제거·deps 정규화
+- `notifications/page.tsx`: `useSheetSide` 적용, `BOTTOM_SHEET_MIN_HEIGHT` 상수 사용, 온보딩 미완료 배너(포트폴리오·알림 미설정)
+- `notifications.ts`: `staleTime: 60_000` 추가
+
+**설계 결정**:
+- 409/410/422 reason 클라이언트 노출: 이 코드들은 도메인 비즈니스 메시지 전달 용도이므로 노출 허용. 단, 호출자가 reason에 기술 정보(DB 제약명 등)를 담는 것은 코드 리뷰 컨벤션으로 금지
+- useSheetSide lazy 초기화: `typeof window === "undefined"` guard + `window.matchMedia()` 즉시 호출로 첫 렌더부터 올바른 side 반환. Next.js "use client" 컴포넌트에서만 사용됨
+
+---
+
 ## 2026-06-17 (13차) | OAuth 온보딩 전 절차 완료 강제 (onboarding_completed_at)
 
 **작업 내용**:

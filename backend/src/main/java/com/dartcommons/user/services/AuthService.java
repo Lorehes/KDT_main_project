@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  *       동의는 사용자가 직접 화면에서 수락 후 POST /users/me/oauth-consent 별도 호출(UserController 처리).
  * [사이드 임팩트] 이메일 signup은 ConsentService.recordSignupConsents()와 동일 트랜잭션 — 롤백 시 동의 이력도 함께 롤백.
  *               OAuth autoSignup은 계정 생성만 수행 — consent_logs 없는 상태로 남을 수 있음.
- *               oauthCallback에서 기존 사용자 is_new_user 판단 = onboarding_completed_at NULL 여부(V10).
+ *               oauthCallback에서 기존 사용자 is_new_user 판단 = onboarding_completed_at NULL 여부(V20).
  *               hasRequiredConsents() 기반 판단은 약관만 체크 → phone/profile/complete 미완료도 returning user로 처리하는 버그.
  *               onboarding_completed_at 전환으로 /signup/complete 도달 전까지는 is_new_user=true 반환.
  *               OAuth 콜백에서 동일 이메일 기존 계정 존재 시 409(수동 이메일 로그인 유도).
@@ -61,7 +61,10 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    // Naver state CSRF 검증용 캐시 — TTL 5분, 최대 10,000 state UUID 보관
+    // OAuth state CSRF 검증용 캐시 — TTL 5분, 최대 10,000 state UUID 보관
+    // ⚠ Caffeine은 JVM 단위 in-process 캐시: 다중 인스턴스(수평 확장) 배포 시 인스턴스 간 state 공유 안 됨.
+    //   로드 밸런서가 /oauth/callback 요청을 최초 /oauth/url 요청과 다른 인스턴스로 라우팅하면 CSRF 검증 실패.
+    //   실서비스 수평 확장 전 Redis 기반 공유 캐시(Spring Data Redis)로 교체 필요.
     private final Cache<String, Boolean> oauthStateCache = Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.MINUTES)
             .maximumSize(10_000)
@@ -236,8 +239,9 @@ public class AuthService {
                 return issueTokenPair(user);
             } else {
                 log.info("oauth onboarding-incomplete re-entry: provider={} userId={}", provider, user.getId());
-                // 온보딩 미완료 재진입 시 기존 refresh_token 전부 삭제 — 반복 진입에 의한 토큰 누적 방지
-                refreshTokenRepository.deleteByUserId(user.getId());
+                // OAuth 재진입 시 refresh token을 발급만 하고 기존 토큰은 건드리지 않음.
+                // deleteByUserId는 멀티 디바이스 세션 전체 삭제(force logout) 위험이 있어 제거.
+                // 미사용 토큰 누적은 RefreshTokenRepository.deleteExpiredTokens() 배치가 처리.
                 return issueTokenPairAsNew(user);
             }
         }
