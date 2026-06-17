@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-17
 updated: 2026-06-17
 ---
 
 # 온보딩 체크리스트 모달 전환 Spec (signup-complete-checklist-modal)
 
-> 상태: Draft → **Approved** (2026-06-17, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-17, e438705+f579be2 구현 완료)
 
 ## 배경 / 목적
 
