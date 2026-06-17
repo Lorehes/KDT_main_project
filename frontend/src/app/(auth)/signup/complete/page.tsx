@@ -30,7 +30,7 @@ import {
 import { StockSearchCombobox } from "@/components/domain/StockSearchCombobox";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useSignupStore } from "@/lib/stores/signupStore";
-import { useCreatePortfolio } from "@/lib/api/portfolios";
+import { useCreatePortfolio, usePortfolios } from "@/lib/api/portfolios";
 import {
   useNotificationSettings,
   useUpdateNotificationSettings,
@@ -429,10 +429,13 @@ export default function CompletePage() {
   const { clear } = useSignupStore();
 
   const [portfolioSheetOpen, setPortfolioSheetOpen] = useState(false);
-  const [portfolioDone, setPortfolioDone]           = useState(false);
   const [notifDialogOpen, setNotifDialogOpen]       = useState(false);
   const [notifDone, setNotifDone]                   = useState(false);
   const [sheetSide, setSheetSide]                   = useState<"bottom" | "right">("bottom");
+
+  const { data: existingPortfolios } = usePortfolios();
+  // 이미 등록된 종목이 있으면 체크리스트를 완료 상태로 초기화 (페이지 새로고침 후 재등록 방지)
+  const portfolioDone = (existingPortfolios?.length ?? 0) > 0;
 
   // CompletePage 최상단 훅 호출 — Dialog 오픈 전 데이터 준비(loading race 방지)
   const { data: notifSettings, isLoading: isNotifLoading, isError: isNotifError } = useNotificationSettings();
@@ -536,7 +539,7 @@ export default function CompletePage() {
         open={portfolioSheetOpen}
         onOpenChange={setPortfolioSheetOpen}
         side={sheetSide}
-        onSuccess={() => setPortfolioDone(true)}
+        onSuccess={() => {}}
       />
       <NotifDialog
         open={notifDialogOpen}

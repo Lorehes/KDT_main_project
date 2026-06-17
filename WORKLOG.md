@@ -2,12 +2,24 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-16
+updated: 2026-06-17
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-17 (12차) | 온보딩 종목 등록 409 버그 수정
+
+**작업 내용**:
+- `GlobalExceptionHandler.java`: `ResponseStatusException` 핸들러 추가. HTTP status → `code` 매핑(409→DUPLICATE_RESOURCE, 422→BUSINESS_RULE_VIOLATION 등) + ProblemDetail에 `code`·`message` 속성 명시
+- `signup/complete/page.tsx`: `portfolioDone` 상태를 `useState(false)` → `usePortfolios().data?.length > 0` derived로 변경. 페이지 새로고침 후에도 DB 실제 상태 반영
+
+**설계 결정**:
+- Spring 기본 `ResponseStatusException` 처리는 RFC 7807 ProblemDetail에 `code`·`message` 필드를 포함하지 않음 → FE `ApiError` 인터페이스 계약({code, message}) 불일치가 근본 원인. `GlobalExceptionHandler`에서 직접 처리해 모든 `ResponseStatusException`에 일관된 계약 보장
+- `portfolioDone`을 in-memory 상태로 관리하면 새로고침 시 초기화 → 이미 등록된 종목 재시도 가능. `usePortfolios()` 쿼리는 `staleTime: 60s`로 캐시되므로 추가 네트워크 비용 최소
 
 ---
 
