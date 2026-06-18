@@ -71,6 +71,7 @@ updated: 2026-06-02
 | 2026-06-17 | Jin | d7128ea | fix(user,frontend,shared): 코드 리뷰 전수 수정 — V20 마이그레이션·OAuth 세션·보안·UX [7/8 L] | User/Shared/Frontend | 7 | 8 | L | 코드리뷰 Critical~Low 전수 수정 |
 | 2026-06-17 | Jin | 6fa9848 | fix(frontend,docs): dc-review-frontend Low 수정 + 랜딩 히어로 목업 스펙 [3/8 S] | Frontend/Docs | 3 | 8 | S | 온보딩 아이콘·공백 수정+랜딩 목업 스펙 |
 | 2026-06-18 | Jin | 4a30ad8 | feat(frontend): LP 히어로 목업+SSR 리다이렉트 전환 [4/8 M] | Frontend | 4 | 8 | M | LP 히어로 목업+SSR 리다이렉트 전환 |
+| 2026-06-18 | Jin | decaf15 | chore(docs): 랜딩 목업 스펙 Done 전환 [2/8 S] | Docs | 2 | 8 | S | 랜딩 목업 스펙 Done 전환 |
 <!-- SCORES -->
 
 ## 기간별 집계

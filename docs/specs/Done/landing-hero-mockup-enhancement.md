@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-17
 updated: 2026-06-18
 ---
 
 # 랜딩 히어로 목업 강화 Spec
 
-> 상태: Draft → **Approved** (2026-06-18, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-18, 구현+리뷰+푸시 완료)
 
 ## 배경 / 목적
 

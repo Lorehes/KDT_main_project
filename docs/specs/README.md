@@ -37,7 +37,6 @@ docs/specs/
 
 ### Approved
 - [[code-review-fixes-onboarding-portfolio]] — 온보딩·포트폴리오 리뷰 수정: Critical(V10 충돌) + High 7건 + Medium 5건 + Low 4건 (2026-06-17 승인)
-- [[landing-hero-mockup-enhancement]] — 랜딩 히어로 목업 강화: 우측 placeholder → 시뮬레이션 공시 카드 + 진입 애니메이션 (2026-06-18 승인)
 
 ### Done
 - [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans (2026-06-11)
@@ -56,6 +55,7 @@ docs/specs/
 - [[frontend-full-ui-implementation]] — 프론트엔드 전체 UI: 7 Zone·29카드·W1~W7 완료 (2026-06-09)
 - [[fe-auth-token-refresh-flow-rewrite]] — FE 토큰 갱신 흐름 재설계: Promise 큐 + httpOnly + BroadcastChannel + Playwright E2E (2026-06-10)
 - [[fe-correctness-investor-protection]] — FE 정확성·투자자 보호: R1 sentiment 가드·R3 BE JOIN·R4~R7 런타임에러 (2026-06-10)
+- [[landing-hero-mockup-enhancement]] — 랜딩 히어로 목업 강화: placeholder→시뮬레이션 카드+진입 애니메이션+SSR 리다이렉트 (2026-06-18)
 - [[frontend-api-integration]] — FE BE API 실연동: env prefix·fetchMe 부트스트랩·Sonner Toast (2026-06-10)
 
 ## 작업 흐름
