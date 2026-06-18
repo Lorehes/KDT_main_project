@@ -36,9 +36,9 @@ docs/specs/
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V19) + 캐싱 + 미완료 계정 배치 정리
 
 ### Approved
-- [[code-review-fixes-onboarding-portfolio]] — 온보딩·포트폴리오 리뷰 수정: Critical(V10 충돌) + High 7건 + Medium 5건 + Low 4건 (2026-06-17 승인)
 
 ### Done
+- [[code-review-fixes-onboarding-portfolio]] — 온보딩·포트폴리오 리뷰 수정: C-1·H 7건·M 5건·L 4건 완료 (2026-06-18)
 - [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans (2026-06-11)
 - [[frontend-oauth-social]] — 소셜 OAuth 실연동: 카카오·구글 콜백 Route Handler 구현 (2026-06-11)
 - [[notification-read-status]] — 알림 읽음 처리: is_read 컬럼 + PATCH API + TopBar 미읽음 카운트 (2026-06-11)

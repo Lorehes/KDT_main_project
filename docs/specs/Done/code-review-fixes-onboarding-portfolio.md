@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-18
 ---
 
 # 온보딩·포트폴리오 코드 리뷰 수정 Spec
 
-> 상태: **Approved** (2026-06-17, dc-tech-review 승인)
+> 상태: **Done** (2026-06-18, 전 Wave 구현 완료·커밋)
 
 ## 배경 / 목적
 

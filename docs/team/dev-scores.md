@@ -72,6 +72,7 @@ updated: 2026-06-02
 | 2026-06-17 | Jin | 6fa9848 | fix(frontend,docs): dc-review-frontend Low 수정 + 랜딩 히어로 목업 스펙 [3/8 S] | Frontend/Docs | 3 | 8 | S | 온보딩 아이콘·공백 수정+랜딩 목업 스펙 |
 | 2026-06-18 | Jin | 4a30ad8 | feat(frontend): LP 히어로 목업+SSR 리다이렉트 전환 [4/8 M] | Frontend | 4 | 8 | M | LP 히어로 목업+SSR 리다이렉트 전환 |
 | 2026-06-18 | Jin | decaf15 | chore(docs): 랜딩 목업 스펙 Done 전환 [2/8 S] | Docs | 2 | 8 | S | 랜딩 목업 스펙 Done 전환 |
+| 2026-06-18 | Jin | e5a5193 | chore(docs): code-review-fixes-onboarding-portfolio Spec Done 전환 [2/8 S] | Docs | 2 | 8 | S | 온보딩·포트폴리오 리뷰 Spec Done 전환 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -79,5 +80,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 7 | 35 | 58 | 8.1 | 5.9 |
+| Jin | 3 | 22 | 60 | 8.1 | 6.1 |
 <!-- SUMMARY:END -->

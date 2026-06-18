@@ -11,6 +11,17 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-18 (17차) | code-review-fixes-onboarding-portfolio Spec Done 전환
+
+**작업 내용**:
+- `/dc-implement` 실행 → 전 Wave(W1~W4) 이미 커밋(203170d) 완료 확인
+- `/dc-spec-move code-review-fixes-onboarding-portfolio Done` — frontmatter status/updated 갱신, `git mv` Approved→Done, README Approved 제거·Done 등재
+
+**설계 결정**:
+- L-3(UserService.completeOnboarding @Transactional 명시)는 dc-review-code 2차에서 "클래스 레벨로 충분" 판단으로 이미 제거된 상태 → 스펙과 리뷰 결정 충돌, 리뷰 결정 우선 적용
+
+---
+
 ## 2026-06-18 (16차) | 랜딩 히어로 목업 구현 + dc-review-frontend 3건 수정
 
 **작업 내용**:
