@@ -35,12 +35,9 @@ docs/specs/
 - [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware consent 체크 + JWT claims 인코딩 + OAuthTermsPage 분리
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V19) + 캐싱 + 미완료 계정 배치 정리
 
-**2026-06-17 dc-review-frontend Info 이슈 Spec화**
-
-- [[landing-hero-mockup-enhancement]] — 랜딩 히어로 목업 강화: 우측 placeholder → 시뮬레이션 공시 카드 + 진입 애니메이션 (전환율 개선)
-
 ### Approved
 - [[code-review-fixes-onboarding-portfolio]] — 온보딩·포트폴리오 리뷰 수정: Critical(V10 충돌) + High 7건 + Medium 5건 + Low 4건 (2026-06-17 승인)
+- [[landing-hero-mockup-enhancement]] — 랜딩 히어로 목업 강화: 우측 placeholder → 시뮬레이션 공시 카드 + 진입 애니메이션 (2026-06-18 승인)
 
 ### Done
 - [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans (2026-06-11)

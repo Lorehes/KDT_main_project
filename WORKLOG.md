@@ -11,6 +11,22 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-18 (16차) | 랜딩 히어로 목업 구현 + dc-review-frontend 3건 수정
+
+**작업 내용**:
+- `page.tsx` — MOCK_DISCLOSURES(익명 A전자·B반도체·C바이오, 가상 티커) + HeroMockupCard 로컬 서브컴포넌트 + animate-in stagger 진입 애니메이션 + 면책 배지 + aria-hidden 컨테이너 구현
+- `page.tsx` M-1: 카드 `bg-white/10→bg-white/[0.15]`, `border-white/10→border-white/20` (대비 5%p→10%p)
+- `page.tsx` + `middleware.ts` L-1: `LandingRedirect` 제거 → middleware에서 `dr_session` 쿠키 체크 후 `/dashboard` SSR 리다이렉트. 비로그인 401+refresh 콘솔 에러 2건→0건
+- `page.tsx` L-2: 면책 배지 `bg-white/5→bg-white/[0.08]`, `text-blue-300/70→text-blue-200`
+- `LandingRedirect.tsx` 삭제 (데드코드)
+- `docs/specs` Draft→Approved 이동 + README MOC 갱신
+
+**설계 결정**:
+- httpOnly 쿠키(`dr_session`)는 JS에서 읽기 불가 → Next.js middleware(서버)에서 읽어 SSR 리다이렉트로 전환. LandingRedirect의 클라이언트 fetchMe 전략 완전 제거
+- 만료된 dr_session이 있어도 /dashboard 진입 → middleware가 /login으로 다시 리다이렉트 (이중 리다이렉트 허용, 정상 흐름)
+
+---
+
 ## 2026-06-17 (15차) | dc-review-frontend Low 수정 + 랜딩 히어로 목업 스펙 작성
 
 **작업 내용**:

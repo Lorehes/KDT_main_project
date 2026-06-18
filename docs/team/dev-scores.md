@@ -70,6 +70,7 @@ updated: 2026-06-02
 | 2026-06-17 | Jin | d81e826 | feat(user,frontend): OAuth 온보딩 전 절차 완료 강제 — onboarding_completed_at [7/8 M] | User/Frontend | 7 | 8 | M | OAuth 온보딩 전 절차 완료 강제 |
 | 2026-06-17 | Jin | d7128ea | fix(user,frontend,shared): 코드 리뷰 전수 수정 — V20 마이그레이션·OAuth 세션·보안·UX [7/8 L] | User/Shared/Frontend | 7 | 8 | L | 코드리뷰 Critical~Low 전수 수정 |
 | 2026-06-17 | Jin | 6fa9848 | fix(frontend,docs): dc-review-frontend Low 수정 + 랜딩 히어로 목업 스펙 [3/8 S] | Frontend/Docs | 3 | 8 | S | 온보딩 아이콘·공백 수정+랜딩 목업 스펙 |
+| 2026-06-18 | Jin | 4a30ad8 | feat(frontend): LP 히어로 목업+SSR 리다이렉트 전환 [4/8 M] | Frontend | 4 | 8 | M | LP 히어로 목업+SSR 리다이렉트 전환 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -77,5 +78,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 6 | 34 | 57 | 8.1 | 5.9 |
+| Jin | 7 | 35 | 58 | 8.1 | 5.9 |
 <!-- SUMMARY:END -->
