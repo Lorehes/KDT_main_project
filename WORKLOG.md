@@ -11,6 +11,26 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-21 (18차) | portfolio-management-e2e 리뷰 수정 + 후속 Spec
+
+**작업 내용**:
+- `/dc-implement portfolio-management-e2e` — 전 Wave(BE W1·FE W2) 기구현 확인, FE Wave 2 dev-log 누락 항목 보충 기록
+- `/dc-review-code` 4-에이전트 리뷰 (security·correctness·performance·maintainability): 종합 B+
+  - **H-1** `PortfolioIntegrationTest` corp_name 검증 추가 — `createPortfolio` 단건·`listPortfolios` 2종목 bulk 경로 검증 (`containsExactlyInAnyOrder("삼성전자", "SK하이닉스")`)
+  - **M-2** `portfolios/new/page.tsx` `avg_buy_price`·`quantity` 무조건 `Number()` → 조건부 변환 복원 (빈 값→0 전송 잠복 버그 차단)
+  - **M-3** `portfolioSchemas.ts` `notify_enabled: z.boolean().default(true)` dead code 제거 (R3 옵션 A 이후 미정리)
+- `docs/specs/Draft/portfolio-review-followup.md` 신규 — 미수정 7건(M-1·M-4·M-5·M-6·L-1·L-2·L-3·L-5) Spec화
+
+**설계 결정**:
+- `avg_buy_price` form 필드는 `required` 검증이 있어 현재 0 전송이 불가하나, 향후 검증 완화 시 즉시 잠복 버그가 현실화되므로 방어적 조건부 변환 복원
+- L-4(Premium 페이지네이션)·L-6(종목 수정 edit 모드)는 별도 Spec으로 분리 — MVP 이후 우선순위
+
+**다음 세션**:
+- `portfolio-review-followup` → `/dc-tech-review` 후 구현 (Wave 1 BE: R1 오버로드 제거·R2 Caffeine 캐시·R3 NFE 방어·R4 merge 함수)
+- `dashboard-real-data` Spec 구현 또는 `kakao-notification-channel` Spec 구현
+
+---
+
 ## 2026-06-18 (17차) | code-review-fixes-onboarding-portfolio Spec Done 전환
 
 **작업 내용**:

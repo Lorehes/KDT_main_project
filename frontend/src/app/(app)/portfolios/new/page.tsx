@@ -48,8 +48,8 @@ function NewPortfolioForm() {
 
     const body = {
       stock_code: stockCode,
-      avg_buy_price: Number(data.avg_buy_price),
-      quantity: Number(data.quantity),
+      avg_buy_price: data.avg_buy_price ? Number(data.avg_buy_price) : undefined,
+      quantity: data.quantity ? Number(data.quantity) : undefined,
     };
 
     // avg_buy_price·quantity는 절대 console.log 금지 — 금융 개인정보

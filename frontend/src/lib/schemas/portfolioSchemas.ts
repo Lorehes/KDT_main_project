@@ -17,7 +17,6 @@ export const portfolioSchema = z.object({
     .positive("0보다 커야 합니다")
     .optional(),
   memo: z.string().max(100).optional(),
-  notify_enabled: z.boolean().default(true),
 });
 
 export type PortfolioFormValues = z.infer<typeof portfolioSchema>;

@@ -30,6 +30,10 @@ docs/specs/
 - [[performance-caching-staletime]] — 성능/캐싱: Caffeine portfolios/analysis + TanStack staleTime + size 제한 + 복합 인덱스
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + TopBar 검색 결정
 
+**2026-06-21 portfolio-management-e2e 리뷰 후속**
+
+- [[portfolio-review-followup]] — 포트폴리오 리뷰 후속: toResponse 오버로드·Stock 캐시·NFE 방어·max 검증·Bell 링크화 (M-1·M-4·M-5·M-6·L-1·L-2·L-3·L-5)
+
 **2026-06-16 OAuth 소셜 가입 플로우 수정 후속 (코드리뷰 Medium/High 이슈 Spec화)**
 
 - [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware consent 체크 + JWT claims 인코딩 + OAuthTermsPage 분리

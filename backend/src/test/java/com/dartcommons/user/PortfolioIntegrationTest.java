@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -103,22 +104,24 @@ class PortfolioIntegrationTest {
     }
 
     @Test
-    @DisplayName("포트폴리오 생성 — 201 + id·stock_code·avg_buy_price 반환")
+    @DisplayName("포트폴리오 생성 — 201 + id·stock_code·corp_name·avg_buy_price 반환 (단건 조회 경로)")
     void createPortfolio_success_returns201WithFields() throws Exception {
         String token = signupAndGetToken(uniqueEmail());
         JsonNode resp = createPortfolio(token, "005930");
 
         assertThat(resp.get("id").asLong()).isPositive();
         assertThat(resp.get("stock_code").asText()).isEqualTo("005930");
+        assertThat(resp.get("corp_name").asText()).isEqualTo("삼성전자");
         assertThat(resp.get("avg_buy_price").decimalValue())
                 .isEqualByComparingTo(new BigDecimal("50000"));
     }
 
     @Test
-    @DisplayName("포트폴리오 목록 조회 — 200 + 생성한 항목 포함")
+    @DisplayName("포트폴리오 목록 조회 — 200 + 2종목 corp_name bulk 조회 경로 검증")
     void listPortfolios_success_returns200() throws Exception {
         String token = signupAndGetToken(uniqueEmail());
         createPortfolio(token, "005930");
+        createPortfolio(token, "000660");
 
         String resp = mockMvc.perform(get("/api/v1/portfolios")
                         .header("Authorization", "Bearer " + token))
@@ -127,8 +130,11 @@ class PortfolioIntegrationTest {
 
         JsonNode list = objectMapper.readTree(resp);
         assertThat(list.isArray()).isTrue();
-        assertThat(list.size()).isEqualTo(1);
-        assertThat(list.get(0).get("stock_code").asText()).isEqualTo("005930");
+        assertThat(list.size()).isEqualTo(2);
+        assertThat(StreamSupport.stream(list.spliterator(), false)
+                .map(n -> n.get("corp_name").asText())
+                .toList())
+                .containsExactlyInAnyOrder("삼성전자", "SK하이닉스");
     }
 
     @Test
