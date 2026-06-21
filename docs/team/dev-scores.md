@@ -73,7 +73,7 @@ updated: 2026-06-02
 | 2026-06-18 | Jin | 4a30ad8 | feat(frontend): LP 히어로 목업+SSR 리다이렉트 전환 [4/8 M] | Frontend | 4 | 8 | M | LP 히어로 목업+SSR 리다이렉트 전환 |
 | 2026-06-18 | Jin | decaf15 | chore(docs): 랜딩 목업 스펙 Done 전환 [2/8 S] | Docs | 2 | 8 | S | 랜딩 목업 스펙 Done 전환 |
 | 2026-06-18 | Jin | e5a5193 | chore(docs): code-review-fixes-onboarding-portfolio Spec Done 전환 [2/8 S] | Docs | 2 | 8 | S | 온보딩·포트폴리오 리뷰 Spec Done 전환 |
-| 2026-06-21 | Jin | f8ac71f | fix(test,frontend,docs): 포트폴리오 리뷰 H-1·M-2·M-3 수정 + 후속 Spec [5/8 M] | Test/Frontend/Docs | 5 | 8 | M | corp_name 테스트+Number변환+deadcode+후속Spec |
+| 2026-06-21 | Jin | 081de60 | fix(test,frontend,docs): 포트폴리오 리뷰 H-1·M-2·M-3 수정 + 후속 Spec [5/8 M] | Test/Frontend/Docs | 5 | 8 | M | corp_name 테스트+Number변환+deadcode+후속Spec |
 <!-- SCORES -->
 
 ## 기간별 집계
