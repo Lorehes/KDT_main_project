@@ -3,6 +3,8 @@
 // [사이드 임팩트] (auth) 그룹 내 각 온보딩 page에서 직접 import하여 사용.
 //   모바일에서는 좌측 패널 대신 폼 상단에 heading/subtext를 인라인으로 표시하므로,
 //   heading prop 변경 시 모바일/데스크톱 양쪽에 영향을 줌.
+//   모바일 main을 items-center로 변경 — 로그인처럼 짧은 폼의 하단 빈 공간 해소.
+//   폼이 뷰포트보다 길어지면 overflow-y-auto(브라우저 기본 스크롤)가 자동 처리.
 // [수정 시 고려사항] 모바일 heading 영역 스타일 변경 시 데스크톱 aside 패널과 톤 일관성 유지.
 //   heading에 brand-sky 색상이 포함된 경우 라이트 배경 위 대비 확인 필요.
 
@@ -41,7 +43,7 @@ export function AuthLayout({ heading, subtext, children }: AuthLayoutProps) {
       </aside>
 
       {/* 우측 폼 영역 */}
-      <main className="flex items-start justify-center bg-background p-8 md:items-center md:p-16">
+      <main className="flex items-center justify-center bg-background p-8 md:p-16">
         <div className="w-full max-w-[460px]">
           {/* 모바일 전용 브랜드 헤딩 — md 이상에서는 좌측 패널이 표시하므로 숨김 */}
           <div className="mb-8 pb-6 border-b border-border md:hidden">

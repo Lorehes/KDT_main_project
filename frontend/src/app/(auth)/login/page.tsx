@@ -106,7 +106,7 @@ function LoginForm() {
               {...register("password")} />
             {errors.password && <p id="pw-error" className="text-xs text-destructive" role="alert">{errors.password.message}</p>}
           </div>
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button type="submit" className="w-full" disabled={isPending} aria-label="이메일로 로그인">
             {isPending ? "로그인 중..." : "로그인"}
           </Button>
         </form>

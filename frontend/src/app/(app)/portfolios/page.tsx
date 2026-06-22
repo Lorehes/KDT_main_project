@@ -72,9 +72,6 @@ export default function PortfoliosPage() {
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground">보유 종목 등록</h1>
           <p className="mt-1 text-sm text-muted-foreground">관심 종목을 추가하면 해당 공시가 도착할 때 알려드려요.</p>
         </div>
-        <Link href="/portfolios/new" className={buttonVariants({ size: "sm" })} aria-label="종목 추가">
-          ＋ 추가
-        </Link>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr] lg:items-start">

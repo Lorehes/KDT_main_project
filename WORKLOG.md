@@ -2,12 +2,40 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-17
+updated: 2026-06-22
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-22 (21차) | TopBar 팝오버·설정 레이아웃 재구성 + 모바일 메뉴 + 버그 수정 9건
+
+**작업 내용**:
+- **TopBar 프로필 팝오버**: 프로필 아바타 클릭 → Link(/settings) 대신 Popover 드롭다운. navy 헤더(닉네임·이메일·플랜 배지) + PROFILE_MENU_ITEMS(마이페이지·알림설정·요금제·고객센터) + 로그아웃. `@base-ui/react/popover` — `asChild` 미지원으로 `PopoverTrigger` 직접 button 렌더
+- **AppShell 사이드바 제거**: `Sidebar` import 제거, 웹 레이아웃 `md:flex` → `md:flex-col` (TopBar + main 수직 구조)
+- **TopBar 글로벌 네비 통합**: 로고 + 대시보드/공시피드/포트폴리오 수평 링크 추가. `isActivePath()` 사용
+- **마이페이지(/settings) 레이아웃 재구성**: 상단 2열(프로필|구독플랜) + 하단 2열(좌: 설정메뉴+로그아웃 / 우: 개인정보·보안+지원+앱버전). 개인정보·보안·지원 섹션 신규 추가
+- **portfolios "+ 추가" 버튼 제거**: `/portfolios/new`가 `?code=` 미포함 시 즉시 리다이렉트하는 버그 있어 버튼 제거
+- **PublicMobileMenu.tsx 신규**: `PublicNavbar`(RSC) 모바일 햄버거를 client 서브컴포넌트로 분리. Sheet 기반, `isAuthenticated` prop 연동
+- `/dc-review-frontend` → B등급 4건 수정: PublicMobileMenu 신규, login aria-label, landing break-keep, AuthLayout items-center
+- `/dc-review-code` 5-에이전트 → B등급, 즉시 수정 9건:
+  - **TopBar**: Popover controlled open(pathname useEffect 닫힘) / aria-current = isActivePath 통일(WCAG) / initials 빈 문자열 `User` 아이콘 fallback / bell 미읽음 카운트 aria-label
+  - **settings**: 닉네임 stale state useEffect 동기화 / handleSaveNickname catch+toast / alert()→toast.info() 3건 / tier_expires_at Invalid Date 검사 / setTimeout useRef cleanup / 취소 버튼 disabled={isSaving}
+- `pnpm typecheck` 통과
+- 이슈 문서: `docs/issues/topbar-settings-frontend-tech-debt.md` — 기술 부채 10항목(TIER_LABEL·NAV_ITEMS 중앙화, Sidebar 데드코드, Zustand 셀렉터, 디자인 토큰, AppShell 이중 마운트 등) P2/P3로 등록
+
+**설계 결정**:
+- `base-ui PopoverTrigger`의 `asChild` 미지원 확인 → `PopoverTrigger` 자체가 `<button>`으로 렌더되므로 래퍼 불필요. `asChild` 시도 시 TS 오류 발생.
+- Popover 내부 Link 클릭 후 close 방법: `onOpenChange` + `useEffect([pathname])` 조합. Next.js App Router는 `router.events` 없으므로 pathname 감지가 유일한 경로.
+- PublicNavbar RSC 유지 결정: `isAuthenticated`는 서버 httpOnly cookie 판정이므로 클라이언트에서 알 수 없음 → RSC 필수. 모바일 햄버거만 client 서브컴포넌트로 분리해 RSC 이점 보존.
+
+**미완료 · 다음 세션**:
+- 기술 부채 P2(TIER_LABEL·NAV_ITEMS 중앙화, Zustand 셀렉터, AppShell 이중 마운트, aria-controls) → `docs/issues/topbar-settings-frontend-tech-debt.md`
+- `review-frontend-hover-capture` / `review-frontend-auth-capture` Spec 구현 대기
+- M3(Cloud LLM 전환 / FE staleTime 튜닝 / BE Caffeine 캐시)
 
 ---
 

@@ -237,7 +237,7 @@ export default function LandingPage() {
                     <Icon className="size-5 text-[color:var(--color-brand-blue)]" aria-hidden />
                   </div>
                   <h3 className="text-[17px] font-bold text-foreground">{title}</h3>
-                  <p className="text-[13.5px] leading-relaxed text-muted-foreground">{desc}</p>
+                  <p className="break-keep text-[13.5px] leading-relaxed text-muted-foreground">{desc}</p>
                 </li>
               ))}
             </ul>
