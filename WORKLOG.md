@@ -11,6 +11,33 @@ updated: 2026-06-22
 
 ---
 
+## 2026-06-22 (23차) | 포트폴리오 라우트 재설계 + 대시보드 + 등록폼 완성 + dc-review-frontend
+
+**작업 내용**:
+- **라우트 구조 전면 재설계**:
+  - `/portfolios` (기존: 검색 페이지) → **대시보드 페이지** (PortfoliosDashboardPage)
+  - `/portfolios/new` (기존: 등록 폼) → **종목 검색 페이지** (PortfoliosNewPage, 이전 page.tsx 내용)
+  - `/portfolios/add` (신규) → **종목 등록 상세 폼** (AddPortfolioPage, 2-column 레이아웃)
+- **대시보드 (`/portfolios`)**: 총 평가금액·평가 손익(시세 연동 전 "—") + 보유 종목 수 + 이번 주 공시 4-stat카드, 보유 종목 테이블(평단·수량·현재가·수익률·평가금액·최근공시 badge), 우측 최근 공시 패널 + dark CTA 카드
+- **등록 폼 (`/portfolios/add`)**: 2-column (보유 정보 + 알림 공시 종류), avg_buy_price `Controller` + `type="text"` + 쉼표 포매팅, 보유 수량 native spinner 숨김 + 커스텀 ▲▼ 버튼, 8개 프리셋 버튼(현재가에 덧셈 방식), AES-256 보안 안내
+- **검색 페이지 (`/portfolios/new`)**: 이전 로직 이전 + "찾는 종목이 없나요?" 박스 추가, "알림 설정하기" CTA 제거, 종목 선택 후 `/portfolios/add?...` 이동
+- **dc-review-frontend 실행**: Playwright API 모킹 + 6페이지 캡처, 종합 B등급
+  - 즉시 수정 3건: 프리셋 `grid-cols-4 sm:grid-cols-8`, 대시보드 `grid-cols-2 lg:grid-cols-4`, 스피너 `py-0.5 → py-1.5`
+- **이슈 문서화**: `docs/issues/portfolio-add-switch-overflow.md` (P3), `docs/issues/portfolio-csv-upload.md` (P2), HOME.md 이슈 섹션 신설
+
+### 결정 (코드에 드러나지 않는 사항)
+- **avg_buy_price `Controller` 사용**: `type="number"` input은 콤마 포매팅 불가 → `type="text"` + `inputMode="numeric"` + `Controller`로 원시 숫자 문자열 관리. `register()`로는 불가.
+- **프리셋 버튼 "덧셈 방식"**: 금액 버튼을 누를 때 현재 입력값에 더하는 방식(SET 아님) — "168,000원에서 5만 올리기" 같은 점진적 조합 워크플로에 최적화.
+- **네이티브 스피너 완전 숨김**: `min` + `step` 조합이 현재값 무시하고 배수로 스냅하는 브라우저 동작 → `[&::-webkit-inner-spin-button]:appearance-none` + 커스텀 버튼으로 대체.
+- **Playwright auth 우회**: `dr_session` 쿠키는 middleware만 체크. API는 BE 8080 포트로 분리되어 있어 `page.route('**/localhost:8080/**')` 모킹으로 클라이언트 인증 루프(fetchMe→refresh→logout) 차단 가능.
+
+### 미완료 → 다음 세션
+- CSV 업로드 구현 (`docs/issues/portfolio-csv-upload.md`) — FE 파싱 + 확인 UI + BE bulk 엔드포인트
+- Playwright review-capture.js overflow 임계값 15px 조정 (`docs/issues/portfolio-add-switch-overflow.md`)
+- 포트폴리오 대시보드 시세 연동 (현재가·수익률·평가금액 "—" placeholder 상태)
+
+---
+
 ## 2026-06-22 (22차) | 포트폴리오 검색 UX 재설계 + 접근성 수정 + Spec 2건
 
 **작업 내용**:
