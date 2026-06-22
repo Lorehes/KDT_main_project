@@ -8,7 +8,7 @@
 // [수정 시 고려사항] WebSocket 도입 시 useUnreadCount 폴링 → 서버 푸시 구독으로 교체.
 
 import Link from "next/link";
-import { Bell, Search } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useUnreadCount } from "@/lib/api/notifications";
@@ -20,17 +20,7 @@ export function TopBar() {
   const initials = user?.nickname?.[0] ?? "";
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-7">
-      <div className="flex flex-1 items-center gap-3 pr-8">
-        <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <input
-          type="search"
-          placeholder="종목명 또는 공시 검색"
-          className="w-full max-w-[440px] bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
-          aria-label="종목명 또는 공시 검색"
-        />
-      </div>
-
+    <header className="flex h-16 shrink-0 items-center justify-end border-b border-border bg-background px-7">
       <div className="flex items-center gap-4">
         <button
           type="button"

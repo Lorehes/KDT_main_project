@@ -11,8 +11,6 @@ import {
   LayoutDashboard,
   FileText,
   Briefcase,
-  Bell,
-  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "./BrandMark";
@@ -22,17 +20,11 @@ import { isActivePath } from "@/lib/utils/isActivePath";
 import { buttonVariants } from "@/components/ui/button";
 
 // /portfolios/new는 NAV_ITEMS에서 제거 — /portfolios 내부 CTA로만 제공(IA 계층 정합)
-// /notifications(이력)을 최상위 메뉴에 추가 — design_structure §1 IA 기준
+// 알림·알림설정·요금제는 TopBar/nav 모달 경유 — 사이드바 중복 제거
 const NAV_ITEMS = [
   { href: "/dashboard",    label: "대시보드",    icon: LayoutDashboard },
   { href: "/disclosures",  label: "공시 피드",   icon: FileText },
   { href: "/portfolios",   label: "내 포트폴리오", icon: Briefcase },
-  { href: "/notifications", label: "알림",       icon: Bell },
-];
-
-const SETTING_ITEMS = [
-  { href: "/notifications/settings", label: "알림 설정", icon: Bell },
-  { href: "/pricing", label: "요금제", icon: CreditCard },
 ];
 
 export function Sidebar() {
@@ -61,27 +53,6 @@ export function Sidebar() {
                 : "text-foreground hover:bg-muted",
             )}
             aria-current={pathname === href ? "page" : undefined}
-          >
-            <Icon className="size-5 shrink-0" />
-            {label}
-          </Link>
-        ))}
-      </nav>
-
-      <p className="mt-5 px-3 pb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
-        설정
-      </p>
-      <nav className="flex flex-col gap-0.5" aria-label="설정 메뉴">
-        {SETTING_ITEMS.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex items-center gap-3 rounded-[11px] px-3 py-3 text-[14.5px] font-bold transition-colors",
-              pathname.startsWith(href)
-                ? "bg-primary/10 text-primary"
-                : "text-foreground hover:bg-muted",
-            )}
           >
             <Icon className="size-5 shrink-0" />
             {label}

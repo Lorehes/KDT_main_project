@@ -11,6 +11,32 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-22 (19차) | PublicNavbar 인증 분기 + 네비 정리
+
+**작업 내용**:
+- `/dc-implement pricing-nav-auth-consistency` — `(public)/layout.tsx` `async` + `cookies()` presence 판정, `PublicNavbar`에 `isAuthenticated` prop 주입 / RSC 전환(`"use client"` 제거)
+  - 로그인 사용자 → "대시보드로 →" 단일 CTA / 비로그인 → "로그인"(ghost) + "무료로 시작"(solid)
+- `/dc-review-code` → Low: "로그인" `outline`→`ghost` 수정 (모바일 계층 정합)
+- `/dc-review-frontend` 실행 → Info 2건(hover 캡처·auth 캡처) Spec 화 + `/dc-tech-review`
+  - `docs/specs/Draft/review-frontend-hover-capture.md` — `data-pw-hover-idx` 패턴으로 timing race 픽스
+  - `docs/specs/Draft/review-frontend-auth-capture.md` — BE 직접 호출 경로·browser 중복 생성 버그 보정
+- 사이드바 `SETTING_ITEMS`(알림설정·요금제) + `알림` 메뉴 항목 제거 (nav 모달 중복 제거)
+- `HamburgerDrawer` 알림설정·요금제 제거
+- `TopBar` 미구현 검색 바 제거 → `docs/issues/topbar-global-search.md` 이슈 문서 작성
+- `docs/issues/` 폴더 신설 + public-layout-dynamic-rendering-perf / public-navbar-aria-labels 이슈 문서 작성
+
+**설계 결정**:
+- `dr_session`은 httpOnly라 클라이언트 JS 읽기 불가 → 서버에서 `cookies()` presence-only 판정이 유일한 방법
+  - `middleware.ts:28` 동일 기준 적용(유효성 검증은 BE 담당). 클라이언트 Zustand는 경쟁 조건 있음
+- `(public)/layout.tsx`가 동적 렌더링이 되는 부작용은 현재 트래픽에서 무시 가능 수준 — MAU 임계치 도달 시 Suspense + useAuthStore 분리(C-plan → A-plan) 전환
+
+**다음 세션**:
+- `review-frontend-hover-capture` → `/dc-spec-move Approved` + `/dc-implement` (1 wave)
+- `review-frontend-auth-capture` → `/dc-spec-move Approved` + `/dc-implement` (1 wave)
+- TopBar 글로벌 검색 구현 시 → `/dc-plan TopBar 글로벌 검색`
+
+---
+
 ## 2026-06-21 (18차) | portfolio-management-e2e 리뷰 수정 + 후속 Spec
 
 **작업 내용**:

@@ -10,14 +10,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { BrandMark } from "./BrandMark";
-import { LayoutDashboard, FileText, Briefcase, Bell, CreditCard, User, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, Briefcase, User, LogOut } from "lucide-react";
 
 const MENU_ITEMS = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { href: "/disclosures", label: "공시 피드", icon: FileText },
   { href: "/portfolios", label: "내 포트폴리오", icon: Briefcase },
-  { href: "/notifications/settings", label: "알림 설정", icon: Bell },
-  { href: "/pricing", label: "요금제", icon: CreditCard },
   { href: "/settings", label: "마이페이지", icon: User },
 ];
 
