@@ -1,21 +1,20 @@
 "use client";
 
-// [목적] 종목 관리 페이지(D12/m05·D12b/m05b) — 보유 종목 목록 + 검색 자동완성 + Free 쿼터 표시
-// [이유] 사용자가 등록한 종목을 한눈에 확인하고 추가·삭제하는 핵심 관리 화면
+// [목적] 종목 관리 페이지(D12/m05·D12b/m05b) — 좌: 검색+CSV업로드 / 우: 등록된 종목+알림 CTA
+// [이유] 검색과 등록 목록을 패널로 분리해 종목 추가 흐름을 명확히 함 (이전: 단일 패널)
 // [사이드 임팩트] usePortfolios·useDeletePortfolio 쿼리. 삭제 후 ["portfolios"] 자동 무효화.
-//   StockSearchCombobox → /portfolios/new?code= 로 이동 (선택 즉시 등록 상세 페이지)
-// [수정 시 고려사항] Free 3종목 초과 시 422 BUSINESS_RULE_VIOLATION — UI에서 검색 비활성화.
-//   atLimit에 isLoading 포함(R6) — 로딩 중 count=0으로 오활성 방지. 로딩 완료 후 실제 count로 재평가.
-//   매수가·수량은 목록에 표시하되 console.log 절대 금지(금융 개인정보, CLAUDE.md §7)
+//   useStockSearch 직접 사용(실시간 드롭다운) — StockSearchCombobox 제거.
+// [수정 시 고려사항] Free 3종목 초과 시 422 BUSINESS_RULE_VIOLATION — atLimit에 isLoading 포함.
+//   매수가·수량은 console.log 절대 금지(금융 개인정보, CLAUDE.md §7).
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Search, Upload, X } from "lucide-react";
 import { usePortfolios, useDeletePortfolio } from "@/lib/api/portfolios";
+import { useStockSearch } from "@/lib/api/stocks";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
-import { PortfolioListItem } from "@/components/domain/PortfolioListItem";
-import { StockSearchCombobox } from "@/components/domain/StockSearchCombobox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -26,12 +25,14 @@ import type { StockSearchResult } from "@/lib/api/stocks";
 
 const FREE_LIMIT = 3;
 
-const RECOMMENDED_STOCKS = [
-  { code: "005930", name: "삼성전자",  abbr: "SE", market: "코스피" },
-  { code: "035420", name: "NAVER",     abbr: "NV", market: "코스피" },
-  { code: "000660", name: "SK하이닉스", abbr: "SK", market: "코스피" },
-  { code: "035720", name: "카카오",     abbr: "KK", market: "코스피" },
-] as const;
+function useDebounce(value: string, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
+}
 
 export default function PortfoliosPage() {
   const router = useRouter();
@@ -42,11 +43,18 @@ export default function PortfoliosPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [searchInput, setSearchInput] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const debouncedQuery = useDebounce(searchInput);
+  const { data: searchResults, isLoading: isSearching } = useStockSearch(debouncedQuery);
+
   const count = portfolios?.length ?? 0;
-  // isLoading 중에는 count=0이므로 atLimit=false가 되어 추가 버튼 오활성 — isLoading 포함
   const atLimit = isLoading || (!isPro && count >= FREE_LIMIT);
 
   const handleSelect = (stock: StockSearchResult) => {
+    setSearchInput("");
+    setDropdownOpen(false);
     router.push(`/portfolios/new?code=${stock.stock_code}&name=${encodeURIComponent(stock.corp_name)}`);
   };
 
@@ -66,85 +74,160 @@ export default function PortfoliosPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-extrabold uppercase tracking-widest text-primary">My Portfolio</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground">보유 종목 등록</h1>
-          <p className="mt-1 text-sm text-muted-foreground">관심 종목을 추가하면 해당 공시가 도착할 때 알려드려요.</p>
-        </div>
+      <div>
+        <p className="text-xs font-extrabold uppercase tracking-widest text-primary">My Portfolio</p>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground">보유 종목 등록</h1>
+        <p className="mt-1 text-sm text-muted-foreground">관심 종목을 추가하면 해당 공시가 도착할 때 알려드려요.</p>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr] lg:items-start">
-        {/* 등록 목록 + 검색 */}
-        <div className="flex flex-col gap-4">
-          {/* 검색 */}
-          <div className="flex flex-col gap-2">
-            <StockSearchCombobox
-              onSelect={handleSelect}
-              placeholder={atLimit ? "Free 플랜 3종목 초과 — Pro 업그레이드 후 추가" : "종목명 또는 코드 검색"}
-            />
-            {atLimit && (
-              <p className="text-xs text-muted-foreground">
-                Free 플랜은 최대 3종목까지 등록 가능합니다.{" "}
-                <Link href="/pricing" className="font-bold text-primary hover:underline">Pro로 무제한 등록 →</Link>
-              </p>
+        {/* 좌측: 검색 + 결과 + CSV 업로드 */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          {/* 검색 입력 + 실시간 드롭다운 */}
+          <div className="relative" ref={searchContainerRef}>
+            <div className="flex gap-2">
+              <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <input
+                  type="search"
+                  value={searchInput}
+                  onChange={(e) => { setSearchInput(e.target.value); setDropdownOpen(e.target.value.trim().length > 0); }}
+                  onFocus={() => { if (searchInput.trim()) setDropdownOpen(true); }}
+                  onBlur={(e) => { if (!searchContainerRef.current?.contains(e.relatedTarget as Node)) setDropdownOpen(false); }}
+                  onKeyDown={(e) => { if (e.key === "Escape") { setDropdownOpen(false); } }}
+                  placeholder={atLimit ? "Free 플랜 3종목 초과 — Pro 업그레이드 후 추가" : "종목명 또는 코드 검색"}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  aria-label="종목 검색"
+                  aria-expanded={dropdownOpen}
+                  aria-autocomplete="list"
+                  aria-controls="stock-dropdown"
+                  aria-haspopup="listbox"
+                  role="combobox"
+                />
+              </div>
+              <Button className="shrink-0" onClick={() => { if (searchInput.trim()) setDropdownOpen(true); }}>검색</Button>
+            </div>
+
+            {/* 드롭다운 */}
+            {dropdownOpen && searchInput.trim() && (
+              <ul
+                id="stock-dropdown"
+                role="listbox"
+                aria-label="종목 검색 결과"
+                className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-md"
+              >
+                {isSearching && (
+                  <li className="px-4 py-3 text-sm text-muted-foreground" role="status" aria-live="polite">검색 중...</li>
+                )}
+                {!isSearching && searchResults?.length === 0 && (
+                  <li className="px-4 py-3 text-sm text-muted-foreground">검색 결과가 없습니다.</li>
+                )}
+                {!isSearching && searchResults?.map((stock) => (
+                  <li key={stock.stock_code} role="option" aria-selected={false}>
+                    <div className="flex items-center justify-between px-4 py-3 hover:bg-muted">
+                      <div className="flex items-center gap-2.5">
+                        <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>
+                          {stock.corp_name.slice(0, 2)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-foreground">{stock.corp_name}</p>
+                          <p className="font-mono text-xs text-muted-foreground">{stock.stock_code} · {stock.market}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSelect(stock)}
+                        disabled={atLimit}
+                        className={buttonVariants({ variant: "outline", size: "sm" }) + " disabled:opacity-40"}
+                        aria-label={`${stock.corp_name} 추가`}
+                      >
+                        + 추가
+                      </button>
+                    </div>
+                  </li>
+                ))}
+                {atLimit && !isSearching && (searchResults?.length ?? 0) > 0 && (
+                  <li className="border-t border-border px-4 py-2.5">
+                    <p className="text-xs text-muted-foreground">
+                      Free 플랜은 최대 3종목까지 등록 가능합니다.{" "}
+                      <Link href="/pricing" className="font-bold text-primary hover:underline">Pro로 무제한 등록 →</Link>
+                    </p>
+                  </li>
+                )}
+              </ul>
             )}
           </div>
 
-          {/* Free 쿼터 바 */}
-          {!isPro && (
-            <div>
-              <div className="mb-1.5 flex items-center justify-between text-xs">
-                <span className="font-semibold text-muted-foreground">Free 쿼터</span>
-                <span className={`font-extrabold ${atLimit ? "text-destructive" : "text-foreground"}`}>
-                  {count} / {FREE_LIMIT}
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={count} aria-valuemin={0} aria-valuemax={FREE_LIMIT} aria-label={`Free 종목 쿼터 ${count}/${FREE_LIMIT}`}>
-                <div
-                  className={`h-full rounded-full transition-all ${atLimit ? "bg-destructive" : "bg-primary"}`}
-                  style={{ width: `${(count / FREE_LIMIT) * 100}%` }}
-                />
-              </div>
+          {/* CSV 업로드 */}
+          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background py-8 text-center">
+            <div className="grid size-10 place-items-center rounded-xl border border-border bg-card">
+              <Upload className="size-5 text-muted-foreground" aria-hidden />
             </div>
-          )}
+            <p className="text-sm font-semibold text-foreground">증권사 거래내역 CSV 업로드</p>
+            <p className="text-xs text-muted-foreground">파일을 끌어다 놓으면 보유 종목을 자동 추출</p>
+          </div>
+        </div>
 
-          {/* 등록 종목 리스트 */}
-          <div className="rounded-2xl border border-border bg-card shadow-sm">
+        {/* 우측: 등록된 종목 */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-extrabold text-foreground">등록된 종목</p>
+            <span className="text-xs text-muted-foreground">
+              {count} / {isPro ? "∞" : FREE_LIMIT} · {isPro ? "무제한 Pro" : "Free"}
+            </span>
+          </div>
+
+          {/* 종목 목록 */}
+          <div className="flex flex-col gap-2">
             {showSkeleton ? (
-              <div className="flex flex-col divide-y divide-border" role="status" aria-label="종목 목록 불러오는 중">
+              <div role="status" aria-label="종목 목록 불러오는 중" className="flex flex-col gap-2">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-4">
-                    <Skeleton className="size-9 rounded-lg" />
+                  <div key={i} className="flex items-center gap-3 rounded-xl border border-border bg-background px-3.5 py-3">
+                    <Skeleton className="size-8 shrink-0 rounded-lg" />
                     <div className="flex flex-1 flex-col gap-1.5">
                       <Skeleton className="h-4 w-24" />
                       <Skeleton className="h-3 w-16" />
                     </div>
-                    <Skeleton className="h-8 w-16 rounded-lg" />
+                    <Skeleton className="size-9 rounded-md" />
                   </div>
                 ))}
               </div>
-            ) : isLoading ? null : !portfolios?.length ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">
-                아직 등록된 종목이 없습니다.
-              </div>
+            ) : !portfolios?.length ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">아직 등록된 종목이 없습니다.</p>
             ) : (
-              <ul aria-label="등록 종목 목록" className="divide-y divide-border">
-                {portfolios.map((p) => (
-                  <PortfolioListItem
-                    key={p.id}
-                    portfolio={p}
-                    onDelete={handleDelete}
-                    isDeleting={isDeleting}
-                  />
-                ))}
-              </ul>
+              portfolios.map((p) => (
+                <div key={p.id} className="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3.5 py-3">
+                  <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>
+                    {(p.corp_name ?? p.stock_code).slice(0, 2)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-foreground">{p.corp_name ?? p.stock_code}</p>
+                    <p className="font-mono text-xs text-muted-foreground">{p.stock_code}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(p.id, p.corp_name ?? p.stock_code)}
+                    disabled={isDeleting}
+                    className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-40"
+                    aria-label={`${p.corp_name ?? p.stock_code} 삭제`}
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ))
             )}
           </div>
+
+          {/* 알림 설정 CTA */}
+          <Button className="w-full" onClick={() => router.push("/notifications")}>
+            알림 설정하기 →
+          </Button>
         </div>
+      </div>
 
       {/* 종목 삭제 확인 AlertDialog */}
-      {/* isDeleting 중 Escape/배경 클릭으로 닫기 차단 — 뮤테이션 고아 방지 */}
+      {/* isDeleting 중 닫기 차단 — 뮤테이션 고아 방지 */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open && !isDeleting) { setDeleteTarget(null); setDeleteError(null); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -165,35 +248,6 @@ export default function PortfoliosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-        {/* 추천 종목 사이드 */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="mb-4 text-sm font-extrabold text-foreground">이런 종목은 어때요?</p>
-          <ul className="flex flex-col gap-3">
-            {/* 추천 종목 아이콘 배경은 bg-primary 단일 색으로 통일 (P2 토큰화 — CLAUDE.md §6-4) */}
-            {RECOMMENDED_STOCKS.map(({ code, name, abbr, market }) => (
-              <li key={code} className="flex items-center justify-between rounded-xl border border-border bg-background px-3.5 py-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="grid size-8 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>{abbr}</div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">{name}</p>
-                    <p className="font-mono text-xs text-muted-foreground">{code} · {market}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleSelect({ stock_code: code, corp_name: name, market: market as "KOSPI" | "KOSDAQ" })}
-                  disabled={atLimit}
-                  className={buttonVariants({ variant: "outline", size: "sm" }) + " disabled:opacity-40"}
-                  aria-label={`${name} 추가`}
-                >
-                  ＋ 추가
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
     </div>
   );
 }

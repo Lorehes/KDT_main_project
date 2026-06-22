@@ -11,6 +11,26 @@ updated: 2026-06-22
 
 ---
 
+## 2026-06-22 (22차) | 포트폴리오 검색 UX 재설계 + 접근성 수정 + Spec 2건
+
+**작업 내용**:
+- **portfolios 페이지 레이아웃 재설계**: 단일 패널(검색+목록+추천) → 2-패널 구조
+  - 좌: 검색 카드 (input + "검색" 버튼 + 실시간 드롭다운 오버레이 + CSV 업로드 placeholder)
+  - 우: 등록된 종목 카드 (X 버튼 삭제 + 카운트 배지 + "알림 설정하기 →" CTA)
+- **StockSearchCombobox 제거**: 페이지 내부 인라인 combobox 구현 (useStockSearch 직접 사용)
+- **접근성 수정 6건 (dc-review-frontend B등급 즉시 수정)**:
+  - `useDebounce` 300ms 추가 — 매 키입력 API 호출 방지 (P1)
+  - Escape 키 드롭다운 닫기, `aria-haspopup="listbox"` 추가
+  - X 버튼 터치타겟 28px → 36px (WCAG 2.5.5)
+  - Skeleton `role="status"` 래퍼 통합, `atLimit` placeholder 안내 문구
+- **Spec 2건 생성**: `portfolio-search-keyboard-nav` (P1), `portfolio-csv-upload` (P3)
+
+**미완료**:
+- ArrowDown/ArrowUp/Enter 키보드 네비게이션 미구현 → `portfolio-search-keyboard-nav` Spec
+- CSV 드래그앤드롭 핸들러 미구현 → `portfolio-csv-upload` Spec
+
+---
+
 ## 2026-06-22 (21차) | TopBar 팝오버·설정 레이아웃 재구성 + 모바일 메뉴 + 버그 수정 9건
 
 **작업 내용**:

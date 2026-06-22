@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-11 (mvp-missing-endpoints Done 전환)
+updated: 2026-06-22 (portfolio-search-keyboard-nav, portfolio-csv-upload Draft 추가)
 ---
 
 # Specs MOC
@@ -28,6 +28,11 @@ docs/specs/
 **2026-06-09 코드 리뷰 후속 (수동 분석 + dc-review-code 종합 — 56개 이슈를 8개 Spec 으로 분리)**
 
 - [[performance-caching-staletime]] — 성능/캐싱: Caffeine portfolios/analysis + TanStack staleTime + size 제한 + 복합 인덱스
+
+**2026-06-22 dc-review-frontend 리뷰 후속 (portfolios 페이지)**
+
+- [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 ARIA 키보드 네비게이션: ArrowDown/ArrowUp/Enter + aria-activedescendant (P1)
+- [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 (P3)
 
 **2026-06-21 portfolio-management-e2e 리뷰 후속**
 

@@ -77,6 +77,7 @@ updated: 2026-06-02
 | 2026-06-22 | Jin | 80c3abd | fix(frontend): PublicNavbar auth-aware CTA + nav 정리 [6/8 M] | Frontend | 6 | 8 | M | PublicNavbar 인증분기+네비정리 |
 | 2026-06-22 | Jin | 26a738a | feat(frontend): WCAG AA 접근성+Skeleton UI+AlertDialog M2 완료 [7/8 L] | Frontend | 7 | 8 | L | WCAG AA 접근성+Skeleton UI M2 완료 |
 | 2026-06-22 | Jin | 223d39e | feat(frontend): TopBar팝오버+설정레이아웃+모바일메뉴+버그수정9건 [7/7 L] | Frontend | 7 | 7 | L | TopBar팝오버+설정레이아웃+버그9건수정 |
+| 2026-06-22 | Jin | a13613e | feat(frontend): 포트폴리오 검색 UX 재설계+접근성 수정 [5/7 M] | Frontend/Docs | 5 | 7 | M | 포트폴리오 검색 UX 재설계+접근성 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -84,5 +85,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 3 | 22 | 64 | 8.0 | 6.2 |
+| Jin | 4 | 23 | 65 | 8.0 | 6.2 |
 <!-- SUMMARY:END -->
