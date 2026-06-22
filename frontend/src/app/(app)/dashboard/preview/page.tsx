@@ -14,6 +14,7 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
+import { StatCard, SentimentStatCard } from "@/components/domain/StatCards";
 import type { Disclosure } from "@/lib/api/disclosures";
 
 const MOCK_DISCLOSURES: Disclosure[] = [
@@ -96,8 +97,10 @@ const MOCK_PORTFOLIOS = ["삼성전자", "SK하이닉스", "카카오", "LG에�
 export default function DashboardPreviewPage() {
   const [bannerVisible, setBannerVisible] = useState(true);
 
-  const positiveCount = MOCK_DISCLOSURES.filter((d) => d.sentiment === "POSITIVE").length;
-  const negativeCount = MOCK_DISCLOSURES.filter((d) => d.sentiment === "NEGATIVE").length;
+  const positiveCount = MOCK_DISCLOSURES.filter((d) => !d.is_withheld && d.sentiment === "POSITIVE").length;
+  const neutralCount = MOCK_DISCLOSURES.filter((d) => !d.is_withheld && d.sentiment === "NEUTRAL").length;
+  const negativeCount = MOCK_DISCLOSURES.filter((d) => !d.is_withheld && d.sentiment === "NEGATIVE").length;
+  const withheldCount = MOCK_DISCLOSURES.filter((d) => d.is_withheld === true).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -144,22 +147,17 @@ export default function DashboardPreviewPage() {
         </Link>
       </div>
 
-      {/* 통계 카드 4종 */}
+      {/* 통계 카드 4종 — 호재/악재/보류는 1개 카드로 통합. 평가 손익은 목업(+3.4%) */}
       <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="오늘 공시 통계">
-        {[
-          { label: "오늘 공시", value: MOCK_DISCLOSURES.length, unit: "건" },
-          { label: "호재", value: positiveCount, unit: "건" },
-          { label: "악재", value: negativeCount, unit: "건" },
-          { label: "보유 종목", value: MOCK_PORTFOLIOS.length, unit: "개" },
-        ].map(({ label, value, unit }) => (
-          <li key={label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-            <p className="mt-2.5 text-3xl font-extrabold leading-none text-foreground">
-              {value}
-              <small className="ml-1 text-sm font-semibold text-muted-foreground">{unit}</small>
-            </p>
-          </li>
-        ))}
+        <StatCard label="오늘 공시" value={MOCK_DISCLOSURES.length} unit="건" />
+        <SentimentStatCard
+          positive={positiveCount}
+          neutral={neutralCount}
+          negative={negativeCount}
+          withheld={withheldCount}
+        />
+        <StatCard label="보유 종목" value={MOCK_PORTFOLIOS.length} unit="종목" />
+        <StatCard label="평가 손익" value="+3.4" unit="%" />
       </ul>
 
       {/* 공시 피드 */}

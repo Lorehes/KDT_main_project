@@ -52,6 +52,7 @@ public class DisclosureQueryService {
             String scope,
             String stockCode,
             Sentiment sentimentFilter,
+            Boolean withheldFilter,
             LocalDate fromDate,
             LocalDate toDate,
             int page,
@@ -75,14 +76,18 @@ public class DisclosureQueryService {
 
         // Pageable: Sort 없이 — native/JPQL ORDER BY와 이중 적용 방지
         Pageable pageable = PageRequest.of(page, size);
-        // sentiment 필터 시 DB 레벨 native query JOIN → totalElements 정확.
-        // 필터 없으면 JPQL(JOIN 없음) 경로 유지 — 빈번한 피드 조회 성능 보존
+        // 보류(is_withheld)는 sentiment 값이 아닌 별도 플래그(disclosure-withheld-filter).
+        // 보류 필터 시 sentiment 무시(null)하고 is_withheld=true만 — 4상태(호재/중립/악재/보류) 일관.
+        // 감성 필터는 기존 동작 유지(withheld=null → 보류 포함). 둘 다 없으면 JOIN 없는 JPQL 경로로 성능 보존.
+        boolean withheldOnly = Boolean.TRUE.equals(withheldFilter);
+        String sentimentStr = withheldOnly ? null : (sentimentFilter != null ? sentimentFilter.name() : null);
+        Boolean withheldParam = withheldOnly ? Boolean.TRUE : null;
+
         Page<Disclosure> disclosurePage;
-        if (sentimentFilter != null) {
-            String sentimentStr = sentimentFilter.name();
+        if (sentimentStr != null || withheldParam != null) {
             disclosurePage = (stockCodes == null)
-                    ? disclosureRepository.findAllFilteredWithSentiment(fromDate, toDate, sentimentStr, pageable)
-                    : disclosureRepository.findFilteredByStocksWithSentiment(stockCodes, fromDate, toDate, sentimentStr, pageable);
+                    ? disclosureRepository.findAllFilteredWithSentiment(fromDate, toDate, sentimentStr, withheldParam, pageable)
+                    : disclosureRepository.findFilteredByStocksWithSentiment(stockCodes, fromDate, toDate, sentimentStr, withheldParam, pageable);
         } else {
             disclosurePage = (stockCodes == null)
                     ? disclosureRepository.findAllFiltered(fromDate, toDate, pageable)

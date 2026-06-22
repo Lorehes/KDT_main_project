@@ -5,6 +5,8 @@
 // [사이드 임팩트] 공시 상세 Pro·Premium 섹션에서 사용. 클릭 시 ProUpsellModal 또는 /pricing 이동
 // [수정 시 고려사항] children에 흐린 미리보기를 넣으면 overlay가 덮음.
 //   API가 상위 Stage 데이터를 반환하지 않으므로 children은 플레이스홀더 skeleton만 사용
+//   overlay가 absolute inset-0이라 카드 높이가 children에 종속 — 짧은 children(h-20 등)이면
+//   업셀 CTA 버튼/아이콘이 잘림. min-h-[16rem]로 overlay 콘텐츠(아이콘+제목+설명+버튼) 영역을 항상 확보.
 
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +27,7 @@ export function TierGate({ requiredTier, children, className }: TierGateProps) {
   const { setUpsellModalOpen } = useUIStore();
 
   return (
-    <div className={`relative overflow-hidden rounded-[var(--radius-lg)] border border-border ${className ?? ""}`}>
+    <div className={`relative min-h-[16rem] overflow-hidden rounded-[var(--radius-lg)] border border-border ${className ?? ""}`}>
       {children && (
         <div className="pointer-events-none select-none opacity-30 blur-[2px]">
           {children}

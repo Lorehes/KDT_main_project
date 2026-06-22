@@ -62,6 +62,8 @@ export interface DisclosureListParams {
   scope?: "portfolio" | "all";
   stock_code?: string;
   sentiment?: Sentiment;
+  /** 판단 보류(is_withheld) 필터 — sentiment와 별개 플래그. true면 보류 공시만 반환. */
+  withheld?: boolean;
   from?: string;
   to?: string;
   page?: number;

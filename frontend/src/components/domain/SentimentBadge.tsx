@@ -2,7 +2,7 @@
 // [이유] WCAG 2.1 AA 준수 + 색맹 배려. 색상만으로 의미 전달 금지(CLAUDE.md §6-5, design_structure §2.2)
 // [사이드 임팩트] DisclosureCard·공시 상세 등 모든 감성 표기 화면에서 사용. 토큰 변경 시 전체 반영
 // [수정 시 고려사항] 한국 증시 관행: 호재(상승)=빨강, 악재(하락)=파랑. 서구 관행 반대.
-//   판단보류(is_withheld)는 amber 계열로 별도 토큰 사용
+//   판단보류(is_withheld)는 보라색(#5B43C0, --sentiment-withheld) 별도 토큰 — 중립(회색)과 구분 (design_structure §2.2)
 
 import { TrendingUp, TrendingDown, Minus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,9 +47,21 @@ const CONFIG: Record<
 interface SentimentBadgeProps {
   sentiment: Sentiment;
   isWithheld?: boolean;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
+
+// lg는 필터 칩 등 "전체" 버튼(px-4 py-2 text-sm)과 동일 크기를 맞추기 위한 사이즈
+const SIZE_CLASS: Record<NonNullable<SentimentBadgeProps["size"]>, string> = {
+  sm: "px-2 py-1 text-[11px]",
+  md: "px-2.5 py-1.5 text-xs",
+  lg: "px-4 py-2 text-sm",
+};
+const ICON_SIZE: Record<NonNullable<SentimentBadgeProps["size"]>, string> = {
+  sm: "size-3",
+  md: "size-3.5",
+  lg: "size-4",
+};
 
 export function SentimentBadge({
   sentiment,
@@ -64,7 +76,7 @@ export function SentimentBadge({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full font-extrabold tracking-tight",
-        size === "sm" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs",
+        SIZE_CLASS[size],
         // --radius-badge 토큰 정의 후 사용. 미정의 시 rounded-full 폴백
 
         colorClass,
@@ -73,7 +85,7 @@ export function SentimentBadge({
       role="img"
       aria-label={ariaLabel}
     >
-      <Icon className={size === "sm" ? "size-3" : "size-3.5"} aria-hidden />
+      <Icon className={ICON_SIZE[size]} aria-hidden />
       {label}
     </span>
   );

@@ -16,12 +16,14 @@ import {
   type NotifTypeFilter,
 } from "@/lib/api/notifications";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-const CHANNELS: { value: NotifChannel; label: string; icon: React.ElementType; desc: string }[] = [
-  { value: "KAKAO",    label: "카카오 알림톡", icon: MessageSquare, desc: "오픈율 40~60% · 즉시 발송" },
+// comingSoon: 채널 선택은 가능하나 BE 발송 미구현(MVP) — '곧 지원 예정' 배지로 오인 방지(텔레그램 Bot API 연동 후속).
+const CHANNELS: { value: NotifChannel; label: string; icon: React.ElementType; desc: string; comingSoon?: boolean }[] = [
+  { value: "KAKAO",    label: "카카오 알림톡", icon: MessageSquare, desc: "즉시 발송" },
   { value: "EMAIL",    label: "이메일",         icon: Mail,          desc: "수신함에서 확인" },
-  { value: "TELEGRAM", label: "텔레그램",       icon: Smartphone,    desc: "Premium 전용" },
+  { value: "TELEGRAM", label: "텔레그램",       icon: Smartphone,    desc: "텔레그램 봇으로 수신", comingSoon: true },
 ];
 
 const FREQUENCIES: { value: NotifFrequency; label: string }[] = [
@@ -75,16 +77,15 @@ export default function NotificationSettingsPage() {
       <section aria-labelledby="channel-heading" className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <h2 id="channel-heading" className="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-primary">알림 채널</h2>
         <div className="flex flex-col gap-2" role="radiogroup" aria-labelledby="channel-heading">
-          {CHANNELS.map(({ value, label, icon: Icon, desc }) => (
+          {CHANNELS.map(({ value, label, icon: Icon, desc, comingSoon }) => (
             <button
               key={value}
               type="button"
               role="radio"
               aria-checked={channel === value}
               onClick={() => setChannel(value)}
-              disabled={value === "TELEGRAM"}
               className={cn(
-                "flex items-center gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40",
+                "flex items-center gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 channel === value ? "border-primary bg-primary/5" : "border-border bg-background hover:bg-muted",
               )}
             >
@@ -92,7 +93,14 @@ export default function NotificationSettingsPage() {
                 <Icon className={cn("size-4", channel === value ? "text-primary" : "text-muted-foreground")} aria-hidden />
               </span>
               <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">{label}</p>
+                <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                  {label}
+                  {comingSoon && (
+                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                      곧 지원 예정
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground">{desc}</p>
               </div>
               <span className={cn("grid size-5 place-items-center rounded-full border-2 transition-colors", channel === value ? "border-primary" : "border-border")} aria-hidden>
@@ -152,15 +160,32 @@ export default function NotificationSettingsPage() {
               type="button"
               role="radio"
               aria-checked={typeFilter === value}
+              aria-label={`${label} 알림`}
               onClick={() => setFilter(value)}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border-[1.5px] px-4 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                typeFilter === value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted",
+                "shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                value === "ALL"
+                  ? cn(
+                      "border-[1.5px] px-4 py-2 text-sm font-bold",
+                      typeFilter === value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted",
+                    )
+                  : cn(
+                      "hover:opacity-90",
+                      typeFilter === value ? "ring-2 ring-offset-2 ring-offset-background ring-ring" : "",
+                    ),
               )}
             >
-              {value === "POSITIVE_ONLY" && <SentimentBadge sentiment="POSITIVE" size="sm" className="pointer-events-none scale-75" />}
-              {value === "NEGATIVE_ONLY" && <SentimentBadge sentiment="NEGATIVE" size="sm" className="pointer-events-none scale-75" />}
-              {label}
+              {value === "ALL" ? (
+                label
+              ) : (
+                <SentimentBadge
+                  sentiment={value === "POSITIVE_ONLY" ? "POSITIVE" : "NEGATIVE"}
+                  size="lg"
+                  className="pointer-events-none"
+                />
+              )}
             </button>
           ))}
         </div>
@@ -178,19 +203,11 @@ export default function NotificationSettingsPage() {
               <p className="text-xs text-muted-foreground">22시 이후 ~ 익일 8시 발송 허용</p>
             </div>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={offHours}
+          <Switch
+            checked={offHours}
+            onCheckedChange={(checked) => setOffHours(checked)}
             aria-labelledby="offhours-heading"
-            onClick={() => setOffHours((v) => !v)}
-            className={cn(
-              "relative h-6 w-11 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-              offHours ? "bg-primary" : "bg-border",
-            )}
-          >
-            <span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform", offHours ? "translate-x-5" : "translate-x-0.5")} aria-hidden />
-          </button>
+          />
         </div>
       </section>
 

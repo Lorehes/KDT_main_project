@@ -103,7 +103,8 @@
   --sentiment-neutral-foreground: oklch(0.985 0 0);
   --sentiment-negative: oklch(0.52 0.16 252);
   --sentiment-negative-foreground: oklch(0.985 0 0);
-  --sentiment-withheld: oklch(0.58 0.13 70);
+  /* 보류(판단 보류) = 보라색 #5B43C0 (design_structure §2.2 SSOT) — 호재(빨강)/악재(파랑)와 명확히 구분 */
+  --sentiment-withheld: oklch(0.48 0.19 286);
   --sentiment-withheld-foreground: oklch(0.985 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
@@ -150,7 +151,8 @@
   --sentiment-neutral-foreground: oklch(0.145 0 0);
   --sentiment-negative: oklch(0.62 0.16 252);
   --sentiment-negative-foreground: oklch(0.145 0 0);
-  --sentiment-withheld: oklch(0.72 0.14 75);
+  /* 보류 = 보라색 #5B43C0 계열 (다크모드: 명도 상향으로 대비 확보) */
+  --sentiment-withheld: oklch(0.70 0.17 286);
   --sentiment-withheld-foreground: oklch(0.145 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);

@@ -14,13 +14,14 @@ import { DisclosureCard } from "@/components/domain/DisclosureCard";
 import { TierGate } from "@/components/domain/TierGate";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 
-type FilterType = "ALL" | Sentiment;
+type FilterType = "ALL" | Sentiment | "WITHHELD";
 
 const FILTERS: { value: FilterType; label: string }[] = [
   { value: "ALL",      label: "전체" },
   { value: "POSITIVE", label: "호재" },
   { value: "NEGATIVE", label: "악재" },
   { value: "NEUTRAL",  label: "중립" },
+  { value: "WITHHELD", label: "보류" },
 ];
 
 function groupByDate(disclosures: Disclosure[]) {
@@ -49,7 +50,9 @@ export default function DisclosuresFeedPage() {
 
   const { data, isLoading, isError, isFetching } = useDisclosures({
     scope: "portfolio",
-    sentiment: filter === "ALL" ? undefined : filter,
+    // WITHHELD(보류)는 sentiment 값이 아니라 is_withheld 플래그 — 전용 withheld 파라미터로 분리 전송.
+    sentiment: filter === "ALL" || filter === "WITHHELD" ? undefined : filter,
+    withheld: filter === "WITHHELD" ? true : undefined,
     size: PAGE_SIZE,
     page,
   });
@@ -85,25 +88,35 @@ export default function DisclosuresFeedPage() {
         <p className="mt-1 text-sm text-muted-foreground">보유 종목의 공시를 날짜별로 확인하세요.</p>
       </div>
 
-      {/* 필터 칩 */}
-      <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="공시 감성 필터">
+      {/* 필터 칩 — overflow-x-auto가 세로도 클리핑하므로 선택 링(ring-offset)이 잘리지 않게 py 여백 확보.
+          -mx-1 px-1로 링 좌우 여백을 주되 헤더와의 정렬은 유지 */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 py-2" role="group" aria-label="공시 감성 필터">
         {FILTERS.map(({ value, label }) => (
           <button
             key={value}
             type="button"
             onClick={() => setFilter(value)}
             aria-pressed={filter === value}
-            className={`shrink-0 rounded-full border px-4 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              filter === value
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-muted-foreground hover:bg-muted"
+            aria-label={`${label} 필터`}
+            className={`shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              value === "ALL"
+                ? `border px-4 py-2 text-sm font-bold ${
+                    filter === value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted"
+                  }`
+                : `hover:opacity-90 ${
+                    filter === value ? "ring-2 ring-offset-2 ring-offset-background ring-ring" : ""
+                  }`
             }`}
           >
             {value !== "ALL" ? (
-              <span className="flex items-center gap-1.5">
-                <SentimentBadge sentiment={value as Sentiment} size="sm" className="pointer-events-none" />
-                {label}
-              </span>
+              <SentimentBadge
+                sentiment={value === "WITHHELD" ? "NEUTRAL" : (value as Sentiment)}
+                isWithheld={value === "WITHHELD"}
+                size="lg"
+                className="pointer-events-none"
+              />
             ) : label}
           </button>
         ))}

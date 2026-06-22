@@ -14,6 +14,7 @@ import { useAuthStore } from "@/lib/stores/authStore";
 import { usePortfolios } from "@/lib/api/portfolios";
 import { useDisclosures } from "@/lib/api/disclosures";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
+import { StatCard, SentimentStatCard } from "@/components/domain/StatCards";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -39,22 +40,18 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* 통계 카드 4종 — W4에서 실제 데이터로 교체 */}
+      {/* 통계 카드 — 호재/악재/보류는 1개 카드로 통합 표기. W4에서 실제 데이터로 교체.
+          평가 손익은 KRX 현재가 연동 전까지 placeholder("DB 연동 필요") */}
       <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="오늘 공시 통계">
-        {[
-          { label: "오늘 공시", value: disclosures.length, unit: "건" },
-          { label: "호재", value: disclosures.filter((d) => d.sentiment === "POSITIVE").length, unit: "건" },
-          { label: "악재", value: disclosures.filter((d) => d.sentiment === "NEGATIVE").length, unit: "건" },
-          { label: "보유 종목", value: portfolios?.length ?? 0, unit: "개" },
-        ].map(({ label, value, unit }) => (
-          <li key={label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-            <p className="mt-2.5 text-3xl font-extrabold leading-none text-foreground">
-              {value}
-              <small className="ml-1 text-sm font-semibold text-muted-foreground">{unit}</small>
-            </p>
-          </li>
-        ))}
+        <StatCard label="오늘 공시" value={disclosures.length} unit="건" />
+        <SentimentStatCard
+          positive={disclosures.filter((d) => !d.is_withheld && d.sentiment === "POSITIVE").length}
+          neutral={disclosures.filter((d) => !d.is_withheld && d.sentiment === "NEUTRAL").length}
+          negative={disclosures.filter((d) => !d.is_withheld && d.sentiment === "NEGATIVE").length}
+          withheld={disclosures.filter((d) => d.is_withheld === true).length}
+        />
+        <StatCard label="보유 종목" value={portfolios?.length ?? 0} unit="개" />
+        <StatCard label="평가 손익" value="—" muted note="DB 연동 필요" />
       </ul>
 
       {/* 공시 피드 or Empty state */}

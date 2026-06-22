@@ -88,6 +88,14 @@ class DisclosureControllerTest {
                 disclosureId);
     }
 
+    /** sentiment·is_withheld 가변 분석 결과 삽입 — 보류 필터 회귀 테스트용. */
+    private void insertAnalysisWith(long disclosureId, String sentiment, boolean withheld) {
+        jdbc.update(
+                "INSERT INTO analysis_results (disclosure_id, sentiment, confidence, is_withheld, summary, expected_reaction, rationale, stage_reached) " +
+                "VALUES (?, ?, 0.300, ?, '분석 요약입니다.', 'FLAT', '근거 내용', 2)",
+                disclosureId, sentiment, withheld);
+    }
+
     private String signupAndGetToken(String email) throws Exception {
         ObjectNode body = objectMapper.createObjectNode()
                 .put("email",           email)
@@ -220,6 +228,37 @@ class DisclosureControllerTest {
             String next = content.get(i + 1).get("rcept_dt").asText();
             assertThat(curr.compareTo(next)).isGreaterThanOrEqualTo(0);
         }
+    }
+
+    @Test
+    @DisplayName("withheld=true — 판단 보류(is_withheld=true) 공시만 반환, 비보류 제외 (disclosure-withheld-filter)")
+    void list_withheldFilter_returnsOnlyWithheld() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        addPortfolio(token, "005930");
+
+        String withheldRcept = uniqueRceptNo();
+        long withheldId = insertDisclosure(withheldRcept, "005930", "2025-06-07");
+        insertAnalysisWith(withheldId, "NEGATIVE", true);   // 판단 보류
+
+        String normalRcept = uniqueRceptNo();
+        long normalId = insertDisclosure(normalRcept, "005930", "2025-06-07");
+        insertAnalysisWith(normalId, "POSITIVE", false);    // 비보류
+
+        String resp = mockMvc.perform(get("/api/v1/disclosures")
+                        .header("Authorization", "Bearer " + token)
+                        .param("withheld", "true"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode content = objectMapper.readTree(resp).get("content");
+        boolean hasWithheld = false;
+        for (JsonNode item : content) {
+            String rcept = item.get("rcept_no").asText();
+            // 비보류 공시는 보류 필터 결과에 절대 포함되면 안 됨
+            assertThat(rcept).isNotEqualTo(normalRcept);
+            if (rcept.equals(withheldRcept)) hasWithheld = true;
+        }
+        assertThat(hasWithheld).isTrue();
     }
 
     @Test

@@ -84,9 +84,11 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
     );
 
     /**
-     * 포트폴리오 종목 + sentiment 필터 조회 — DB 레벨 LEFT JOIN (fe-correctness-investor-protection R3).
-     * sentiment=null → 전체 반환. sentiment='POSITIVE' 등 → 해당 감성 분析 결과가 있는 공시만 반환.
-     * analysis_results 미존재 공시는 sentiment 필터 적용 시 제외됨(투자자 의도에 부합).
+     * 포트폴리오 종목 + sentiment/withheld 필터 조회 — DB 레벨 LEFT JOIN (fe-correctness-investor-protection R3).
+     * sentiment=null → 감성 필터 미적용. sentiment='POSITIVE' 등 → 해당 감성 분析 결과가 있는 공시만 반환.
+     * withheld=null → 보류 필터 미적용. withheld=true → is_withheld=true(판단 보류) 공시만. false → 보류 제외.
+     * 보류(is_withheld)는 sentiment 값이 아닌 별도 플래그 — 보류 필터 시 sentiment=null로 호출(disclosure-withheld-filter).
+     * analysis_results 미존재 공시는 sentiment/withheld 필터 적용 시 제외됨(투자자 의도에 부합).
      */
     @Query(value = """
             SELECT d.* FROM disclosures d
@@ -95,6 +97,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
               AND (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
               AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
               AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
+              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
             ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
@@ -104,6 +107,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
               AND (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
               AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
               AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
+              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
             """,
             nativeQuery = true)
     Page<Disclosure> findFilteredByStocksWithSentiment(
@@ -111,12 +115,13 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             @Param("sentiment") String sentiment,
+            @Param("withheld") Boolean withheld,
             Pageable pageable
     );
 
     /**
-     * 전체 공시 + sentiment 필터 조회 (scope=all) — DB 레벨 LEFT JOIN.
-     * sentiment=null → 전체 반환. 종목코드 필터 없음.
+     * 전체 공시 + sentiment/withheld 필터 조회 (scope=all) — DB 레벨 LEFT JOIN.
+     * sentiment=null → 감성 필터 미적용. withheld=null → 보류 필터 미적용. 종목코드 필터 없음.
      */
     @Query(value = """
             SELECT d.* FROM disclosures d
@@ -124,6 +129,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             WHERE (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
               AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
               AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
+              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
             ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
@@ -132,12 +138,14 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             WHERE (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
               AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
               AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
+              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
             """,
             nativeQuery = true)
     Page<Disclosure> findAllFilteredWithSentiment(
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             @Param("sentiment") String sentiment,
+            @Param("withheld") Boolean withheld,
             Pageable pageable
     );
 }

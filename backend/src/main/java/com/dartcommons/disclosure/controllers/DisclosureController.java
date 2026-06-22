@@ -53,13 +53,14 @@ public class DisclosureController {
             @RequestParam(defaultValue = "portfolio") String scope,
             @RequestParam(value = "stock_code", required = false) @Pattern(regexp = "^[0-9]{6}$") String stockCode,
             @RequestParam(required = false) Sentiment sentiment,
+            @RequestParam(required = false) Boolean withheld,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") @Positive @Max(100) int size
     ) {
         Tier tier = SecurityUtils.extractTier(authentication);
-        return disclosureQueryService.list(userId, scope, stockCode, sentiment, from, to, page, size, tier);
+        return disclosureQueryService.list(userId, scope, stockCode, sentiment, withheld, from, to, page, size, tier);
     }
 
     /** 공시 상세 — 기본 메타 + 분析 요약 포함. 인증만 필요 (DART 공개 데이터 정책). */
