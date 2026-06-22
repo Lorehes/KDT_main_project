@@ -9,7 +9,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useDisclosures, type Sentiment, type Disclosure } from "@/lib/api/disclosures";
-import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
 import { TierGate } from "@/components/domain/TierGate";
@@ -42,7 +41,6 @@ function groupByDate(disclosures: Disclosure[]) {
 const PAGE_SIZE = 30;
 
 export default function DisclosuresFeedPage() {
-  const { isPro } = useTierCheck();
   const [filter, setFilter] = useState<FilterType>("ALL");
 
   // R4: 페이지 누적 상태 — 필터 변경 시 리셋
@@ -126,80 +124,84 @@ export default function DisclosuresFeedPage() {
         ))}
       </div>
 
-      {/* 3개월 이력 Pro 잠금 */}
-      {!isPro && (
-        <TierGate
-          requiredTier="PRO"
-          className="mb-2"
-        >
-          <div className="h-20 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
-            3개월 이전 공시 이력 (Pro 전용)
-          </div>
-        </TierGate>
-      )}
+      {/* 2컬럼 레이아웃 — 왼쪽: 공시 피드 / 오른쪽: Pro 전용 분석 패널 */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[3fr_2fr]">
 
-      {/* 피드 */}
-      {showSkeleton && (
-        <div className="flex flex-col gap-3" role="status" aria-label="공시 피드 불러오는 중">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-              <Skeleton className="size-10 shrink-0 rounded-xl" />
-              <div className="flex flex-1 flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-5 w-12 rounded-full" />
+        {/* ─── 왼쪽: 공시 피드 ─── */}
+        <div className="flex flex-col gap-6">
+          {showSkeleton && (
+            <div className="flex flex-col gap-3" role="status" aria-label="공시 피드 불러오는 중">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+                  <Skeleton className="size-10 shrink-0 rounded-xl" />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-5 w-12 rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
                 </div>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-              </div>
+              ))}
             </div>
+          )}
+
+          {isError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              공시를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
+            </div>
+          )}
+
+          {!isLoading && !isError && disclosures.length === 0 && (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              {filter === "ALL" ? "아직 공시가 없습니다." : `${FILTERS.find((f) => f.value === filter)?.label} 공시가 없습니다.`}
+            </div>
+          )}
+
+          {Object.entries(groups).map(([dateLabel, items]) => (
+            <section key={dateLabel} aria-label={`${dateLabel} 공시`}>
+              <div className="mb-3 flex items-center gap-3">
+                <h2 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">{dateLabel}</h2>
+                <span className="inline-flex h-5 items-center rounded-full bg-primary/10 px-2 text-[11px] font-extrabold text-primary">{items.length}</span>
+                <span className="flex-1 border-t border-border" aria-hidden />
+              </div>
+              <ul className="flex flex-col gap-3">
+                {items.map((d) => (
+                  <li key={d.id}>
+                    <DisclosureCard disclosure={d} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </div>
-      )}
 
-      {isError && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
-          공시를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
+          {/* R4: content.length >= PAGE_SIZE 일 때만 "더 보기" 표시 — isFetching 중에는 disabled로 유지(소실 방지) */}
+          {canLoadMore && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => p + 1)}
+                disabled={isFetching}
+                className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                aria-label="공시 더 보기"
+              >
+                {isFetching ? "불러오는 중..." : "더 보기"}
+              </button>
+            </div>
+          )}
         </div>
-      )}
 
-      {!isLoading && !isError && disclosures.length === 0 && (
-        <div className="py-12 text-center text-sm text-muted-foreground">
-          {filter === "ALL" ? "아직 공시가 없습니다." : `${FILTERS.find((f) => f.value === filter)?.label} 공시가 없습니다.`}
+        {/* ─── 오른쪽: Pro 전용 분석 패널 (sticky) ─── */}
+        <div className="lg:sticky lg:top-20">
+          <TierGate requiredTier="PRO">
+            <div className="h-20 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
+              3개월 이전 공시 이력 (Pro 전용)
+            </div>
+          </TierGate>
         </div>
-      )}
 
-      {Object.entries(groups).map(([dateLabel, items]) => (
-        <section key={dateLabel} aria-label={`${dateLabel} 공시`}>
-          <div className="mb-3 flex items-center gap-3">
-            <h2 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">{dateLabel}</h2>
-            <span className="inline-flex h-5 items-center rounded-full bg-primary/10 px-2 text-[11px] font-extrabold text-primary">{items.length}</span>
-            <span className="flex-1 border-t border-border" aria-hidden />
-          </div>
-          <ul className="flex flex-col gap-3">
-            {items.map((d) => (
-              <li key={d.id}>
-                <DisclosureCard disclosure={d} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-
-      {/* R4: content.length >= PAGE_SIZE 일 때만 "더 보기" 표시 — isFetching 중에는 disabled로 유지(소실 방지) */}
-      {canLoadMore && (
-        <div className="flex justify-center pt-2">
-          <button
-            type="button"
-            onClick={() => setPage(p => p + 1)}
-            disabled={isFetching}
-            className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            aria-label="공시 더 보기"
-          >
-            {isFetching ? "불러오는 중..." : "더 보기"}
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
