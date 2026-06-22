@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-22 (portfolio-search-keyboard-nav, portfolio-csv-upload Draft 추가)
+updated: 2026-06-22 (be-api-alignment-mvp-r1 Draft 추가)
 ---
 
 # Specs MOC
@@ -33,6 +33,10 @@ docs/specs/
 
 - [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 ARIA 키보드 네비게이션: ArrowDown/ArrowUp/Enter + aria-activedescendant (P1)
 - [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 (P3)
+
+**2026-06-22 FE 최종 점검 후속 — FE↔BE API 전수 비교**
+
+- [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 페이지네이션(P0) + rcept_dt 형식 수정(P1) + Stage 3/5 null 문서화 (2개 버그, DB 변경 없음)
 
 **2026-06-21 portfolio-management-e2e 리뷰 후속**
 

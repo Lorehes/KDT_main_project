@@ -11,6 +11,31 @@ updated: 2026-06-22
 
 ---
 
+## 2026-06-22 (25차) | FE↔BE API 정합 분석 + Spec 수립
+
+**산출**:
+- `dc-review-frontend` 실행 — 4개 공개 페이지(home·login·signup·pricing) Playwright 캡처, 종합 **A등급**
+- FE `lib/api/` 10개 파일 전수 분석 → 28개 REST 엔드포인트 계약 추출
+- BE 컨트롤러 12개 + DTO + Migration V1~V20 현황 대조
+- **P0 버그 식별**: `GET /notifications` — `List<>` 반환, FE + api_spec이 `PageResponse<T>` 요구 (알림 화면 파싱 불가)
+- **P1 버그 식별**: `rcept_dt` 포맷 불일치 — BE "YYYY-MM-DD", FE `groupByDate()` "YYYYMMDD" 비교 → "오늘"/"어제" 그루핑 불가
+- `docs/specs/Draft/be-api-alignment-mvp-r1.md` 생성 — 전수 비교표 + 구현 순서 포함
+- `docs/specs/README.md` MOC 등록
+
+### 결정 (코드에 드러나지 않는 사항)
+- **DB 변경 없음 확정**: V1~V20 스키마가 MVP 전 기능을 커버. 알림 pagination 인덱스(`idx_notifications_user`) 이미 존재.
+- **OTP 인메모리 유지**: Caffeine (단일 인스턴스 MVP) — 다중 인스턴스 전환 시 Redis 이관 후속.
+- **similar_disclosures/financial_context = null**: 의도적 (Stage 3/5 미구현). FE 이미 null 처리 확인됨.
+- **결제 Spec 제외**: payment-pg-integration.md 별도 Draft 존재, 본 세션 범위 아님.
+
+### 미완료 → 다음 세션
+- `be-api-alignment-mvp-r1` 구현 — `/dc-tech-review be-api-alignment-mvp-r1` → `/dc-implement` 순서
+  - R1: `NotificationController` PageResponse 전환 (3파일)
+  - R2: `DisclosureListItemResponse.rceptDt` BASIC_ISO_DATE 포맷 (1파일)
+  - R4: `/signup` submit 버튼 aria-label (1파일)
+
+---
+
 ## 2026-06-22 (24차) | 공시피드 2컬럼 레이아웃 재배치
 
 **작업 내용**:
