@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-22
 ---
 
 # FE 접근성 · Skeleton · UI 완성도 Spec
 
-> 상태: **Draft** (dc-plan 생성, 수동 리뷰에서 발견된 UX/A11y 갭)
+> 상태: Draft → **Approved** (2026-06-22, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -101,4 +101,68 @@ updated: 2026-06-09
 - Wave 4 (회귀): axe-core Playwright 추가 (별도 PR)
 - [[architecture-refactoring-cleanup]] R10 (`AlertDialog`) 과 중복 — 본 Spec 이 시각/접근성 측면, refactoring 이 코드 측면
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-06-22)
+
+### 아키텍처 분해
+
+- **영향 레이어**: frontend 전용 — `components/ui/`, `components/layout/`, `components/domain/`, `app/(app)/*`, `app/(auth)/signup/terms/`
+- **DB / 외부 계약 변경**: 없음
+- **신규**: `Skeleton.tsx` (ui), `useDelayedLoading` hook (선택)
+- **수정 대상**: AppShell · TierGate · SentimentBadge · terms/page · 5개 페이지 로딩 블록 · portfolios/page
+
+### 코드 현황 대조 (R 별 실측)
+
+| R | 요구사항 | 실측 현황 | 조치 필요 |
+|---|---------|----------|----------|
+| R1 | 스킵 네비게이션 링크 | `id="main-content"` 이미 존재 (AppShell:25). **링크 자체 미존재** | 추가 필요 |
+| R2 | TierGate `role="region"` + `aria-label` | 컨테이너 div에 role 없음. Button에 `aria-label` ✅ | 외부 div 수정 |
+| R3 | 체크박스 `role="checkbox"` | `aria-pressed` 사용 중 (terms:116·127) — 토글 버튼 semantics ≠ 체크박스 semantics | 교체 필요 |
+| R4 | `:focus-visible` 전역 보강 | globals.css `--ring` 토큰 정의 ✅, 개별 요소 `focus-visible:ring-2` 적용 ✅. 누락 요소 일괄 확인 필요 | 부분 보강 |
+| R5 | SentimentBadge 색상 대비 | `role="img"` + `aria-label` + 텍스트 + 아이콘 3중 표기 ✅. 색상 토큰 의존 → 대비 수치 코드 기준 미확인 | axe-core 실행 후 판단 |
+| R6 | `Skeleton.tsx` 신규 | `components/ui/` 에 없음 | 신규 생성 |
+| R7 | 5개 페이지 Skeleton 교체 | portfolios:101 · disclosures:138 · disclosures/[id]:34 · notifications:179 · dashboard:62 — 전부 텍스트 | 전부 교체 |
+| R8 | 200ms 임계치 | 없음 | hook 추가 or inline state |
+| R9 | TopBar 검색 결정 | **19차 세션(2026-06-22)에서 이미 제거** + `docs/issues/topbar-global-search.md` 이슈화 완료 | **Skip** |
+| R10 | `window.confirm` → AlertDialog | portfolios:45 `confirm()` 확인 · `alert-dialog.tsx` ui에 없음, `dialog.tsx` 존재 | shadcn AlertDialog 추가 or Dialog 재활용 |
+
+### 작업 카드
+
+| # | 작업 | 파일 | 난이도 | 의존성 |
+|---|------|------|--------|--------|
+| W1-1 | AppShell 스킵 네비 링크 추가 (`sr-only focus:not-sr-only`) | `AppShell.tsx` | 하 | - |
+| W1-2 | TierGate 컨테이너 `role="region"` + `aria-label` 추가 | `TierGate.tsx` | 하 | - |
+| W1-3 | terms/page 개별 체크박스 `aria-pressed` → `role="checkbox" aria-checked` 교체 | `terms/page.tsx` | 하 | - |
+| W1-4 | globals.css `*:focus-visible` 전역 fallback 추가 + 누락 요소 확인 | `globals.css` | 하 | - |
+| W2-1 | `Skeleton.tsx` 신규 생성 (shadcn 패턴 `animate-pulse bg-muted rounded-md`) | `components/ui/Skeleton.tsx` | 하 | - |
+| W2-2 | `useDelayedLoading(isLoading, 200)` hook 신규 (200ms 후 true 반환) | `lib/hooks/useDelayedLoading.ts` | 하 | W2-1 |
+| W2-3 | portfolios/page 로딩 텍스트 → 카드 Skeleton 3줄 (종목 카드 3개 높이) | `portfolios/page.tsx` | 하 | W2-1·W2-2 |
+| W2-4 | disclosures/page 로딩 텍스트 → 피드 카드 Skeleton 5개 | `disclosures/page.tsx` | 하 | W2-1·W2-2 |
+| W2-5 | disclosures/[id]/page 로딩 텍스트 → 상세 + 분석 블록 Skeleton | `disclosures/[id]/page.tsx` | 하 | W2-1·W2-2 |
+| W2-6 | notifications/page 로딩 텍스트 → 알림 행 Skeleton 5개 | `notifications/page.tsx` | 하 | W2-1·W2-2 |
+| W2-7 | dashboard/page 로딩 텍스트 → 대시보드 카드 Skeleton | `dashboard/page.tsx` | 하 | W2-1·W2-2 |
+| W3-1 | portfolios/page `confirm()` → shadcn `AlertDialog` 교체 (shadcn add alert-dialog) | `portfolios/page.tsx` | 중 | - |
+
+### DB / 마이그레이션 영향
+
+없음.
+
+### 외부 계약 영향
+
+없음. (DART/KRX/카카오/LLM 무관)
+
+### 리스크 & 법적 검토
+
+| 항목 | 내용 |
+|------|------|
+| R9 중복 작업 주의 | TopBar 검색 제거는 19차 세션 완료. Spec R9는 구현 없이 "완료" 처리 |
+| AlertDialog 패키지 추가 | `@radix-ui/react-alert-dialog` 신규 dep. 번들 영향 미미 (~3 kB gzipped) |
+| 200ms hook 부작용 | `useDelayedLoading`은 마운트 직후 타이머 시작 — `isLoading=false` 즉시 완료 시 Skeleton 미노출. 의도된 동작 |
+| SentimentBadge 색상 | 코드 구조 이미 AA 준수 설계. 실제 토큰 hex 값 검증은 axe-core Playwright 실행 시 확인. 토큰 미달 시 `globals.css` 토큰만 수정 (컴포넌트 코드 변경 불필요) |
+| 법적 제약 | A11y 전용 작업 — 자본시장법·개인정보 영향 없음 |
+
+### 예상 Wave 수
+
+- **Wave 1** — A11y 기본 (W1-1~W1-4): R1·R2·R3·R4 — 단순 attribute 추가. 1 PR
+- **Wave 2** — Skeleton (W2-1~W2-7): R5~R8 — 컴포넌트 1개 + hook 1개 + 5개 페이지 교체. 1 PR
+- **Wave 3** — UI 정리 (W3-1): R10 AlertDialog — 패키지 추가 + UI 교체. 1 PR
+- **Total**: 3 waves. R9 Skip (기완료). 전체 난이도 **하** (DB·BE 변경 없음, 코드 패턴 반복적)

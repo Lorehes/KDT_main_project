@@ -8,14 +8,20 @@
 //   atLimit에 isLoading 포함(R6) — 로딩 중 count=0으로 오활성 방지. 로딩 완료 후 실제 count로 재평가.
 //   매수가·수량은 목록에 표시하되 console.log 절대 금지(금융 개인정보, CLAUDE.md §7)
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePortfolios, useDeletePortfolio } from "@/lib/api/portfolios";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
+import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { PortfolioListItem } from "@/components/domain/PortfolioListItem";
 import { StockSearchCombobox } from "@/components/domain/StockSearchCombobox";
-import { buttonVariants } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import type { StockSearchResult } from "@/lib/api/stocks";
 
 const FREE_LIMIT = 3;
@@ -32,6 +38,9 @@ export default function PortfoliosPage() {
   const { isPro } = useTierCheck();
   const { data: portfolios, isLoading } = usePortfolios();
   const { mutate: deletePortfolio, isPending: isDeleting } = useDeletePortfolio();
+  const showSkeleton = useDelayedLoading(isLoading);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const count = portfolios?.length ?? 0;
   // isLoading 중에는 count=0이므로 atLimit=false가 되어 추가 버튼 오활성 — isLoading 포함
@@ -42,9 +51,17 @@ export default function PortfoliosPage() {
   };
 
   const handleDelete = useCallback((id: number, name: string) => {
-    if (!confirm(`"${name}"을 삭제하시겠습니까?`)) return;
-    deletePortfolio(id);
-  }, [deletePortfolio]);
+    setDeleteTarget({ id, name });
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    deletePortfolio(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+      onError: () => setDeleteError("삭제에 실패했습니다. 잠시 후 다시 시도해주세요."),
+    });
+  }, [deleteTarget, deletePortfolio]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,9 +114,20 @@ export default function PortfoliosPage() {
 
           {/* 등록 종목 리스트 */}
           <div className="rounded-2xl border border-border bg-card shadow-sm">
-            {isLoading ? (
-              <div className="py-10 text-center text-sm text-muted-foreground" role="status">불러오는 중...</div>
-            ) : !portfolios?.length ? (
+            {showSkeleton ? (
+              <div className="flex flex-col divide-y divide-border" role="status" aria-label="종목 목록 불러오는 중">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-4">
+                    <Skeleton className="size-9 rounded-lg" />
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-8 w-16 rounded-lg" />
+                  </div>
+                ))}
+              </div>
+            ) : isLoading ? null : !portfolios?.length ? (
               <div className="py-10 text-center text-sm text-muted-foreground">
                 아직 등록된 종목이 없습니다.
               </div>
@@ -117,6 +145,29 @@ export default function PortfoliosPage() {
             )}
           </div>
         </div>
+
+      {/* 종목 삭제 확인 AlertDialog */}
+      {/* isDeleting 중 Escape/배경 클릭으로 닫기 차단 — 뮤테이션 고아 방지 */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open && !isDeleting) { setDeleteTarget(null); setDeleteError(null); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>종목 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{deleteTarget?.name}&quot;을 포트폴리오에서 삭제하시겠습니까?
+              삭제하면 해당 종목의 공시 알림을 받을 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="px-1 text-sm text-destructive" role="alert">{deleteError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
         {/* 추천 종목 사이드 */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">

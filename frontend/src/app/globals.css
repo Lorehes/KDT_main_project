@@ -164,6 +164,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* [목적] focus-visible 전역 폴백 — 명시적 focus-visible:outline-none이 없는 요소의 키보드 포커스 표시
+     [이유] WCAG 2.1 SC 2.4.7 (AA). Tailwind utilities 레이어가 base보다 우선하므로
+            focus-visible:outline-none(components/buttons)이 이 규칙을 정상 오버라이드함 */
+  *:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
   body {
     @apply bg-background text-foreground;
   }

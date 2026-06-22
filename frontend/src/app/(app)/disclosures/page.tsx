@@ -10,9 +10,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useDisclosures, type Sentiment, type Disclosure } from "@/lib/api/disclosures";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
+import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
 import { TierGate } from "@/components/domain/TierGate";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type FilterType = "ALL" | Sentiment | "WITHHELD";
 
@@ -73,6 +75,8 @@ export default function DisclosuresFeedPage() {
       setAllItems(prev => page === 0 ? data.content : [...prev, ...data.content]);
     }
   }, [data, page]);
+
+  const showSkeleton = useDelayedLoading(isLoading);
 
   // R4: content.length < PAGE_SIZE → 마지막 페이지 감지. isFetching과 분리해 버튼 가시성 유지
   const canLoadMore = (data?.content.length ?? 0) >= PAGE_SIZE;
@@ -135,9 +139,21 @@ export default function DisclosuresFeedPage() {
       )}
 
       {/* 피드 */}
-      {isLoading && (
-        <div className="py-12 text-center text-sm text-muted-foreground" role="status" aria-live="polite">
-          공시를 불러오는 중...
+      {showSkeleton && (
+        <div className="flex flex-col gap-3" role="status" aria-label="공시 피드 불러오는 중">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <Skeleton className="size-10 shrink-0 rounded-xl" />
+              <div className="flex flex-1 flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

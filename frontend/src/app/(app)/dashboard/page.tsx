@@ -13,13 +13,16 @@ import { buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { usePortfolios } from "@/lib/api/portfolios";
 import { useDisclosures } from "@/lib/api/disclosures";
+import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard, SentimentStatCard } from "@/components/domain/StatCards";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { data: portfolios } = usePortfolios();
   const { data: disclosurePage, isLoading } = useDisclosures({ scope: "portfolio", size: 10 });
+  const showSkeleton = useDelayedLoading(isLoading);
 
   const hasPortfolios = (portfolios?.length ?? 0) > 0;
   const disclosures = disclosurePage?.content ?? [];
@@ -57,11 +60,23 @@ export default function DashboardPage() {
       {/* 공시 피드 or Empty state */}
       {!hasPortfolios ? (
         <EmptyState />
-      ) : isLoading ? (
-        <div className="flex justify-center py-12 text-sm text-muted-foreground" role="status" aria-live="polite">
-          공시를 불러오는 중...
+      ) : showSkeleton ? (
+        <div className="flex flex-col gap-3" role="status" aria-label="공시 피드 불러오는 중">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <Skeleton className="size-10 shrink-0 rounded-xl" />
+              <div className="flex flex-1 flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+          ))}
         </div>
-      ) : disclosures.length === 0 ? (
+      ) : isLoading ? null : disclosures.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
           오늘 등록 종목의 신규 공시가 없습니다.
         </div>

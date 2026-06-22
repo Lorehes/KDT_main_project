@@ -28,7 +28,6 @@ docs/specs/
 **2026-06-09 코드 리뷰 후속 (수동 분석 + dc-review-code 종합 — 56개 이슈를 8개 Spec 으로 분리)**
 
 - [[performance-caching-staletime]] — 성능/캐싱: Caffeine portfolios/analysis + TanStack staleTime + size 제한 + 복합 인덱스
-- [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + TopBar 검색 결정
 
 **2026-06-21 portfolio-management-e2e 리뷰 후속**
 
@@ -40,6 +39,7 @@ docs/specs/
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V19) + 캐싱 + 미완료 계정 배치 정리
 
 ### Approved
+- [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
 
 ### Done
 - [[code-review-fixes-onboarding-portfolio]] — 온보딩·포트폴리오 리뷰 수정: C-1·H 7건·M 5건·L 4건 완료 (2026-06-18)

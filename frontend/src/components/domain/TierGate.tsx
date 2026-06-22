@@ -2,7 +2,8 @@
 
 // [목적] 티어 미달 컨텐츠 잠금 오버레이 — 업셀 CTA로 전환 유도
 // [이유] 상위 Stage(Pro/Premium) 필드는 API에서 제외되어 반환됨. 마스킹이 아닌 잠금+업셀 패턴(design_structure §3.1)
-// [사이드 임팩트] 공시 상세 Pro·Premium 섹션에서 사용. 클릭 시 ProUpsellModal 또는 /pricing 이동
+// [사이드 임팩트] 공시 상세 Pro·Premium 섹션에서 사용. 클릭 시 ProUpsellModal 또는 /pricing 이동.
+//   role="region" + aria-label 추가로 스크린리더가 "Pro 전용 기능 (잠김)" 영역임을 인지 (WCAG 1.3.6)
 // [수정 시 고려사항] children에 흐린 미리보기를 넣으면 overlay가 덮음.
 //   API가 상위 Stage 데이터를 반환하지 않으므로 children은 플레이스홀더 skeleton만 사용
 //   overlay가 absolute inset-0이라 카드 높이가 children에 종속 — 짧은 children(h-20 등)이면
@@ -27,7 +28,11 @@ export function TierGate({ requiredTier, children, className }: TierGateProps) {
   const { setUpsellModalOpen } = useUIStore();
 
   return (
-    <div className={`relative min-h-[16rem] overflow-hidden rounded-[var(--radius-lg)] border border-border ${className ?? ""}`}>
+    <div
+      role="region"
+      aria-label={`${TIER_LABEL[requiredTier]} 전용 기능 (잠김)`}
+      className={`relative min-h-[16rem] overflow-hidden rounded-[var(--radius-lg)] border border-border ${className ?? ""}`}
+    >
       {children && (
         <div className="pointer-events-none select-none opacity-30 blur-[2px]">
           {children}

@@ -58,6 +58,9 @@ function TermsPage() {
   };
 
   const requiredDone = TERMS_ITEMS.filter((t) => t.required).every((t) => checked[t.key]);
+  // WCAG 4.1.2: aria-checked="mixed" — 일부만 체크된 인디터미네이트 상태를 스크린리더에 전달
+  const someRequired = TERMS_ITEMS.filter((t) => t.required).some((t) => checked[t.key]);
+  const partialRequired = someRequired && !requiredDone;
 
   const handleContinue = async () => {
     if (!requiredDone) return;
@@ -111,10 +114,11 @@ function TermsPage() {
             type="button"
             onClick={toggleAll}
             className={cn(
-              "flex w-full items-center gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors",
+              "flex w-full items-center gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               requiredDone ? "border-primary bg-primary/5" : "border-border",
             )}
-            aria-pressed={requiredDone}
+            role="checkbox"
+            aria-checked={requiredDone ? true : partialRequired ? "mixed" : false}
           >
             <Checkbox checked={requiredDone} />
             <span className="text-base font-extrabold text-foreground">필수 항목 전체 동의</span>
@@ -126,7 +130,8 @@ function TermsPage() {
                 <button
                   type="button"
                   onClick={() => toggle(key)}
-                  aria-pressed={!!checked[key]}
+                  role="checkbox"
+                  aria-checked={!!checked[key]}
                   aria-label={label}
                   className="mt-0.5 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 >

@@ -17,8 +17,10 @@ import Link from "next/link";
 import { Settings2, AlertTriangle } from "lucide-react";
 import { useNotifications, useMarkAsRead, useMarkAllAsRead, useNotificationSettings } from "@/lib/api/notifications";
 import { usePortfolios } from "@/lib/api/portfolios";
+import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { PortfolioSheet } from "@/components/domain/PortfolioSheet";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/lib/api/notifications";
@@ -48,6 +50,7 @@ function groupByDate(notifications: Notification[]) {
 
 export default function NotificationsPage() {
   const { data, isLoading } = useNotifications();
+  const showSkeleton = useDelayedLoading(isLoading);
   const [filter, setFilter] = useState<FilterType>("ALL");
   const markAsRead    = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
@@ -176,9 +179,23 @@ export default function NotificationsPage() {
       </div>
 
       {/* 알림 목록 */}
-      {isLoading ? (
-        <div className="py-12 text-center text-sm text-muted-foreground" role="status" aria-live="polite">알림을 불러오는 중...</div>
-      ) : filtered.length === 0 ? (
+      {showSkeleton ? (
+        <div className="flex flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm" role="status" aria-label="알림 불러오는 중">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-start gap-3 border-b border-border last:border-b-0 px-5 py-4">
+              <Skeleton className="size-11 shrink-0 rounded-xl" />
+              <div className="flex flex-1 flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-10 rounded-full" />
+                </div>
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : isLoading ? null : filtered.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
           {filter === "UNREAD" ? "안읽은 알림이 없습니다." : "알림이 없습니다."}
         </div>

@@ -13,6 +13,8 @@ import Link from "next/link";
 import { ExternalLink, ArrowLeft } from "lucide-react";
 import { useDisclosure, useDisclosureAnalysis, EXPECTED_REACTION_CONFIG } from "@/lib/api/disclosures";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
+import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SUPPORT_EMAIL } from "@/lib/constants";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { ConfidenceMeter } from "@/components/domain/ConfidenceMeter";
@@ -29,11 +31,42 @@ export default function DisclosureDetailPage() {
   const { data: disclosure, isLoading: discLoading } = useDisclosure(id);
   // R7: disclosure 로드 완료 후 분析 쿼리 활성 — 미스매치 데이터 렌더 방지
   const { data: analysis, isLoading: analysisLoading } = useDisclosureAnalysis(id, { enabled: !!disclosure });
+  const showSkeleton = useDelayedLoading(discLoading || analysisLoading);
 
   if (discLoading || analysisLoading) {
+    if (!showSkeleton) return null;
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground" role="status" aria-live="polite">
-        공시 정보를 불러오는 중...
+      <div className="mx-auto max-w-4xl" role="status" aria-label="공시 상세 불러오는 중">
+        <Skeleton className="mb-5 h-5 w-24" />
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-7 w-16 rounded-full" />
+              </div>
+              <div className="border-t border-border pt-4">
+                <Skeleton className="h-4 w-full" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          </div>
+          <div className="hidden lg:flex lg:flex-col lg:gap-4">
+            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-4 w-36" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

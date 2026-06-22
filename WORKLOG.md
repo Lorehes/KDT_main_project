@@ -11,6 +11,31 @@ updated: 2026-06-17
 
 ---
 
+## 2026-06-22 (20차) | WCAG AA 접근성 + Skeleton UI + AlertDialog — M2 완료
+
+**작업 내용**:
+- `/dc-implement fe-accessibility-skeleton-ui` (W1~W3 전체)
+  - **W1 접근성**: AppShell 스킵 네비(sr-only focus:not-sr-only) / TierGate role=region+aria-label / terms role=checkbox aria-checked(tri-state "mixed" 포함) / globals.css *:focus-visible 전역 폴백
+  - **W2 Skeleton**: `skeleton.tsx` 신규 (animate-pulse + motion-reduce:animate-none) / `useDelayedLoading` hook(200ms delay) / portfolio·disclosures·disclosures[id]·notifications·dashboard 5페이지 로딩 텍스트→Skeleton
+  - **W3 AlertDialog**: `alert-dialog.tsx` 신규 (@base-ui/react/dialog 재활용, 별도 dep 없음) / portfolios `window.confirm()` → AlertDialog 전환
+- `/dc-review-code` 5-에이전트 리뷰(security·correctness·maintainability·performance·adversarial) → 종합 B+
+  - **HIGH 3건** 즉시 수정: aria-checked="mixed" 누락(WCAG 4.1.2) / confirmDelete onError 에러 처리 / animate-pulse prefers-reduced-motion 미적용
+  - **MEDIUM 3건** 즉시 수정: Skeleton.tsx→skeleton.tsx 소문자(Linux CI 호환) / Escape-while-isDeleting 다이얼로그 차단 / confirmDelete useCallback 추가
+- `pnpm typecheck` 통과
+
+**설계 결정**:
+- AlertDialog는 `@radix-ui/react-alert-dialog` 미설치 → `@base-ui/react/dialog` 재활용 + `role="alertdialog"` override. 새 dep 추가 대신 기존 primitive 재사용 (통합기획서 §5 dep 최소화 원칙)
+- useDelayedLoading 200ms 임계값: 네트워크 환경 상 `< 200ms` 응답은 skeleton 없이 즉시 콘텐츠 표시, `≥ 200ms`만 skeleton 노출 → CLS 최소화와 UX 사이 최적점
+- skip nav 모바일 미동작(#main-content-mobile 별도 ID)은 허용 — 모바일은 탭바 구조로 사이드바 미존재, WCAG 2.4.1 모바일 적용 범위 외
+
+**미완료 · 다음 세션**:
+- `review-frontend-hover-capture` Draft → Approved → implement (Playwright timing race)
+- `review-frontend-auth-capture` Draft → Approved → implement (BE 직접 호출 경로 수정)
+- `portfolio-review-followup` Draft → tech-review → implement (M-1·M-4·M-5·M-6·L-1~L-5)
+- M3 시작(6/23~): Cloud LLM 전환(`LLM_PROVIDER` env) / FE staleTime 튜닝(disclosures 5min·portfolios 30s) / BE Caffeine 캐시 TTL
+
+---
+
 ## 2026-06-22 (19차) | PublicNavbar 인증 분기 + 네비 정리
 
 **작업 내용**:
