@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (be-api-alignment-mvp-r1·oauth-consent-enforcement Approved→Done)
+updated: 2026-06-23 (portfolio-search-keyboard-nav Draft→Approved)
 ---
 
 # Specs MOC
@@ -31,7 +31,6 @@ docs/specs/
 
 **2026-06-22 dc-review-frontend 리뷰 후속 (portfolios 페이지)**
 
-- [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 ARIA 키보드 네비게이션: ArrowDown/ArrowUp/Enter + aria-activedescendant (P1)
 - [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 (P3)
 
 **2026-06-22 FE 최종 점검 후속 — FE↔BE API 전수 비교**
@@ -49,6 +48,7 @@ docs/specs/
 
 ### Approved
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
+- [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 키보드 네비: ArrowKey·Enter·activedescendant (new/page + Combobox 2곳, 2026-06-23 Approved)
 
 ### Done
 - [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware E4 게이트 + JWT onboarding_completed + OAuthTermsPage + Vitest 30건 (2026-06-23)
