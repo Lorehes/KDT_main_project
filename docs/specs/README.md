@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-22 (be-api-alignment-mvp-r1 Draft 추가)
+updated: 2026-06-23 (oauth-consent-enforcement Draft→Approved)
 ---
 
 # Specs MOC
@@ -44,10 +44,10 @@ docs/specs/
 
 **2026-06-16 OAuth 소셜 가입 플로우 수정 후속 (코드리뷰 Medium/High 이슈 Spec화)**
 
-- [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware consent 체크 + JWT claims 인코딩 + OAuthTermsPage 분리
-- [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V19) + 캐싱 + 미완료 계정 배치 정리
+- [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V21) + 캐싱 + 미완료 계정 배치 정리
 
 ### Approved
+- [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware consent 체크 + JWT onboarding_completed 인코딩 + OAuthTermsPage 분리 (2026-06-23 Approved)
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
 
 ### Done

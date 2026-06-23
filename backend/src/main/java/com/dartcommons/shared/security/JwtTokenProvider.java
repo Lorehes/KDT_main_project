@@ -16,7 +16,7 @@ import java.util.HexFormat;
 
 /*
  * [목적] JWT access token 발급·파싱·검증 + refresh token (random UUID 기반) 생성·해싱.
- *       access token: HMAC-SHA256 서명, subject=userId, claims에 email/tier 포함.
+ *       access token: HMAC-SHA256 서명, subject=userId, claims에 email/tier/onboarding_completed 포함.
  *       refresh token: SecureRandom base64, SHA-256 해시를 refresh_tokens 테이블에 저장.
  * [이유] jjwt-api 0.12.x 사용 — Spring Boot 3.x 호환, 단순 API.
  *       refresh token을 JWT로 만들지 않는 이유: 서버측 무효화(logout/rotation)가 필요하므로
@@ -25,15 +25,17 @@ import java.util.HexFormat;
  *       키 생성: `openssl rand -base64 32` (32 random bytes → 44-char Base64).
  * [사이드 임팩트] R14 파괴적 변경: 기존 raw string JWT_SECRET은 Base64 디코딩 실패 → 부팅 즉시 실패.
  *               JWT_SECRET 변경 시 기존 발급 access token 전부 무효화됨 — 사용자 재로그인 1회 필요.
- *               AuthService(Wave 2)가 이 컴포넌트에 의존 — 변경 시 AuthService 동반 확인.
+ *               generateAccessToken() 시그니처 변경(onboarding_completed 파라미터 추가) — 유일 호출처 AuthService.issueTokenPairInternal() 동반 수정됨.
+ *               FE middleware.ts가 "onboarding_completed" claim 이름을 하드코딩 — 이름 변경 시 FE도 동기화 필수.
  * [수정 시 고려사항] kid(key id) + 멀티 키 지원으로 무중단 key rotation 가능(현재 미구현).
  *                  토큰 블랙리스트(access token 즉시 무효화)가 필요하면 Redis TTL 저장 추가.
  */
 @Component
 public class JwtTokenProvider {
 
-    private static final String CLAIM_EMAIL = "email";
-    private static final String CLAIM_TIER  = "tier";
+    private static final String CLAIM_EMAIL                = "email";
+    private static final String CLAIM_TIER                 = "tier";
+    private static final String CLAIM_ONBOARDING_COMPLETED = "onboarding_completed";
 
     private final SecretKey signingKey;
     private final long      accessTtlMs;
@@ -58,17 +60,28 @@ public class JwtTokenProvider {
         this.refreshTtlMs = (long) props.refreshTtlDays() * 24 * 60 * 60 * 1000;
     }
 
-    /** access token 발급. subject=userId, claims에 email/tier 포함. */
-    public String generateAccessToken(Long userId, String email, String tier) {
+    /**
+     * access token 발급. subject=userId, claims에 email/tier/onboarding_completed 포함.
+     * onboardingCompleted: user.getOnboardingCompletedAt() != null — 온보딩 완료 여부.
+     * FE middleware가 서명 검증 없이 payload를 디코딩해 라우팅 게이트로 사용.
+     * 인가 목적 서명 검증은 BE JwtAuthenticationFilter가 담당.
+     */
+    public String generateAccessToken(Long userId, String email, String tier, boolean onboardingCompleted) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_TIER, tier)
+                .claim(CLAIM_ONBOARDING_COMPLETED, onboardingCompleted)
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + accessTtlMs))
                 .signWith(signingKey)
                 .compact();
+    }
+
+    /** onboarding_completed claim 추출. 파싱 실패 또는 claim 부재 시 false 반환. */
+    public boolean extractOnboardingCompleted(String token) {
+        return Boolean.TRUE.equals(parseClaims(token).get(CLAIM_ONBOARDING_COMPLETED, Boolean.class));
     }
 
     /** refresh token raw 값 생성 (SecureRandom base64). DB에는 해시만 저장. */

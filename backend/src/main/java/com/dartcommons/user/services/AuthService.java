@@ -40,7 +40,8 @@ import java.util.stream.Collectors;
  *       refresh rotation: 갱신마다 기존 해시 삭제 + 신규 발급 → 토큰 재사용 방지.
  *       "인증 실패" 단일 메시지: 이메일 존재 여부를 노출하지 않아 계정 열거 공격 차단.
  *       OAuth state CSRF: Caffeine 캐시(TTL 5분)로 state UUID 저장, 콜백에서 대조 후 삭제.
- *       OAuth 신규 가입은 계정만 생성(동의 보류) + is_new_user=true 반환 → FE가 /signup/terms?oauth=true 로 유도.
+ *       OAuth 신규 가입은 계정만 생성(동의 보류) + is_new_user=true 반환 → FE가 /signup/terms/oauth 로 유도.
+ *       issueTokenPairInternal()은 onboarding_completed(= onboarding_completed_at IS NOT NULL)를 JWT claim에 포함 → FE middleware 게이트 사용.
  *       동의는 사용자가 직접 화면에서 수락 후 POST /users/me/oauth-consent 별도 호출(UserController 처리).
  * [사이드 임팩트] 이메일 signup은 ConsentService.recordSignupConsents()와 동일 트랜잭션 — 롤백 시 동의 이력도 함께 롤백.
  *               OAuth autoSignup은 계정 생성만 수행 — consent_logs 없는 상태로 남을 수 있음.
@@ -332,7 +333,8 @@ public class AuthService {
         refreshTokenRepository.save(token);
 
         String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(), user.getEmail(), user.getTier().name());
+                user.getId(), user.getEmail(), user.getTier().name(),
+                user.getOnboardingCompletedAt() != null);
 
         return isNewUser
                 ? AuthResponse.ofNew(accessToken, rawRefresh, jwtProperties.accessTtlMinutes())

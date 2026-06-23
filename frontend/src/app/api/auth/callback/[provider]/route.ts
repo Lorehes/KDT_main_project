@@ -54,9 +54,10 @@ export async function GET(
   const tokens: { access_token: string; refresh_token: string; is_new_user: boolean } =
     await callbackRes.json();
 
-  // is_new_user=true: 신규 가입 또는 약관 동의 미완료 → 약관 동의 화면으로 유도
+  // is_new_user=true: 신규 가입 또는 온보딩 미완료 → 소셜 전용 약관 동의 화면으로 유도
+  // /signup/terms?oauth=true URL 파라미터 의존 제거(M-S1) — 독립 경로 /signup/terms/oauth 사용
   const isProd = process.env.NODE_ENV === "production";
-  const redirectPath = tokens.is_new_user ? "/signup/terms?oauth=true" : "/dashboard";
+  const redirectPath = tokens.is_new_user ? "/signup/terms/oauth" : "/dashboard";
   const redirect = NextResponse.redirect(new URL(redirectPath, req.url));
 
   redirect.cookies.set("dr_session", tokens.access_token, {

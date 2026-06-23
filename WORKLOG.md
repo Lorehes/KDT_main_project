@@ -2,12 +2,39 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-22
+updated: 2026-06-23
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-23 (27차) | E4 OAuth 약관게이트 + JWT claim + Vitest
+
+**산출**:
+- BE: `JwtTokenProvider.generateAccessToken()` 4번째 파라미터(`onboardingCompleted`) 추가, `CLAIM_ONBOARDING_COMPLETED` 상수, `extractOnboardingCompleted()` 헬퍼
+- BE: `AuthService.issueTokenPairInternal()` — `onboardingCompletedAt != null` 여부로 claim 주입
+- FE: `frontend/src/lib/auth/jwt-utils.ts` 순수 함수 `decodeJwtPayload()` 분리 (Edge Runtime 의존 없음, 테스트 가능)
+- FE: `frontend/src/middleware.ts` 전면 재작성 — `PUBLIC_EXACT Set` + `ONBOARDING_PREFIXES` prefix 방식으로 `/signup/terms` 통과 버그 해소, E4 게이트 구현
+- FE: `/signup/terms/oauth` 소셜 전용 약관 동의 페이지 신설 (`oauth/page.tsx`)
+- FE: `TermsCheckboxList` 공유 컴포넌트 신설 — 이메일·소셜 양쪽 공유, WCAG 2.1 AA 완비
+- FE: `/signup/terms/page.tsx` 단순화 — `isOAuth`/`Suspense`/`useSearchParams` 완전 제거
+- FE: `/signup/complete/page.tsx` M-1 fix — 완료 후 `/api/auth/refresh` 호출로 새 토큰(claim 포함) 발급
+- FE: `vitest.config.ts` + `jwt-utils.test.ts`(8건) + `middleware.test.ts`(22건) — Vitest 프로젝트 최초 단위 테스트 설정
+
+### 결정 (코드에 드러나지 않는 사항)
+- **H-1 backward-compat**: 기존 토큰엔 `onboarding_completed` claim이 없음 → `undefined !== true` 평가로 모든 기존 사용자 30분 중단 버그 발생 위험. `claims !== null && claims.onboarding_completed === false` 패턴으로 수정해 claim 없는 구 토큰은 게이트를 통과하게 처리.
+- **D1 차단 기준**: `onboarding_completed` (V20 `onboarding_completed_at IS NOT NULL`)로 단일화. `consent_completed`(약관 3종만)보다 상위집합이라 더 엄격.
+- **D2 redirect 목적지**: `/signup/terms/oauth` 단일 경로 (MVP). 향후 단계별 확장 가능.
+- **PUBLIC_EXACT vs ONBOARDING_PREFIXES 분리**: `startsWith("/signup")` 로 `/signup/terms`를 통과시키면 `/signup/complete`도 통과 → `SIGNUP_PROTECTED_EXACT`로 세션 필수 예외 처리. `/signup/complete` 세션 없이 접근 → `/login?redirect=/signup/complete`.
+- **Spec 전제 3건 정정**: ① `onboarding_completed` 대신 `consent_completed` 예정이었으나 V20에서 이미 `onboarding_completed_at` 필드로 확정됨 ② `/signup/terms?oauth=true` 대신 독립 경로로 설계 변경됨 ③ `hasRequiredConsents()`가 버그로 폐기되고 V20 필드 기반으로 전환됨.
+
+### 미완료 → 다음 세션
+- Playwright E2E 테스트에 E4 게이트 시나리오 추가 (OAuth 가입 후 약관 미동의 → redirect 흐름)
+- `/dc-test-verify` 실행 — BE Testcontainers 전체 스위트 실행 확인 (현재 FE Vitest만 확인)
+- Stage 3 RAG `similar_disclosures` Spec 별도 작성 필요
 
 ---
 

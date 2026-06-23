@@ -237,8 +237,15 @@ export default function CompletePage() {
     clear();
     // fetchMe: authStore.user는 null로 초기화되므로 닉네임 표시를 위해 최초 1회 필요
     fetchMe();
-    // 온보딩 완료 마킹 — OAuth is_new_user 판단 전환. 이미 완료된 경우 멱등(204).
+    // 온보딩 완료 마킹 — onboarding_completed_at 설정 → JWT claim 갱신 필요.
+    // 성공 후 /api/auth/refresh를 await: 새 토큰(onboarding_completed=true)이 쿠키에 저장된 뒤
+    // 사용자가 CTA 버튼을 눌러 /dashboard로 이동해야 middleware 게이트 통과.
+    // refresh를 await하지 않으면 onSuccess → CTA 클릭 경쟁 조건 발생 — 구 토큰으로 /signup/terms/oauth 튕김.
+    // refresh 실패는 무시(catch) — backward-compat 처리로 구 토큰도 30분 내 자동 갱신됨.
     completeOnboarding(undefined, {
+      onSuccess: async () => {
+        await fetch("/api/auth/refresh", { method: "POST" }).catch(() => {});
+      },
       onError: () => toast.error("온보딩 처리 중 오류가 발생했습니다. 페이지를 새로고침해주세요."),
     });
   // clear·fetchMe·completeOnboarding은 모두 안정적 참조(Zustand action / TanStack mutate)
