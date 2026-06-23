@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-16
 updated: 2026-06-23
 ---
 
 # OAuth 동의 데이터 정합성 개선 Spec
 
-> 상태: Draft → **Approved** (2026-06-23, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-23) → **Done** (2026-06-23, dc-push Wave 1+3 완료)
 
 ## 배경 / 목적
 
