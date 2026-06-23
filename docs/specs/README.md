@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (e2e-token-refresh-mecount-fix Done)
+updated: 2026-06-23 (performance-caching-staletime Done)
 ---
 
 # Specs MOC
@@ -42,10 +42,10 @@ docs/specs/
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V21) + 캐싱 + 미완료 계정 배치 정리
 
 ### Approved
-- [[performance-caching-staletime]] — 성능/캐싱: Caffeine @EnableCaching+portfolioStockCodes/analysisResult + TanStack staleTime (2026-06-23 Approved · R5·R10 기완료, R6 드롭)
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
 
 ### Done
+- [[performance-caching-staletime]] — 성능/캐싱: Caffeine+portfolioStockCodes/analysisResult + TanStack staleTime — 149/149 + 30/30 통과 (2026-06-23)
 - [[e2e-token-refresh-mecount-fix]] — E2E meCallCount 오차 수정: concurrent-auth 픽스처 AuthBroadcastListener 조건부 마운트 (2026-06-23)
 - [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 키보드 네비: ArrowKey·Enter·activedescendant + useDebounce 공유훅 + Playwright 3케이스 (2026-06-23)
 - [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware E4 게이트 + JWT onboarding_completed + OAuthTermsPage + Vitest 30건 (2026-06-23)

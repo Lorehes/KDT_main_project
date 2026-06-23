@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-23
 ---
 
 # 성능 · 캐싱 보강 Spec (Caffeine + TanStack staleTime + size 제한)
 
-> 상태: Draft → **Approved** (2026-06-23, dc-tech-review 승인 — R1·R3 정정, R5·R10 기완료 확인, R6 드롭)
+> 상태: Draft → Approved (2026-06-23, dc-tech-review 승인 — R1·R3 정정, R5·R10 기완료 확인, R6 드롭) → **Done** (2026-06-23, 구현 완료 — 149/149 BE + 30/30 FE 통과, 28936c1)
 
 ## 배경 / 목적
 
