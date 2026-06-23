@@ -44,6 +44,7 @@ docs/specs/
 ### Approved
 
 ### Done
+- [[portfolio-management-e2e]] — 포트폴리오 종목 관리 E2E: corp_name 응답·staleTime·알림 토글 Option A(설정 링크 교체) (2026-06-23 Done)
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-23 Done)
 - [[performance-caching-staletime]] — 성능/캐싱: Caffeine+portfolioStockCodes/analysisResult + TanStack staleTime — 149/149 + 30/30 통과 (2026-06-23)
 - [[e2e-token-refresh-mecount-fix]] — E2E meCallCount 오차 수정: concurrent-auth 픽스처 AuthBroadcastListener 조건부 마운트 (2026-06-23)

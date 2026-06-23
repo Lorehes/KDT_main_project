@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-23
 ---
 
 # 포트폴리오 종목 관리 E2E Spec (portfolio-management-e2e)
 
-> 상태: **Approved** (2026-06-16, dc-tech-review 승인)
+> 상태: Approved (2026-06-16, dc-tech-review 승인) → **Done** (2026-06-23, 구현·리뷰·커밋 완료)
 
 ## 배경 / 목적
 
