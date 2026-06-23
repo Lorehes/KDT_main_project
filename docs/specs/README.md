@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (oauth-consent-enforcement Draft→Approved)
+updated: 2026-06-23 (e2e-token-refresh-mecount-fix Draft 추가)
 ---
 
 # Specs MOC
@@ -45,6 +45,7 @@ docs/specs/
 **2026-06-16 OAuth 소셜 가입 플로우 수정 후속 (코드리뷰 Medium/High 이슈 Spec화)**
 
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V21) + 캐싱 + 미완료 계정 배치 정리
+- [[e2e-token-refresh-mecount-fix]] — E2E 토큰 갱신 테스트 픽스: AuthBroadcastListener 조건부 마운트로 meCallCount 오차 수정 (1줄 수정)
 
 ### Approved
 - [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware consent 체크 + JWT onboarding_completed 인코딩 + OAuthTermsPage 분리 (2026-06-23 Approved)

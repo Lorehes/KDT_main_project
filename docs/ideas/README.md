@@ -18,4 +18,6 @@ updated: 2026-05-28
 
 ## 현황
 
-*(없음)*
+### Issues (기술 부채 / 미구성)
+
+- [[fe-unit-test-infra]] — FE Vitest + Testing Library 미구성 (2026-06-23, Open)
