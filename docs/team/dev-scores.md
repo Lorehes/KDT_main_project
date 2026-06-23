@@ -87,7 +87,7 @@ updated: 2026-06-02
 | 2026-06-23 | Jin | 4dc407c | fix(frontend): E2E meCallCount 픽스 — AuthBroadcastListener 조건부 마운트 [4/8 S] | Frontend/Docs | 4 | 8 | S | E2E meCallCount 픽스 |
 | 2026-06-23 | Jin | 15fac11 | feat(perf): Caffeine 캐시 인프라 + staleTime 정책 [7/8 L] | Shared/Analysis/User/Frontend | 7 | 8 | L | Caffeine 캐시 인프라 + staleTime 정책 |
 | 2026-06-23 | Jin | 2a5f497 | chore(spec): fe-accessibility-skeleton-ui Approved→Done [2/8 S] | Docs | 2 | 8 | S | fe-accessibility-skeleton-ui Spec Done 전환 |
-| 2026-06-23 | Jin | ca5b667 | feat(frontend): 포트폴리오 알림 토글 dead code 제거 [3/8 S] | Frontend | 3 | 8 | S | 알림토글 제거+설정 링크 안내 |
+| 2026-06-23 | Jin | 0fd5092 | feat(frontend): 포트폴리오 알림 토글 dead code 제거 [3/8 S] | Frontend | 3 | 8 | S | 알림토글 제거+설정 링크 안내 |
 <!-- SCORES -->
 
 ## 기간별 집계
