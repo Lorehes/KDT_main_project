@@ -11,6 +11,32 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (34차) | 투자 경험·주 사용 시점 DB 저장 활성화 (user-profile-investment-experience Wave 1+2)
+
+**산출**:
+- BE(신규): `V22__add_profile_fields_to_users.sql` — `investment_experience`(VARCHAR 15, nullable, CHECK) + `preferred_time`(VARCHAR 10, nullable, CHECK) 컬럼 추가
+- BE(수정): `UserEntity.java` — `InvestmentExperience`·`PreferredTime` enum 추가, 필드 2개(`@Enumerated STRING`), `updateProfile()` null-safe 메서드 추가, 클래스 주석 V22 반영
+- BE(수정): `UpdateMeRequest.java` — `nickname` `@NotBlank` → nullable(`@Size(min=1)` 유지), `investmentExperience`·`preferredTime` String 필드 추가(`@Pattern` 검증), DTO 주석 null/"" 경계 명시
+- BE(수정): `UserMeResponse.java` — `investment_experience`·`preferred_time` 응답 필드 추가(null 허용), `from()` 팩토리 null-safe 처리
+- BE(수정): `UserService.java` — `updateMe()` nickname null-safe 분기 + enum 파싱 후 `updateProfile()` 호출
+- BE(수정): `UserController.java` — stale 주석 정정(V22 필드 반영)
+- FE(수정): `authStore.ts` — `AuthUser` 타입에 `investment_experience`·`preferred_time` optional 필드 추가
+- FE(수정): `auth.ts` — `UpdateMeBody.nickname` optional 전환, 두 필드 추가. 스테일 주석 "BE 미지원" 제거
+- FE(수정): `signup/profile/page.tsx` — `useUpdateMe()` 호출 복원(nickname 미전송, 미선택 → undefined 변환, `isPending` 로딩, `try/catch + toast.error` 추가)
+- Docs: `docs/issues/user-profile-v22-integration-test.md` 신규 (P2)
+
+### 결정
+- **nickname nullable 채택**: `@NotBlank` 제거. profile 단계에서 page refresh 시 `authStore.user=null` → nickname 미전송 안전(BE null → skip). 기존 마이페이지 닉네임 변경은 nickname 포함 전송으로 하위 호환.
+- **@Pattern 컨트롤러 검증**: enum 잘못된 값은 컨트롤러 단계 400. 서비스 `valueOf()` 실패 경로 없음.
+- **빈 문자열 → undefined 변환 (FE)**: `(experience || undefined)` — JSON 직렬화 시 필드 생략 → BE null 수신 → skip. null과 "" 혼동 방지.
+- **investment_experience 용도 제한**: DB·코드·주석 전 레이어에 "투자 권유 판단 금지, 해석 복잡도 조정 전용" 명시 (통합기획서 §11.1).
+
+### 미완료
+- `PATCH /users/me` V22 시나리오 통합 테스트 미작성 → `docs/issues/user-profile-v22-integration-test.md` (P2)
+  5가지 시나리오: nickname 없이 두 필드만, mixed, 잘못된 enum 400, 빈 nickname 400, GET 응답 필드 확인
+
+---
+
 ## 2026-06-23 (33차) | 대시보드 오늘 필터 + Free 5건/일 강제 (dashboard-real-data Wave 1+2)
 
 **산출**:

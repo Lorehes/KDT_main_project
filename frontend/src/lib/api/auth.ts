@@ -6,7 +6,7 @@
 //   useSendPhoneOtp → BE Caffeine rate limit(1분 1회, 시간당 5회). useConfirmPhoneOtp 성공 시 fetchMe()로 phone_verified 갱신.
 //   initiateOAuth: 호출 즉시 페이지 이동 — 이후 콜백은 /api/auth/callback/[provider]/route.ts 에서 처리.
 // [수정 시 고려사항] BE가 Set-Cookie를 직접 발급하도록 변경 시 /api/auth/session 호출 제거.
-//   BE UpdateMeRequest는 nickname 단일 필드(@NotBlank) — investment_experience/preferred_time은 BE 미지원으로 제거됨
+//   V22: BE UpdateMeRequest에 investment_experience/preferred_time 추가됨. nickname은 nullable로 전환.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
@@ -39,7 +39,10 @@ export interface AuthTokenResponse {
 }
 
 export interface UpdateMeBody {
-  nickname: string;  // BE UpdateMeRequest @NotBlank — 필수. 향후 필드 확장 시 BE UpdateMeRequest 동시 수정
+  // V22: nickname nullable(BE @Size min=1 유지). profile 단계는 생략 가능, 마이페이지는 포함해 전송.
+  nickname?: string;
+  investment_experience?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  preferred_time?: "REALTIME" | "LUNCH" | "EVENING";
 }
 
 // ─── 헬퍼 — 토큰 → httpOnly 쿠키 저장 ──────────────────────────────────────

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
  *               POST /phone/verify → Caffeine 5분 TTL OTP 발송 + rate limit(1분 1회, 시간당 5회).
  *               POST /phone/verify/confirm → OTP 검증 성공 시 phone_number_enc 갱신 + phone_verified=true.
  *               POST /me/oauth-consent → consent_logs INSERT — 중복 호출 시 이력 추가(INSERT-only 정책).
- * [수정 시 고려사항] PATCH에 nickname 외 필드 추가 시 UpdateMeRequest 확장.
+ * [수정 시 고려사항] PATCH /me — V22: nickname(optional)·investment_experience·preferred_time 포함(UpdateMeRequest 참고).
  *                  탈퇴 전 확인 코드(이메일 재인증 등)가 필요하면 2-step 흐름 추가.
  */
 @RestController

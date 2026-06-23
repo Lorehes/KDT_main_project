@@ -7,12 +7,13 @@ import lombok.*;
 import java.time.OffsetDateTime;
 
 /*
- * [목적] users 테이블(V1+V7+V10+V21 마이그레이션) JPA 엔티티 — 사용자·인증·BM 등급·알림 설정 루트 엔티티.
+ * [목적] users 테이블(V1+V7+V10+V21+V22 마이그레이션) JPA 엔티티 — 사용자·인증·BM 등급·알림 설정·프로필 루트 엔티티.
  * [이유] soft delete(deleted_at) + OAuth2 계정(password_hash nullable) 지원.
  *       V7 알림 빈도/필터/거래시간외 컬럼 포함.
  *       V10 onboarding_completed_at: OAuth 로그인 is_new_user 판단 기준. NULL=미완료, NOT NULL=완료.
  *       V21 terms_agreed_at / privacy_agreed_at: OAuth 가입은 동의 SSOT를 consent_logs로 일원화,
  *            users 컬럼은 이메일 가입 전용(nullable 전환). OAuth 계정에 now() 기록 시 불일치(E3) 방지.
+ *       V22 investment_experience / preferred_time: 공시 해석 복잡도 조정 개인화 데이터. 선택사항(nullable).
  *       Enum은 VARCHAR+CHECK DB 제약과 @Enumerated(STRING) 동기화(db_schema §3.1, CLAUDE.md §6-3).
  * [사이드 임팩트] portfolios/notifications/consent_logs/feedbacks가 users.id FK 참조.
  *               soft delete 후 email UNIQUE 충돌 가능 — findByEmailAndDeletedAtIsNull 사용 필수.
@@ -20,6 +21,7 @@ import java.time.OffsetDateTime;
  * [수정 시 고려사항] phone_number_enc는 BYTEA — AesGcmEncryptor로만 암복호. 평문 저장/로깅 절대 금지.
  *                  tier 변경(Pro 구독 만료)은 별도 스케줄러 담당 — 여기선 단순 필드.
  *                  동의 시각이 필요하면 users 컬럼 대신 consent_logs.agreed_at을 조회할 것.
+ *                  investment_experience는 해석 복잡도 조정 전용 — 투자 권유 판단에 활용 금지 (통합기획서 §11.1).
  */
 @Entity
 @Table(name = "users")
@@ -33,6 +35,9 @@ public class UserEntity {
     public enum NotifyChannel  { KAKAO, TELEGRAM, EMAIL }
     public enum NotifyFrequency{ INSTANT, DAILY_1, DAILY_2, WEEKLY }
     public enum NotifyTypeFilter{ POSITIVE_ONLY, NEGATIVE_ONLY, ALL }
+    /** 공시 해석 복잡도 조정 전용 — 투자 권유 판단에 활용 금지 (통합기획서 §11.1). */
+    public enum InvestmentExperience { BEGINNER, INTERMEDIATE, ADVANCED }
+    public enum PreferredTime        { REALTIME, LUNCH, EVENING }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -121,6 +126,16 @@ public class UserEntity {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
+    /** V22. 공시 해석 복잡도 조정 전용. 미설정 시 null — FE에서 INTERMEDIATE 기본값 표시. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "investment_experience", length = 15)
+    private InvestmentExperience investmentExperience;
+
+    /** V22. 주 사용 시점 개인화 참고값. 미설정 시 null — FE에서 REALTIME 기본값 표시. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preferred_time", length = 10)
+    private PreferredTime preferredTime;
+
     @PrePersist
     private void prePersist() {
         OffsetDateTime now = OffsetDateTime.now();
@@ -158,6 +173,12 @@ public class UserEntity {
         if (this.onboardingCompletedAt == null) {
             this.onboardingCompletedAt = OffsetDateTime.now();
         }
+    }
+
+    /** V22. null이 전달된 필드는 스킵 — profile 단계 미선택·마이페이지 부분 변경 모두 안전. */
+    public void updateProfile(InvestmentExperience experience, PreferredTime time) {
+        if (experience != null) this.investmentExperience = experience;
+        if (time       != null) this.preferredTime        = time;
     }
 
     public void softDelete() {

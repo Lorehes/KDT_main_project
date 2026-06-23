@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (dashboard-real-data Done)
+updated: 2026-06-23 (user-profile-investment-experience Approved)
 ---
 
 # Specs MOC
@@ -39,6 +39,7 @@ docs/specs/
 
 
 ### Approved
+- [[user-profile-investment-experience]] — 투자 경험·주 사용 시점 DB 저장: V22 마이그레이션 + UserEntity enum + DTO nickname nullable + FE 호출 복원 (2026-06-23 Approved)
 
 ### Done
 - [[dashboard-real-data]] — 대시보드 실데이터 연동: R2 오늘 필터 + R3 Free 일 5건 BE 강제 + R4 FE 제한 안내 (2026-06-23 Done)

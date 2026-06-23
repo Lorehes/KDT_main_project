@@ -18,8 +18,10 @@ import org.springframework.web.server.ResponseStatusException;
  * [사이드 임팩트] softDeleteMe()는 refresh_tokens 삭제 → 모든 기기에서 access token 만료(30분) 전까지는 유효.
  *               portfolios/consent_logs 등 사용자 데이터는 soft delete 후 보존(GDPR 배치 처리 별도).
  *               completeOnboarding()은 이미 완료된 경우 멱등(UserEntity.completeOnboarding() 내부 guard).
+ *               updateMe() — V22: nickname null 허용(profile 단계 미전송 허용), 프로필 두 필드 null-safe 업데이트.
  * [수정 시 고려사항] 이메일 변경 기능 추가 시 이메일 인증 흐름 필요(MVP 외).
  *                  계정 복구(undelete) 정책 확정 전 softDelete()는 되돌릴 수 없는 것으로 간주.
+ *                  investmentExperience/preferredTime은 해석 복잡도 조정 전용 — 투자 권유 판단에 활용 금지.
  */
 @Service
 @Transactional
@@ -42,7 +44,16 @@ public class UserService {
 
     public UserMeResponse updateMe(Long userId, UpdateMeRequest request) {
         UserEntity user = findActiveUser(userId);
-        user.updateNickname(request.nickname());
+        // nickname null = profile 단계에서 미전송 → 스킵. 빈 문자열은 @Size(min=1)이 컨트롤러에서 400 처리.
+        if (request.nickname() != null) {
+            user.updateNickname(request.nickname());
+        }
+        // enum 문자열은 @Pattern이 컨트롤러에서 검증 완료 — valueOf() 실패 없음.
+        UserEntity.InvestmentExperience experience = request.investmentExperience() != null
+                ? UserEntity.InvestmentExperience.valueOf(request.investmentExperience()) : null;
+        UserEntity.PreferredTime preferredTime = request.preferredTime() != null
+                ? UserEntity.PreferredTime.valueOf(request.preferredTime()) : null;
+        user.updateProfile(experience, preferredTime);
         return UserMeResponse.from(user);
     }
 

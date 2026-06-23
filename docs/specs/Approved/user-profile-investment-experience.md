@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-23
 ---
 
 # 투자 경험 · 주 사용 시점 DB 저장 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-23, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -162,3 +162,74 @@ export interface UpdateMeBody {
 **결론**: 기존 `PATCH /users/me` 확장이 변경 최소화·일관성 면에서 우선.
 
 <!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+
+## Tech Review (dc-tech-review · 2026-06-23)
+
+### ⚠️ 전제 재검증 — Spec 작성(2026-06-16) 이후 코드 실측
+
+| 항목 | Spec 원전제 | 실측 결과 | 판정 |
+|------|------------|-----------|------|
+| **마이그레이션 버전** | "V9가 최신 → V10" | 실제 최신은 **V21**(`V21__nullable_agreed_at.sql`). V10은 과거 사용됨 | ❌ **V22로 정정** |
+| **profile nickname 조달** | "user!.nickname — 이미 fetchMe() 호출됨" | `terms/page.tsx:44` `useSignup`이 fetchMe 호출 → 정상 경로 profile 진입 시 user 존재 ✅. 단 **profile 직접 진입/새로고침 시 Zustand 초기화로 user=null** | ⚠️ **방어 필요 → nickname 선택화** |
+| **FE 훅** | "apiClient 직접 호출" | `useUpdateMe()` 훅 이미 존재(`auth.ts:108`) — apiClient 직접 호출 대신 훅 사용 | 🔧 **훅 사용으로 변경** |
+| **UpdateMeRequest** | nickname만 존재 | `UpdateMeRequest.java:13` nickname `@NotBlank`만 — 확장 필요 확인 | ✅ 유효 |
+| **UserMeResponse** | 필드 추가 필요 | `UserMeResponse.java` 두 필드 없음 확인 | ✅ 유효 |
+| **updateProfile()** | UserEntity에 추가 | `UserEntity.java` `updateNickname`/`updateNotifySettings` 패턴 존재, `updateProfile` 없음 | ✅ 유효 |
+
+### 사용자 결정 (2026-06-23)
+
+**nickname 선택화 채택** — `UpdateMeRequest.nickname`을 `@NotBlank` → **nullable**로 변경:
+
+- `nickname != null`이면 갱신, `null`이면 스킵(`UserService.updateMe()` null-safe 분기).
+- profile 단계는 nickname 없이 `{ investment_experience, preferred_time }`만 전송 → **새로고침으로 user=null이어도 안전**.
+- 기존 마이페이지 닉네임 변경은 nickname 포함 전송 → 동일 동작(호환).
+- **반려**: Spec 원안(nickname 동봉) — profile 새로고침 시 user=null이면 저장 실패. 별도 엔드포인트 — DTO/Controller/Service 증가로 과설계.
+- **주의**: `@NotBlank` 제거 시 빈 문자열(`""`) 닉네임 허용 위험 → null 허용하되 `@Size(min=1, max=50)` 유지하고 서비스에서 `nickname != null` 체크(빈 문자열은 size 위반으로 400).
+
+### 아키텍처 분해
+
+- **영향 레이어**: backend(user) + frontend(signup/profile, lib)
+- **신규**: `V22__add_profile_fields_to_users.sql`, `UserEntity.InvestmentExperience`/`PreferredTime` enum
+- **수정**: `UserEntity`(필드+updateProfile), `UpdateMeRequest`(nickname nullable + 2필드), `UserMeResponse`(2필드), `UserService.updateMe()`(null-safe), `authStore.AuthUser`, `auth.ts UpdateMeBody`, `signup/profile/page.tsx`(useUpdateMe 호출 복원)
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| **Wave 1 — BE 스키마 + 도메인** | | | | | |
+| 1 | `V22__add_profile_fields_to_users.sql` — `investment_experience`/`preferred_time` nullable + CHECK 제약 (V7 패턴, NOT NULL DEFAULT 없음) | backend/user | BE | 하 | - |
+| 2 | `UserEntity` — `InvestmentExperience`/`PreferredTime` enum + 필드 2개(`@Enumerated(STRING)`) + `updateProfile()` null-safe 메서드 | backend/user | BE | 하 | #1 |
+| **Wave 1 — BE DTO + 서비스** | | | | | |
+| 3 | `UpdateMeRequest` — nickname `@NotBlank`→nullable(`@Size` 유지), `investmentExperience`/`preferredTime` String 필드 추가(`@Pattern` enum 검증). `UserMeResponse` — `investment_experience`/`preferred_time` 추가. `UserService.updateMe()` — nickname null-safe + `valueOf()` 파싱 후 `updateProfile()` 호출 | backend/user | BE | 중 | #2 |
+| **Wave 2 — FE 타입 + 호출 복원** | | | | | |
+| 4 | `authStore.AuthUser` + `auth.ts UpdateMeBody` — `investment_experience`/`preferred_time` optional 필드 추가 | frontend/lib | FE | 하 | #3 |
+| 5 | `signup/profile/page.tsx` — `useUpdateMe()` 호출 복원(nickname 미전송, 두 필드만), 머리 주석 정정("BE 미지원" 제거), 미선택 시 빈 문자열→undefined 변환 | frontend/signup | FE | 하 | #4 |
+
+### DB / 마이그레이션 영향
+
+- **필요** — `backend/src/main/resources/db/migration/V22__add_profile_fields_to_users.sql` (신규)
+- 두 컬럼 모두 **nullable**(기존 가입자 null 유지) + CHECK 제약. V7 패턴 참고하되 `NOT NULL DEFAULT` 없음.
+- `ddl-auto: validate` 유지 — V22 미적용 상태로 엔티티 필드 추가 시 기동 실패. 마이그레이션 선적용 필수.
+- **Flyway 불변**: V22 적용 후 수정 금지, 롤백은 V23 `DROP COLUMN`.
+
+### 외부 계약 영향
+
+- **없음.** DART/KRX/카카오/LLM 무관. 자체 REST `PATCH /users/me` 요청 스키마에 optional 필드 2개 추가(하위 호환 — 기존 nickname-only 요청 정상 동작) + `GET /users/me` 응답 필드 2개 추가.
+
+### 리스크 & 법적 검토
+
+- **자본시장법 §11.1(중)**: `investment_experience`는 **해석 복잡도 조정** 목적으로만 사용. "상급자이니 매수하세요" 등 경험 기반 투자 권유 표현 절대 금지(CLAUDE.md §7).
+- **개인정보(하)**: 투자 경험·시점은 단순 UX 설정값 — 민감정보 미해당, 암호화 불필요(통합기획서 §11.1 금융 개인정보와 구분).
+- **nickname nullable 회귀(중)**: `@NotBlank` 제거가 빈 문자열 닉네임을 허용하지 않도록 `@Size(min=1)` 유지 + 서비스 null 체크 필수. 기존 마이페이지 닉네임 변경 동작 회귀 여부를 통합 테스트로 확인.
+- **enum 파싱 400(하)**: 잘못된 값(`valueOf` 실패)은 `IllegalArgumentException` → `GlobalExceptionHandler`에서 400 매핑되는지 확인 필요(기존 `ConstraintViolationException` 핸들러와 별개 — `@Pattern` 우선 검증이면 무관).
+
+### 예상 wave 수
+
+- **2 wave**:
+  - **Wave 1**(BE): 카드 #1·#2·#3. 마이그레이션→엔티티→DTO/서비스 순서. 1 PR.
+  - **Wave 2**(FE): 카드 #4·#5. 타입 확장 후 호출 복원. 1 PR. Wave 1 배포 후 진행(BE 필드 선존재 필요).
+
+### 확인 필요 (구현 시점)
+
+1. **카드 #3** — `UserService.updateMe()`의 enum `valueOf()` 실패 시 400 응답 경로. `@Pattern`으로 컨트롤러 단계 차단이 더 깔끔(서비스 도달 전 400).
+2. **카드 #5** — profile 단계에서 인증 토큰 보유 확인. `terms`에서 `useSignup`이 `storeTokenCookies` 수행하므로 정상 경로 토큰 존재(apiClient 인증 헤더 주입 가능).

@@ -1,10 +1,13 @@
 "use client";
 
 // [목적] 프로필 입력 화면(D9/m13, STEP 4/4) — 투자 경험·주 사용 시점 입력. 모두 선택 사항
-// [이유] 개인화된 해석 톤·추천을 위한 데이터 수집. 미입력 시 기본값(INTERMEDIATE·REALTIME) 적용
-// [사이드 임팩트] BE UpdateMeRequest에 investment_experience·preferred_time 미지원 — API 호출 스킵, UX 수집 전용 화면.
-//   BE에 해당 필드 추가 후 handleSubmit 내 apiClient 호출 복원 필요
-// [수정 시 고려사항] 투자 경험은 공시 해석의 복잡도를 조정할 예정. 언제든 마이페이지에서 변경 가능
+// [이유] 개인화된 해석 톤·추천을 위한 데이터 수집. 미입력 시 기본값(INTERMEDIATE·REALTIME) 적용.
+//   V22: BE UpdateMeRequest에 두 필드 추가됨 → useUpdateMe()로 PATCH /users/me 호출.
+//   nickname 미전송: profile 단계에서 새로고침 시 authStore user=null 가능 → nickname 생략 안전(BE null 허용).
+// [사이드 임팩트] useUpdateMe() onSuccess → fetchMe() → authStore.user 갱신.
+//   선택 안 한 필드는 undefined로 전송 생략 — BE에서 null로 수신해 스킵.
+// [수정 시 고려사항] 투자 경험은 공시 해석의 복잡도를 조정할 예정. 언제든 마이페이지에서 변경 가능.
+//   투자 경험 값을 투자 권유 판단에 활용하는 UI 추가 금지 (통합기획서 §11.1).
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,6 +15,8 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 import { OnboardingStepper } from "@/components/layout/OnboardingStepper";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useUpdateMe } from "@/lib/api/auth";
+import { toast } from "sonner";
 
 const EXPERIENCE_OPTIONS = [
   { value: "BEGINNER",     label: "입문 (1년 미만)",  desc: "공시 용어부터 쉽게 풀어드려요" },
@@ -27,14 +32,21 @@ const TIME_OPTIONS = [
 
 export default function ProfilePage() {
   const router = useRouter();
+  const updateMe = useUpdateMe();
   const [experience, setExperience] = useState("");
   const [time, setTime] = useState("");
 
-  const handleSubmit = () => {
-    // TODO: BE UpdateMeRequest에 investment_experience·preferred_time 추가 후 아래 호출 복원.
-    // await apiClient("/users/me", { method: "PATCH", body: JSON.stringify({ investment_experience: experience, preferred_time: time }) });
-    // experience·time 값은 현재 UX 수집 전용 — 저장되지 않음.
-    router.push("/signup/complete");
+  const handleSubmit = async () => {
+    try {
+      await updateMe.mutateAsync({
+        // 빈 문자열(미선택) → undefined → JSON에서 생략 → BE null 수신 → 스킵
+        investment_experience: (experience || undefined) as "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | undefined,
+        preferred_time:        (time        || undefined) as "REALTIME" | "LUNCH" | "EVENING" | undefined,
+      });
+      router.push("/signup/complete");
+    } catch {
+      toast.error("저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   return (
@@ -94,8 +106,8 @@ export default function ProfilePage() {
           </div>
         </fieldset>
 
-        <Button onClick={handleSubmit} className="w-full">
-          시작하기 →
+        <Button onClick={handleSubmit} disabled={updateMe.isPending} className="w-full">
+          {updateMe.isPending ? "저장 중…" : "시작하기 →"}
         </Button>
       </div>
     </AuthLayout>

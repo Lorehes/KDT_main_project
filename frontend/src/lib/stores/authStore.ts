@@ -1,11 +1,13 @@
-// [목적] 인증 상태 전역 관리 — 사용자 정보·티어·알림설정·로그아웃 + 다중 탭 동기화
+// [목적] 인증 상태 전역 관리 — 사용자 정보·티어·알림설정·프로필·로그아웃 + 다중 탭 동기화
 // [이유] BE GET /users/me 응답의 notify 관련 필드는 플랫 구조(nested 아님) — UserMeResponse 구조 반영.
 //   tier_expires_at은 UserMeResponse에 포함됨(null = Free 구독).
+//   V22: investment_experience / preferred_time 추가 — null = profile 단계 미입력.
 // [사이드 임팩트] Sidebar·TopBar·HamburgerDrawer 등 인증 상태에 의존하는 모든 컴포넌트가 구독.
 //   logout()은 BroadcastChannel로 다른 탭에 로그아웃 알림 전파(broadcast.ts 참고).
 // [수정 시 고려사항] logout은 LOGOUT_PATH Route Handler 경유(httpOnly 쿠키 삭제 위해).
 //   fetchMe 실패 시 user: null — 401 인터셉터가 refresh 시도 후 재호출.
 //   다른 탭에서 로그아웃 이벤트 수신은 subscribeAuthBroadcast()를 layout.tsx useEffect에서 구독.
+//   investment_experience는 FE 개인화 표시 전용 — 투자 권유 판단에 활용 금지 (통합기획서 §11.1).
 
 import { create } from "zustand";
 import { apiClient } from "@/lib/api/client";
@@ -28,6 +30,9 @@ export interface AuthUser {
   privacy_agreed_at?: string;
   marketing_agreed_at?: string | null;
   created_at?: string;
+  // V22 프로필 필드 — null = profile 단계 미입력 (FE 기본값: INTERMEDIATE·REALTIME 표시)
+  investment_experience?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | null;
+  preferred_time?: "REALTIME" | "LUNCH" | "EVENING" | null;
 }
 
 interface AuthState {
