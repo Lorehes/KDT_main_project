@@ -11,6 +11,18 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (31차) | 포트폴리오 알림 토글 dead code 제거 (portfolio-management-e2e R3)
+
+**산출**:
+- FE(수정): `portfolios/add/page.tsx` — `DISCLOSURE_TYPES` 상수·`notifTypes` state·`Switch`·`FileText/BarChart2/Users` import 제거. 알림 설정 callout + `/notifications/settings` 링크로 교체.
+- Docs: `docs/dev-log/frontend.jsonl` — 변경 기록 추가.
+
+### 결정 (코드에 드러나지 않는 사항)
+- **R3 Option A 채택**: per-stock notify_enabled는 BE 미구현 상태. MVP에서 UX 가치 불명확하여 계정 전역 알림(`/notifications/settings`)으로 일원화. 토글이 UI에만 존재하고 실제 전송되지 않는 혼동 제거.
+- **Option B 전환 경로 보존**: `[수정 시 고려사항]` 주석에 V19 마이그레이션 참조 명시 — 향후 per-stock 알림 지원 시 진입점 확보.
+
+---
+
 ## 2026-06-23 (30차) | Caffeine 캐시 인프라 + staleTime 정책 (performance-caching-staletime)
 
 **산출**:

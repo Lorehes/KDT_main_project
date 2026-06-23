@@ -1,20 +1,19 @@
 "use client";
 
-// [목적] 종목 등록 상세 화면 — 보유 정보(평균 매수가·수량) + 알림 받을 공시 종류 선택
-// [이유] 매수 정보와 알림 선호를 한 화면에서 설정해 등록 흐름 단축. 2열 레이아웃으로 정보 밀도 향상.
+// [목적] 종목 등록 상세 화면 — 보유 정보(평균 매수가·수량) 입력 + 알림 설정 안내
+// [이유] 매수 정보 입력 후 저장. 알림 공시 종류 토글은 BE 미지원으로 Option A(계정 전역 일원화) 채택 —
+//   per-stock 토글 UI 제거, /notifications/settings로 유도. MVP에서 per-stock 토글 UX 가치 불명확.
 // [사이드 임팩트] POST /portfolios 호출 후 ["portfolios"] 쿼리 무효화 → 목록 자동 갱신.
 //   매수가·수량은 평문 console.log 절대 금지 — 백엔드에서 AES-256-GCM 암호화 저장(CLAUDE.md §7)
-// [수정 시 고려사항] 알림 공시 종류 토글은 현재 UI 전용 — BE notification_types 미구현(후속 스펙).
-//   평가 손익은 시세 API 연동 후 실시간 계산 예정(현재 "—" placeholder).
-//   code 없이 직접 접근 시 /portfolios/new 로 리디렉트.
+// [수정 시 고려사항] per-stock notify_enabled 지원 시 Option B(V19 마이그레이션)로 전환 가능 —
+//   portfolio-management-e2e Spec R3 참조. code 없이 직접 접근 시 /portfolios/new 리디렉트.
 
-import { useState, useEffect, Suspense } from "react";
+import { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
-import { ArrowLeft, FileText, BarChart2, Users, ShieldCheck, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, Bell, ShieldCheck, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useCreatePortfolio } from "@/lib/api/portfolios";
 import { ApiException } from "@/lib/api/client";
 import { API_ERROR_CODES } from "@/lib/api/errorCodes";
@@ -35,12 +34,6 @@ const PRICE_PRESETS = [
   { label: "1000만", value: 10_000_000 },
 ] as const;
 
-const DISCLOSURE_TYPES = [
-  { key: "major_report", label: "주요사항보고서", desc: "증자·CB·합병 등",    Icon: FileText,  defaultOn: true  },
-  { key: "earnings",     label: "실적·배당",      desc: "분기 실적, 배당 공시", Icon: BarChart2, defaultOn: true  },
-  { key: "ownership",    label: "지분·임원 변동", desc: "대주주·임원 매매",    Icon: Users,     defaultOn: false },
-] as const;
-
 function AddPortfolioForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -49,10 +42,6 @@ function AddPortfolioForm() {
   const stockMarket = params.get("market") ?? "";
 
   const { mutateAsync, isPending } = useCreatePortfolio();
-
-  const [notifTypes, setNotifTypes] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(DISCLOSURE_TYPES.map((t) => [t.key, t.defaultOn]))
-  );
 
   useEffect(() => {
     if (!stockCode) router.replace("/portfolios/new");
@@ -304,31 +293,23 @@ function AddPortfolioForm() {
             </div>
           </div>
 
-          {/* 우측: 알림 공시 종류 + 저장 */}
+          {/* 우측: 알림 설정 안내 + 저장 */}
           <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-sm font-extrabold text-foreground">알림 받을 공시 종류</p>
-
-            <div className="flex flex-col divide-y divide-border">
-              {DISCLOSURE_TYPES.map(({ key, label, desc, Icon }) => (
-                <div key={key} className="flex items-center justify-between gap-3 py-3.5 first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <div className="grid size-9 shrink-0 place-items-center rounded-xl border border-border bg-background text-muted-foreground">
-                      <Icon className="size-4" aria-hidden />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{label}</p>
-                      <p className="text-xs text-muted-foreground">{desc}</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={notifTypes[key]}
-                    onCheckedChange={(checked) =>
-                      setNotifTypes((prev) => ({ ...prev, [key]: checked }))
-                    }
-                    aria-label={`${label} 알림`}
-                  />
-                </div>
-              ))}
+            <div className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3.5">
+              <Bell className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+              <div>
+                <p className="text-sm font-semibold text-foreground">알림 설정</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  공시 종류별 알림은{" "}
+                  <Link
+                    href="/notifications/settings"
+                    className="font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    알림 설정
+                  </Link>
+                  {" "}에서 계정 전역으로 관리할 수 있어요.
+                </p>
+              </div>
             </div>
 
             {/* 저장하기 */}
