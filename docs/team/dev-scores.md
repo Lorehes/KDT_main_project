@@ -81,6 +81,7 @@ updated: 2026-06-02
 | 2026-06-22 | Jin | 699d1de | feat(frontend): 포트폴리오 라우트 재설계+대시보드+등록폼 완성 [6/8 M] | Frontend/Docs | 6 | 8 | M | 포트폴리오 라우트 재설계+등록폼 완성 |
 | 2026-06-22 | Jin | 4b29f38 | feat(frontend): 공시피드 2컬럼 레이아웃 재배치 [3/7 S] | Frontend | 3 | 7 | S | 공시피드 2컬럼 레이아웃 재배치 |
 | 2026-06-22 | Jin | 73d5488 | docs(spec): FE↔BE API 정합 Spec 수립 [5/8 S] | Docs | 5 | 8 | S | FE↔BE API 정합 Spec 수립 |
+| 2026-06-23 | Jin | f3ce93f | fix(notification,disclosure): FE-BE API 정합 P0·P1 수정 [7/8 M] | Notification/Disclosure/Frontend | 7 | 8 | M | 알림페이지네이션+rcept_dt포맷정합 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -88,5 +89,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 7 | 30 | 68 | 6.1 | 8.0 |
+| Jin | 1 | 31 | 69 | 8.0 | 6.1 |
 <!-- SUMMARY:END -->

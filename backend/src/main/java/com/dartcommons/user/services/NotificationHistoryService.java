@@ -9,11 +9,15 @@ import com.dartcommons.infrastructure.mail.MailNotificationClient;
 import com.dartcommons.notification.entities.NotificationEntity;
 import com.dartcommons.notification.repositories.NotificationRepository;
 import com.dartcommons.shared.crypto.AesGcmEncryptor;
+import com.dartcommons.shared.dto.PageResponse;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.user.dto.NotificationResponse;
 import com.dartcommons.user.entities.UserEntity;
 import com.dartcommons.user.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,12 +81,25 @@ public class NotificationHistoryService {
         return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
 
+    /*
+     * [목적] 알림 이력 페이지네이션 조회 — DB 페이지네이션 후 현재 페이지 콘텐츠만 bulk-join해 N+1 방지.
+     * [이유] Page.map()은 요소별 호출이라 bulk-join 패턴이 깨짐(N+1 재발생). 올바른 패턴:
+     *       ① DB에서 Page<NotificationEntity> 수신 → ② page.getContent()만 bulk-join → ③ PageImpl로 재조립.
+     *       정렬은 컨트롤러에서 Pageable에 고정 주입(createdAt DESC) — 메서드명 OrderBy와 이중 정의 방지.
+     * [사이드 임팩트] 기존 in-memory sorted() 제거 — DB 정렬로 이관. 페이지 경계 정확성 보장.
+     * [수정 시 고려사항] WebSocket 도입 시 이 메서드 대신 실시간 이벤트 구독으로 전환 가능.
+     *                  Caffeine getUnreadCount 캐싱 추가 시 markRead/markAllRead에서 evict 연동 필요.
+     */
     @Transactional(readOnly = true)
-    public List<NotificationResponse> list(Long userId) {
-        List<NotificationEntity> notifications = notificationRepository.findByUserId(userId);
-        if (notifications.isEmpty()) return List.of();
+    public PageResponse<NotificationResponse> list(Long userId, Pageable pageable) {
+        Page<NotificationEntity> page = notificationRepository.findByUserId(userId, pageable);
+        List<NotificationEntity> notifications = page.getContent();
 
-        // bulk 조회 — N+1 방지
+        if (notifications.isEmpty()) {
+            return PageResponse.from(new PageImpl<>(List.of(), pageable, page.getTotalElements()));
+        }
+
+        // bulk 조회 — N+1 방지. page.getContent()만 대상(DB 페이지네이션 후 처리)
         List<Long> disclosureIds = notifications.stream()
                 .map(NotificationEntity::getDisclosureId).distinct().toList();
         Map<Long, Disclosure> disclosureMap = disclosureRepository.findAllById(disclosureIds)
@@ -91,19 +108,17 @@ public class NotificationHistoryService {
                 .findByDisclosureIdIn(disclosureIds)
                 .stream().collect(Collectors.toMap(AnalysisResult::getDisclosureId, ar -> ar));
 
-        return notifications.stream()
-                .sorted((a, b) -> {
-                    if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
-                    return b.getCreatedAt().compareTo(a.getCreatedAt());
-                })
+        List<NotificationResponse> dtos = notifications.stream()
                 .map(n -> {
-                    Disclosure    disclosure = disclosureMap.get(n.getDisclosureId());
-                    AnalysisResult ar        = disclosure != null
+                    Disclosure     disclosure = disclosureMap.get(n.getDisclosureId());
+                    AnalysisResult ar         = disclosure != null
                             ? analysisMap.get(disclosure.getId()) : null;
-                    Sentiment sentiment      = ar != null ? ar.getSentiment() : null;
+                    Sentiment sentiment        = ar != null ? ar.getSentiment() : null;
                     return NotificationResponse.from(n, disclosure, sentiment);
                 })
                 .toList();
+
+        return PageResponse.from(new PageImpl<>(dtos, pageable, page.getTotalElements()));
     }
 
     /** 설정 검증용 테스트 발송 — DB 이력 없이 채널 인프라 직접 호출. */

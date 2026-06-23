@@ -11,6 +11,29 @@ updated: 2026-06-22
 
 ---
 
+## 2026-06-23 (26차) | BE/DB API 정합 MVP R1 구현
+
+**산출**:
+- R1: `GET /notifications` 응답 `List<>` → `PageResponse<T>` 전환 (P0 수정 — FE 알림 파싱 복구)
+- R2: `DisclosureListItemResponse.rceptDt` `BASIC_ISO_DATE` 포맷(YYYYMMDD) 수정 (P1 수정 — FE 날짜 그루핑 복구)
+- R3: `AnalysisResponse` 주석 표준화 + `api_spec.md §2.4` Stage 3/5 null 정책 명시
+- R4: `/signup` submit 버튼 `aria-label` 접근성 보강 (WCAG 2.1 AA)
+- Testcontainers 통합 테스트 4건 추가: rcept_dt 포맷 2건 + 알림 PageResponse 구조 1건 + IDOR 격리 1건
+- `/dc-tech-review` → `/dc-spec-move Approved` → `/dc-implement` → `/dc-review-code` → 이슈 수정 파이프라인 완주
+
+### 결정 (코드에 드러나지 않는 사항)
+- **sort 파라미터 고정**: FE가 `sort=` 보내도 BE에서 무시하고 `created_at DESC` 고정. sort injection 방어.
+- **`findByUserId(Long)` no-arg 유지**: `NotificationDispatcherIntegrationTest` 13곳·`NotificationRetryJobIntegrationTest` 1곳이 테스트 assert용으로 직접 사용. 삭제 시도 → 컴파일 오류 확인. 주석을 "테스트 assert 및 소규모 유틸 조회용"으로 정정.
+- **`PageImpl<>(dtos, pageable, page.getTotalElements())` 패턴**: `Page.map()` 쓰면 N+1 재발생 — `page.getContent()` 후 bulk-join → `PageImpl` 재조립이 올바른 패턴. 코드에 주석 명시.
+- **FE 페이지 이동 UI 미구현**: `notifications.ts`가 `.content`만 소비하고 `page` 메타 미사용. MVP 범위 수용, 무한스크롤/페이저는 후속 FE Spec.
+
+### 미완료 → 다음 세션
+- `/dc-test-verify` 실행 — 통합 테스트 4건 포함 전체 스위트 실제 실행 확인
+- FE 알림 무한스크롤/페이저 Spec 신규 작성 (현재 size=20 1페이지만 표시)
+- Stage 3 RAG `similar_disclosures` Spec 별도 작성 필요
+
+---
+
 ## 2026-06-22 (25차) | FE↔BE API 정합 분석 + Spec 수립
 
 **산출**:

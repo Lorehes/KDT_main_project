@@ -104,7 +104,7 @@ export default function SignupPage() {
               {...register("password")} />
             {errors.password && <p id="pw-error" className="text-xs text-destructive" role="alert">{errors.password.message}</p>}
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting} aria-label="가입하고 시작하기">
             {isSubmitting ? "처리 중..." : "가입하고 시작하기"}
           </Button>
         </form>

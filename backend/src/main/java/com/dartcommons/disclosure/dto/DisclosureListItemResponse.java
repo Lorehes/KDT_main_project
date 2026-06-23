@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 /*
@@ -16,6 +17,7 @@ import java.util.Optional;
  * [사이드 임팩트] corp_name·report_nm은 DART 원본 그대로 — LLM 변형 금지(CLAUDE.md §4).
  * [수정 시 고려사항] attachment_url은 현재 Stage 1 범위 밖(Disclosure.attachmentUrl = null) — 후속 Spec에서 채움.
  *                  confidence는 BigDecimal로 저장되나 JSON은 숫자로 직렬화됨.
+ *                  rcept_dt는 BASIC_ISO_DATE(YYYYMMDD) 직렬화 — FE groupByDate()와 1:1 대응. DB 저장값은 LocalDate 불변.
  *                  패키지 위치: services/ → dto/ (CLAUDE.md §3-2 도메인 모듈 표준).
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -42,7 +44,7 @@ public record DisclosureListItemResponse(
                 d.getCorpName(),
                 d.getStockCode(),
                 d.getReportNm(),
-                d.getRceptDt().toString(),
+                d.getRceptDt().format(DateTimeFormatter.BASIC_ISO_DATE),
                 d.getAttachmentUrl(),
                 opt.map(AnalysisResult::getSentiment).orElse(null),
                 opt.map(AnalysisResult::getConfidence).orElse(null),

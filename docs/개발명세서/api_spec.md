@@ -240,6 +240,8 @@ updated: 2026-05-30
 
 > **불변 규칙**([[CLAUDE]] §6-6·§7): `confidence` 필드 항상 포함, `is_withheld=true`면 호재/악재 단정 대신 "판단 보류" 표시. **모든 분석 응답에 `disclaimer`와 신고 경로(`report_inaccuracy_path`) 동반.** 티어 미달 사용자에게는 상위 Stage 필드를 응답에서 **제외**(노출 후 마스킹 금지)하고, 화면은 업셀 CTA로 처리([[design_structure]]).
 
+> **Stage 3·5 미구현 정책 (2026-06-23 기준)**: `similar_disclosures` (Stage 3 RAG)·`financial_context` (Stage 5) 필드는 **구현 완료 전까지 모든 티어에서 `null` 반환**하며 `@JsonInclude(NON_NULL)`에 의해 JSON 직렬화에서 제외됨. FE는 이 필드가 `null`일 때 Pro+·Premium 업셀 CTA로 처리 중(의도적 설계). Stage 3·5 Spec 완료 시 `AnalysisResponse.from()` 내 `TODO Stage-3/5` 주석 교체 지점 참조.
+
 **`POST /api/v1/analyses/{analysisId}/feedback` 요청**
 
 ```jsonc

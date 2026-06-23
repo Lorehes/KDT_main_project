@@ -336,4 +336,40 @@ class DisclosureControllerTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("GET /disclosures 목록 rcept_dt — YYYYMMDD(8자리, 하이픈 없음) 형식 (R2: FE groupByDate 호환)")
+    void list_rceptDt_basicIsoDate_noHyphens() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        addPortfolio(token, "005930");
+        insertDisclosure(uniqueRceptNo(), "005930", "2024-06-22");
+
+        String resp = mockMvc.perform(get("/api/v1/disclosures")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode content = objectMapper.readTree(resp).get("content");
+        assertThat(content.size()).isGreaterThanOrEqualTo(1);
+        String rceptDt = content.get(0).get("rcept_dt").asText();
+        assertThat(rceptDt).matches("\\d{8}");      // YYYYMMDD — 8자리 숫자
+        assertThat(rceptDt).doesNotContain("-");     // 하이픈 없음 (FE replace(/-/g,"") 없이 비교 가능)
+    }
+
+    @Test
+    @DisplayName("GET /disclosures/{id} 단건 rcept_dt — YYYYMMDD 포맷 일관성 (R2 단건 커버)")
+    void detail_rceptDt_basicIsoDate() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        // detail 엔드포인트는 포트폴리오 소유 불필요(인증만 필요)
+        long disclosureId = insertDisclosure(uniqueRceptNo(), "005930", "2024-06-22");
+
+        String resp = mockMvc.perform(get("/api/v1/disclosures/" + disclosureId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String rceptDt = objectMapper.readTree(resp).get("rcept_dt").asText();
+        assertThat(rceptDt).matches("\\d{8}");
+        assertThat(rceptDt).doesNotContain("-");
+    }
 }

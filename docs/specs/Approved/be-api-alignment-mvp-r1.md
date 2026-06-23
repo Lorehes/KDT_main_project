@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-23
 ---
 
 # BE/DB API 정합 MVP R1 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: **Approved** (2026-06-23, dc-tech-review 승인)
 > 근거: dc-review-frontend 2026-06-22 실행 결과 + FE API 계약 전수 비교
 > 참고 Spec: [[payment-pg-integration]] (결제 연동은 별도 Spec, 본 범위 제외)
 
@@ -219,3 +219,96 @@ d.getRceptDt().format(DateTimeFormatter.BASIC_ISO_DATE)  // "20240622"
 Wave 1·2·4는 병렬 실행 가능 (상호 의존 없음).
 
 <!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+
+---
+
+## Tech Review (dc-tech-review · 2026-06-23)
+
+> 검토 방식: api_spec 신뢰 금지, **BE Controller/Service/Repository/DTO 직접 Read 후 검증**
+> (메모리 `feedback_be_read_before_fe_implement` 원칙). FE 소비측(`notifications.ts`,
+> `disclosures/page.tsx`, `signup/page.tsx`)도 실제 코드 대조.
+
+### 검증 결과 (Spec 주장 ↔ 실제 코드)
+
+| Spec 주장 | 실제 코드 | 판정 |
+|-----------|-----------|------|
+| R1: `NotificationController.list()` = `List<NotificationResponse>` 반환 | `NotificationController.java:36` 확정 | ✅ 정확 |
+| R1: FE `notifications.ts`가 PageResponse 파싱 → 즉시 호환 | `notifications.ts:55` = `apiClient<{ content: Notification[] }>` — **`.content`만 읽음, `page` 메타 미소비** | ⚠️ 부분정확 (아래 R1-주의) |
+| R2: `DisclosureListItemResponse.rceptDt = d.getRceptDt().toString()` | `DisclosureListItemResponse.java:45` 확정 | ✅ 정확 |
+| R2 card #3: `/disclosures/{id}` 별도 수정 필요 | `DisclosureController.java:68` detail()도 **동일 DTO `from()` 사용** | ✅ 단일 수정으로 자동 커버 |
+| R2 card #2: 전역 Jackson `LocalDate` 설정 확인 필요 | `JacksonConfig` 없음 + `application.yml` date 설정 없음 + `rceptDt`는 **`String` 타입** | ✅ **영향 없음 — 카드 종결** |
+| R3: `similar_disclosures`/`financial_context` 의도적 null | `AnalysisResponse.java:92,94` TODO 주석 확정 | ✅ 정확 |
+| R4: `/signup` submit 버튼 `aria-label` 누락 | `signup/page.tsx:107` 확정 (텍스트 "가입하고 시작하기" 존재) | ✅ 정확 |
+| FE `disclosures/page.tsx` YYYYMMDD 비교 | `disclosures/page.tsx:29` `replace(/-/g,"")` 확정 | ✅ 정확 (R2가 차단 원인) |
+
+### 아키텍처 분해
+
+- **영향 레이어**: backend(user/controllers·services, notification/repositories, disclosure/dto) / frontend(auth/signup) / docs(api_spec)
+- **신규**: 없음 — 기존 클래스 시그니처 수정만. `PageResponse`(shared/dto) 재사용.
+- **수정**: `NotificationController` · `NotificationHistoryService` · `NotificationRepository` · `DisclosureListItemResponse`(1줄) · `AnalysisResponse`(주석) · `signup/page.tsx`(1속성) · `api_spec.md`
+- **Stage 파이프라인 영향**: 없음 (R3는 문서화만, 코드 변경 없음)
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | R2: `DisclosureListItemResponse.from()` rceptDt → `BASIC_ISO_DATE` (목록+상세 동시 커버) | backend/disclosure/dto | BE | 하 | - |
+| 2 | R2-test: `DisclosureControllerTest` rcept_dt="20240622" 단언 추가/갱신 | backend/test | BE | 하 | #1 |
+| 3 | R1: `NotificationRepository`에 `Page<NotificationEntity> findByUserId(Long, Pageable)` 추가 | backend/notification/repo | BE | 하 | - |
+| 4 | R1: `NotificationHistoryService.list(Long, Pageable)` — **DB 페이지네이션 후 page 콘텐츠만 bulk-join** (아래 R1-주의 패턴) | backend/user/services | BE | 중 | #3 |
+| 5 | R1: `NotificationController.list()` → `PageResponse<NotificationResponse>` + page/size 파라미터 + 검증 | backend/user/controllers | BE | 중 | #4 |
+| 6 | R1-test: 알림 목록 PageResponse 구조 + 소유권 격리 통합 테스트 (Testcontainers) | backend/test | BE | 중 | #5 |
+| 7 | R3: `AnalysisResponse` 주석 표준화 + `api_spec.md §2.4` Stage 3/5 null 정책 명시 | backend/analysis + docs | BE | 하 | - |
+| 8 | R4: `/signup` submit 버튼 `aria-label="가입하고 시작하기"` | frontend/auth | FE | 하 | - |
+
+> Spec 원안 대비 추가: **#2·#6 테스트 카드** (원안 누락 — CLAUDE.md §6-6 통합 테스트는 Testcontainers 필수, 응답 형식 변경은 회귀 위험).
+
+### R1-주의: 페이지네이션 ↔ bulk-join 상호작용 (핵심 구현 포인트)
+
+현재 `NotificationHistoryService.list()`는 ① 전체 조회 → ② `Disclosure`+`AnalysisResult` **bulk 조인(N+1 방지)** → ③ in-memory sort → ④ DTO 매핑 순서다. 페이지네이션 도입 시:
+
+- ❌ `repo.findByUserId(userId, pageable).map(n -> NotificationResponse.from(...))` — `Page.map()`은 요소별 호출 → **bulk-join 깨지고 N+1 재발생**.
+- ✅ 올바른 패턴:
+  1. `Page<NotificationEntity> page = repo.findByUserId(userId, pageable)` (DB 레벨 정렬·페이징)
+  2. `page.getContent()`에 대해서만 기존 bulk-join 수행 → `List<NotificationResponse> dtos`
+  3. `PageResponse.from(new PageImpl<>(dtos, pageable, page.getTotalElements()))` 또는 `PageResponse`에 `(List<T> content, Page<?> meta)` 오버로드 추가
+- in-memory `sorted(...)`는 **제거** — 정렬을 Pageable/DB로 이관 (정렬 일관성 + 페이지 경계 정확성).
+
+### R1-주의: Repository 메서드명 ↔ Sort 충돌
+
+Spec 원안 카드는 `findByUserIdOrderByCreatedAtDesc(userId, pageable)` 제안 + 권장 구현 예시는 `PageRequest.of(page, size, Sort.by("createdAt").descending())` 사용 → **메서드명 OrderBy와 Pageable Sort가 중복/충돌**. 택일:
+- (권장) 메서드명 `findByUserId(userId, pageable)` + 정렬은 컨트롤러에서 `Sort` 고정 주입 — 정렬 정책이 한 곳.
+- 또는 `...OrderByCreatedAtDesc` 유지 + Pageable에 Sort 미전달(`PageRequest.of(page, size)`).
+
+### R1-주의: FE는 `.content`만 소비 (페이지 메타 미사용)
+
+`notifications.ts:55`는 `{ content: Notification[] }`만 파싱하고 `page`(total_pages 등)는 읽지 않는다. 따라서:
+- R1 적용 후 **FE는 즉시 정상화**(현재는 배열에서 `.content` 접근 → `undefined`로 깨진 상태, P0 확정).
+- 단, FE에 **실제 페이지 이동 UI가 없음** → size=20 첫 페이지만 노출되는 한계 잔존. MVP 수용 가능하나, 무한스크롤/페이저는 **후속 FE 카드로 분리** 권장(본 Spec 범위 외, R1은 BE-only 유지).
+
+### DB / 마이그레이션 영향
+
+- **마이그레이션 불필요** — 검증 완료. `notifications` 복합 인덱스 `idx_notifications_user (user_id, created_at DESC)`가 `NotificationRepository:22` 주석에 명시·존재 → Pageable `ORDER BY created_at DESC` 쿼리 인덱스 커버.
+- 신규 컬럼/인덱스 없음. R2는 직렬화 단계 포맷 변경(DB 저장값 `LocalDate` 불변).
+
+### 외부 계약 영향
+
+- 없음. DART rcept_dt 원본은 YYYYMMDD(8자리) → BE가 `BASIC_ISO_DATE`로 **원복**하는 것이므로 외부 계약과 오히려 정합. 카카오/OAuth/LLM 프롬프트 변경 없음.
+
+### 리스크 & 법적 검토
+
+- **[P1·보안] Pageable sort 인젝션** — FE가 `sort=password_hash,asc` 등 전달 시 정렬 필드 노출 위험. 대응: **sort 파라미터를 바인딩하지 않고** 서버에서 `created_at DESC` 고정(화이트리스트조차 불필요). FE가 sort 보내도 무시 → 동작 영향 없음.
+- **[입력 검증] page/size 범위** — `size`는 `@Min(1) @Max(100)`, `page`는 `@Min(0)` + 컨트롤러 클래스에 `@Validated` 필요(원안 예시의 `@Max(100)` 단독으로는 미동작). 미설정 시 `size=10000` 등으로 메모리 압박.
+- **[회귀] 응답 형식 변경** — R1은 공개 응답 envelope 변경. #6 통합 테스트로 구조 고정.
+- **[자본시장법/개인정보]** 해당 없음 — disclaimer 정책·암호화 경로 변경 없음. 알림 이력은 회사명/sentiment만 노출(매수가·수량 비포함).
+
+### 예상 wave 수
+
+- **Wave A (BE, #1·#2)**: R2 rcept_dt + 테스트 — 독립, 최소 PR.
+- **Wave B (BE, #3·#4·#5·#6)**: R1 알림 페이지네이션 + 테스트 — 의존 체인(repo→service→controller→test).
+- **Wave C (DOCS+FE, #7·#8)**: R3 문서화 + R4 aria-label — 독립.
+- A·B·C 상호 독립 → 병렬 가능. 권장 순서: B를 단일 PR로 묶고, A·C는 소형 PR 또는 B에 동봉.
+
+### Spec 상태 전환 제안
+
+검증 결과 **구현 가능**. 작업 카드·리스크·테스트 보강 완료 → `/dc-spec-move be-api-alignment-mvp-r1 Approved` 권장.

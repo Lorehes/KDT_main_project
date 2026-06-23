@@ -11,6 +11,7 @@ import com.dartcommons.notification.repositories.NotificationRepository;
 import com.dartcommons.user.entities.UserEntity;
 import com.dartcommons.user.repositories.UserRepository;
 import com.dartcommons.user.services.EmailVerificationService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
@@ -222,5 +223,62 @@ class NotificationReadIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(2));
+    }
+
+    @Test
+    @DisplayName("GET /notifications — PageResponse 구조 확인 (content·page.total_elements·page.total_pages)")
+    void list_returnsPageResponse() throws Exception {
+        String email = uniqueEmail();
+        String token = signupAndGetToken(email);
+        Long userId  = getUserId(email);
+
+        saveNotification(userId, createDisclosure("010").getId(), false);
+        saveNotification(userId, createDisclosure("011").getId(), true);
+
+        String resp = mockMvc.perform(get("/api/v1/notifications")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode body = objectMapper.readTree(resp);
+        assertThat(body.has("content")).isTrue();
+        assertThat(body.has("page")).isTrue();
+        assertThat(body.get("page").has("total_elements")).isTrue();
+        assertThat(body.get("page").has("total_pages")).isTrue();
+        assertThat(body.get("content").size()).isEqualTo(2);
+        assertThat(body.get("page").get("total_elements").asLong()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("GET /notifications — 타 사용자 알림은 노출되지 않음 (IDOR 격리)")
+    void list_isolatedByUser() throws Exception {
+        String emailA = uniqueEmail();
+        String emailB = uniqueEmail();
+        String tokenA = signupAndGetToken(emailA);
+        String tokenB = signupAndGetToken(emailB);
+        Long userAId  = getUserId(emailA);
+        Long userBId  = getUserId(emailB);
+
+        saveNotification(userAId, createDisclosure("012").getId(), false);
+        saveNotification(userBId, createDisclosure("013").getId(), false);
+
+        String respA = mockMvc.perform(get("/api/v1/notifications")
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // A 응답 — A의 알림 1건만, B의 알림 포함 안 됨
+        JsonNode contentA = objectMapper.readTree(respA).get("content");
+        assertThat(contentA.size()).isEqualTo(1);
+
+        String respB = mockMvc.perform(get("/api/v1/notifications")
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode contentB = objectMapper.readTree(respB).get("content");
+        assertThat(contentB.size()).isEqualTo(1);
     }
 }

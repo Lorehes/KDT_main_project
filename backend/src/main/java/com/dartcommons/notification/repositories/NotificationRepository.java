@@ -2,6 +2,7 @@ package com.dartcommons.notification.repositories;
 
 import com.dartcommons.notification.entities.NotificationEntity;
 import com.dartcommons.notification.entities.NotificationEntity.Status;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -27,8 +28,17 @@ import java.util.List;
  */
 public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
 
-    /** 사용자 알림 이력 조회 (idx_notifications_user 활용). */
+    /**
+     * 사용자 알림 전체 조회 — 테스트 직접 assert 및 소규모 유틸 조회용.
+     * 프로덕션 API 응답은 반드시 Pageable 오버로드 사용.
+     */
     List<NotificationEntity> findByUserId(Long userId);
+
+    /**
+     * 사용자 알림 이력 페이지네이션 조회 — idx_notifications_user(user_id, created_at DESC) 활용.
+     * Pageable의 Sort로 정렬을 제어하므로 메서드명에 OrderBy 없음(중복 방지).
+     */
+    Page<NotificationEntity> findByUserId(Long userId, Pageable pageable);
 
     /**
      * 재시도 배치 대상 조회 — status IN (PENDING, RETRYING) AND sent_at IS NULL AND retry_count < maxRetry.

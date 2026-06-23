@@ -89,7 +89,7 @@ public record AnalysisResponse(
 
                 proPlus ? ar.getExpectedReaction() : null,
                 proPlus ? ar.getRationale() : null,
-                null, // similar_disclosures — Stage 3 후속 Spec에서 채움
+                null, // TODO Stage-3: similar_disclosures — Stage 3 RAG 완료 시 proPlus ? ar.getSimilarDisclosures() : null 로 교체
 
                 null, // TODO Stage-5: financial_context — Stage 5 구현 시 premium ? ar.getFinancialContext() : null 로 교체
 
