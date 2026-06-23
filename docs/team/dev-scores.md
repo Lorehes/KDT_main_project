@@ -90,7 +90,7 @@ updated: 2026-06-02
 | 2026-06-23 | Jin | 0fd5092 | feat(frontend): 포트폴리오 알림 토글 dead code 제거 [3/8 S] | Frontend | 3 | 8 | S | 알림토글 제거+설정 링크 안내 |
 | 2026-06-23 | Jin | 928dcf8 | fix(user): OAuth agreed_at 정합+좀비계정 배치 [7/7 M] | User | 7 | 7 | M | OAuth agreed_at 정합+좀비계정 배치 |
 | 2026-06-23 | Jin | 7061755 | feat(disclosure,frontend): 대시보드 오늘 필터+Free 5건/일 강제 [7/8 M] | Disclosure/Frontend | 7 | 8 | M | 대시보드 오늘필터+Free 5건 강제 |
-| 2026-06-23 | Jin | b42c90a | feat(user,frontend): 투자경험·주사용시점 DB 저장 활성화 (V22) [7/8 L] | User/Frontend | 7 | 8 | L | 투자경험·사용시점 DB 저장 활성화 |
+| 2026-06-23 | Jin | 01b9f3f | feat(user,frontend): 투자경험·주사용시점 DB 저장 활성화 (V22) [7/8 L] | User/Frontend | 7 | 8 | L | 투자경험·사용시점 DB 저장 활성화 |
 <!-- SCORES -->
 
 ## 기간별 집계
