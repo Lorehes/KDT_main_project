@@ -2,9 +2,10 @@
 // [이유] 알림 센터·설정 페이지에서 서버 상태 관리. page/sort 파라미터 추가(spec §1.4 페이지네이션)
 //   V18: is_read 컬럼 + PATCH API 추가 → 로컬 Set 임시 처리를 서버 영속화로 교체
 // [사이드 임팩트] useMarkAsRead/useMarkAllAsRead mutation 성공 시 ["notifications", "unread-count"] 쿼리 invalidate.
-//   useUnreadCount: staleTime 30초 폴링 — TopBar 벨 뱃지 실데이터. WebSocket 도입 시 대체 가능.
+//   useUnreadCount: staleTime 30초 — TopBar 벨 뱃지 실데이터. WebSocket 도입 시 대체 가능.
+//   useNotifications: staleTime 30초 + refetchOnWindowFocus:true — 알림 목록은 즉시성 우선.
+//   useNotificationSettings: staleTime 5분 — 설정은 자주 변경되지 않음. refetchOnWindowFocus:true 유지.
 //   useUpdateNotificationSettings·useTestNotification onError → Sonner toast.error 발화.
-//   useNotificationSettings: staleTime 60초 — 포커스 복귀마다 불필요한 설정 refetch 방지.
 // [수정 시 고려사항] useTestNotification은 설정 검증용 — 실제 알림 발송 트리거.
 //   WebSocket 연결 시 useUnreadCount 폴링 → 서버 푸시 이벤트 구독으로 교체.
 
@@ -53,6 +54,8 @@ export function useNotifications(params?: NotificationListParams) {
   return useQuery({
     queryKey: ["notifications", params],
     queryFn: () => apiClient<{ content: Notification[] }>(`/notifications${qs}`),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -60,7 +63,8 @@ export function useNotificationSettings() {
   return useQuery({
     queryKey: ["notification-settings"],
     queryFn: () => apiClient<NotificationSettings>("/notifications/settings"),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
   });
 }
 

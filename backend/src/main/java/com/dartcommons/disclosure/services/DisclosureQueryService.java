@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
  *                  stockCodes null 분기(scope=all)는 findAllFilteredWithSentiment, non-null은 findFilteredByStocksWithSentiment.
  *                  ids.isEmpty() 가드: Hibernate가 IN()을 SQL 오류로 변환하므로 빈 컬렉션일 때 DB 호출 생략.
  *                  sentimentStr: Sentiment enum → name() 변환 후 native query에 전달. null → 전체 반환.
+ *                  size 이중 방어: 컨트롤러 @Max(100) + 서비스 진입부 Math.min — AOP 우회(직접 호출 등) 방어선.
  */
 @Service
 @RequiredArgsConstructor
@@ -59,6 +60,9 @@ public class DisclosureQueryService {
             int size,
             Tier tier
     ) {
+        // 컨트롤러 @Max(100) 우회 경로(테스트/직접 서비스 호출) 대비 이중 방어
+        size = Math.min(size, 100);
+
         // scope=all은 Pro+ 전용 — 단일 stockCode 필터와 다른 "전체 피드" BM 기능
         if ("all".equalsIgnoreCase(scope)
                 && (stockCode == null || stockCode.isBlank())

@@ -25,10 +25,6 @@ docs/specs/
 - [[payment-pg-integration]] — 결제 PG 연동: 카카오페이 정기결제·구독 관리·환불
 - [[frontend-share-card-image]] — 공유 카드 이미지: html2canvas PNG 다운로드·SNS 공유
 
-**2026-06-09 코드 리뷰 후속 (수동 분석 + dc-review-code 종합 — 56개 이슈를 8개 Spec 으로 분리)**
-
-- [[performance-caching-staletime]] — 성능/캐싱: Caffeine portfolios/analysis + TanStack staleTime + size 제한 + 복합 인덱스
-
 **2026-06-22 dc-review-frontend 리뷰 후속 (portfolios 페이지)**
 
 - [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 (P3)
@@ -46,6 +42,7 @@ docs/specs/
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V21) + 캐싱 + 미완료 계정 배치 정리
 
 ### Approved
+- [[performance-caching-staletime]] — 성능/캐싱: Caffeine @EnableCaching+portfolioStockCodes/analysisResult + TanStack staleTime (2026-06-23 Approved · R5·R10 기완료, R6 드롭)
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
 
 ### Done

@@ -13,8 +13,12 @@ import java.util.Optional;
  * [목적] AnalysisResult CRUD + 미분석 공시 조회 — 백필 잡이 사용.
  * [이유] uq_analysis_disclosure UNIQUE 제약 — disclosureId로 1건 조회/UPSERT.
  *       미분석 공시 페이징 조회는 백필 잡의 청크 처리에 필수.
+ *       캐싱은 AnalysisResultCacheService(별도 빈)에서 담당 — Spring Data Optional 반환 메서드에 @Cacheable 직접 적용 시
+ *       Spring Data JPA 프록시가 Optional을 언랩해 SpEL #result가 T(엔티티) 타입으로 전달되는 호환 문제 회피.
  * [사이드 임팩트] findUnanalyzedDisclosureIds는 LEFT JOIN으로 풀스캔 가능 — id 범위 조건으로 제한 권장.
+ *               findByDisclosureIdIn(bulk)은 캐시 미적용 — 목록 피드 경로는 TTL 별도 검토 필요(현재 무캐시).
  * [수정 시 고려사항] Stage 3~5 후속 Spec에서 stage_reached 별 조회 추가 가능(현재 본 Spec=2 한정).
+ *                  재분석 기능 도입 시 AnalysisResultCacheService.evict(disclosureId) 추가 필요.
  */
 public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, Long> {
 

@@ -5,7 +5,7 @@
 // [사이드 임팩트] 생성·수정·삭제 모두 ["portfolios"] 쿼리 무효화로 자동 리페치.
 //   useDeletePortfolio·useUpdatePortfolio onError → Sonner toast.error 발화.
 //   useCreatePortfolio는 portfolios/new에서 mutateAsync+try/catch로 폼 에러 처리 — onError 없음.
-//   staleTime: 60_000 → 포커스 복귀 시 1분 이내 재요청 억제 (포트폴리오는 빈번 변경 없음).
+//   staleTime: 2분 + refetchOnWindowFocus:true — 포트폴리오 변경은 즉시성 필요. BE @CacheEvict로 서버 캐시도 즉시 무효화됨.
 // [수정 시 고려사항] corp_name은 nullable 유지 — stocks 마스터 미등재 엣지케이스 대비(BE corpName: null 허용).
 //   staleTime 연장 시 알림 설정 변경 후 목록 반영 지연 가능 — invalidateQueries로 강제 무효화 가능.
 
@@ -37,7 +37,8 @@ export function usePortfolios() {
   return useQuery({
     queryKey: ["portfolios"],
     queryFn: () => apiClient<Portfolio[]>("/portfolios"),
-    staleTime: 60_000,
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: true,
   });
 }
 

@@ -11,6 +11,33 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (30차) | Caffeine 캐시 인프라 + staleTime 정책 (performance-caching-staletime)
+
+**산출**:
+- BE(신규): `CacheConfig.java` — `@EnableCaching` + `CaffeineCacheManager`, `portfolioStockCodes`(5m/1k) + `analysisResult`(10m/10k) per-cache 등록
+- BE(신규): `AnalysisResultCacheService.java` — `@Cacheable("analysisResult")` 전담 빈, `null`-반환 메서드로 Spring Data Optional 언랩 문제 우회
+- BE(수정): `UserStockCodesProviderImpl.java` — `@Cacheable("portfolioStockCodes", key="#userId")`
+- BE(수정): `PortfolioService.java` — `@CacheEvict("portfolioStockCodes")` on create/delete
+- BE(수정): `AnalysisQueryService.java` — `AnalysisResultCacheService` 경유로 전환, `@Transactional` 제거(캐시 서비스에서 처리)
+- BE(수정): `DisclosureQueryService.java` — `size = Math.min(size, 100)` 이중 방어
+- FE(수정): `providers.tsx` — 전역 `staleTime:60_000` 제거
+- FE(수정): `disclosures.ts` — list:60s, detail:5m+noRefetch, analysis:5m+noRefetch
+- FE(수정): `notifications.ts` — list:30s, settings:5m
+- FE(수정): `portfolios.ts` — list:2m+refetchOnFocus
+- Spec: `performance-caching-staletime` Draft→Approved, Tech Review 추가
+
+### 결정 (코드에 드러나지 않는 사항)
+- **AnalysisResultCacheService 분리 빈 패턴 채택**: Spring Data JPA `Optional` 반환 메서드에 `@Cacheable` 직접 적용 시 Spring Data 프록시가 Optional을 언랩해 SpEL `#result`가 `T`로 전달 → `!#result.isPresent()` SpEL 오류(7건). 분리 빈에서 `null`-반환 메서드로 래핑 + `unless="#result==null"` 으로 우회.
+- **update 시 CacheEvict 제외**: `PortfolioService.updatePortfolio`는 `avg_buy_price`·`quantity`·`memo`만 수정, `stock_code` 불변 → `portfolioStockCodes` 캐시 내용 미변경 → evict 불필요.
+- **DisclosureQueryService 목록 경로 무캐시**: `AnalysisResultRepository.findByDisclosureIdIn` (bulk) 은 캐시 미적용. 현재 단계에서 TTL 기반 전략보다 무캐시가 안전(실시간성 우선).
+- **전역 staleTime 제거**: 각 훅이 명시적으로 staleTime 선언하지 않으면 TanStack 기본(0, always stale)으로 폴백 → 신규 훅 추가 시 명시 필수.
+
+### 미완료 → 다음 세션
+- `fe-accessibility-skeleton-ui` (Approved) 구현 대기
+- `performance-caching-staletime` Spec → Done 전환(`/dc-spec-move performance-caching-staletime Done`)
+
+---
+
 ## 2026-06-23 (29차) | E2E meCallCount 픽스 — AuthBroadcastListener 조건부 마운트
 
 **산출**:

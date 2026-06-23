@@ -8,6 +8,7 @@ import com.dartcommons.user.dto.PortfolioRequest;
 import com.dartcommons.user.dto.PortfolioResponse;
 import com.dartcommons.user.entities.PortfolioEntity;
 import com.dartcommons.user.repositories.PortfolioRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 
 /*
  * [목적] 포트폴리오 CRUD 서비스 — Free 3종목 제한 + AES-256-GCM 암복호 + IDOR 방지 + corp_name 조회.
+ *       create/delete 시 @CacheEvict("portfolioStockCodes")로 UserStockCodesProviderImpl 캐시를 즉시 무효화.
  * [이유] 매수가·수량은 금융 개인정보(CLAUDE.md §7) — 서비스 계층에서 암호화 후 리포지토리에 전달.
  *       IDOR 방지: 모든 조회·수정·삭제에 userId 스코프 쿼리(findByIdAndUserId) 사용.
  *       Free 제한: JWT claims의 tier를 컨트롤러에서 전달받아 서비스 계층에서 검증.
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
  *               portfolios.stock_code는 stocks.stock_code FK(DB RESTRICT) — 미등록 종목 저장 시 DB 에러.
  *               애플리케이션 계층에서 existsByStockCode()로 사전 검증해 DB 에러 대신 400 반환.
  *               avgBuyPrice/quantity가 null이면 암호화 없이 null byte[] 저장 — avg_buy_price_enc/quantity_enc는 nullable(V3).
+ *               @CacheEvict 위치: create/delete만(stock_code 변경). update는 avg_buy_price·quantity·memo만 변경 — evict 불필요.
  * [수정 시 고려사항] Free→Pro 업그레이드 시 countByUserId() 재검사 불필요(이미 등록된 종목 유지).
  *                  동시 요청 경쟁 조건: @Transactional + DB UNIQUE(user_id, stock_code) 이중 방어.
  *                  avg_buy_price·quantity는 DB 정렬/집계 불가 — 손익계산은 복호화 후 앱 계층에서만.
@@ -71,6 +74,7 @@ public class PortfolioService {
         return toResponse(findOwned(userId, portfolioId));
     }
 
+    @CacheEvict(value = "portfolioStockCodes", key = "#userId")
     public PortfolioResponse createPortfolio(Long userId, PortfolioRequest request, Tier tier) {
         if (tier == Tier.FREE && portfolioRepository.countByUserId(userId) >= FREE_TIER_LIMIT) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -109,6 +113,7 @@ public class PortfolioService {
         return toResponse(portfolio);    // 단건 toResponse() → findById() 1회 DB 조회
     }
 
+    @CacheEvict(value = "portfolioStockCodes", key = "#userId")
     public void deletePortfolio(Long userId, Long portfolioId) {
         PortfolioEntity portfolio = findOwned(userId, portfolioId);
         portfolioRepository.delete(portfolio);

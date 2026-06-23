@@ -51,6 +51,8 @@ spring:
 
   cache:
     type: caffeine
+    # 캐시별 TTL/maxSize는 CacheConfig.java에서 프로그래밍 방식으로 구성 (per-cache spec 불일치 회피).
+    # portfolioStockCodes: 5m / 1_000 entries, analysisResult: 10m / 10_000 entries
 
 # API 문서 (springdoc-openapi) — 운영 기본 비활성화(R7). 로컬 개발 시 application-local.yml에서 활성화.
 springdoc:
