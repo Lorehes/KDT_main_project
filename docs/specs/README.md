@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (portfolio-search-keyboard-nav Draft→Approved)
+updated: 2026-06-23 (e2e-token-refresh-mecount-fix Done)
 ---
 
 # Specs MOC
@@ -44,12 +44,12 @@ docs/specs/
 **2026-06-16 OAuth 소셜 가입 플로우 수정 후속 (코드리뷰 Medium/High 이슈 Spec화)**
 
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V21) + 캐싱 + 미완료 계정 배치 정리
-- [[e2e-token-refresh-mecount-fix]] — E2E 토큰 갱신 테스트 픽스: AuthBroadcastListener 조건부 마운트로 meCallCount 오차 수정 (1줄 수정)
 
 ### Approved
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
 
 ### Done
+- [[e2e-token-refresh-mecount-fix]] — E2E meCallCount 오차 수정: concurrent-auth 픽스처 AuthBroadcastListener 조건부 마운트 (2026-06-23)
 - [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 키보드 네비: ArrowKey·Enter·activedescendant + useDebounce 공유훅 + Playwright 3케이스 (2026-06-23)
 - [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware E4 게이트 + JWT onboarding_completed + OAuthTermsPage + Vitest 30건 (2026-06-23)
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 PageResponse(P0) + rcept_dt YYYYMMDD(P1) + Stage null 문서화 (2026-06-23)

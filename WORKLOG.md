@@ -11,6 +11,22 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (29차) | E2E meCallCount 픽스 — AuthBroadcastListener 조건부 마운트
+
+**산출**:
+- FE: `app/test/concurrent-auth/page.tsx` — `{mode !== "concurrent" && <AuthBroadcastListener />}` 1줄 조건부 마운트
+- Docs: `e2e-token-refresh-mecount-fix` Draft→Done, specs/README.md MOC 갱신
+
+### 결정 (코드에 드러나지 않는 사항)
+- **방안 B 채택**: 어설션 완화(A) 대신 픽스처 조건부 마운트(B) 선택. `(a)` 테스트는 Promise 큐 전용이라 BroadcastChannel 불필요. 다른 테스트(b·c)는 `mode` 파라미터 없이 방문 → `AuthBroadcastListener` 유지.
+- **근본 원인**: `AuthBroadcastListener.useEffect`가 마운트 시 `fetchMe()` 1회 추가 호출 → 5×병렬 Promise 큐와 합산 시 meCallCount=11. 픽스처 페이지가 `(app)` 그룹 밖이라 layout.tsx에서 자동 마운트가 없어 직접 포함하고 있었음.
+
+### 미완료 → 다음 세션
+- `fe-accessibility-skeleton-ui` (Approved) 구현 대기
+- Playwright keyboard-nav 테스트 실제 실행 검증 (dev 서버 필요)
+
+---
+
 ## 2026-06-23 (28차) | 종목 검색 키보드 네비게이션 + WAI-ARIA + Playwright E2E
 
 **산출**:

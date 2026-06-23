@@ -3,6 +3,7 @@
 //   page.evaluate()로 fetch를 직접 호출하면 apiClient 코드 경로를 우회하게 됨.
 // [사이드 임팩트] NODE_ENV=production 이면 null 반환(미들웨어로 차단 불가한 경우 대비).
 //   AuthBroadcastListener를 직접 포함 — (app) 그룹 밖이므로 layout.tsx에서 자동 마운트 안 됨.
+//   mode=concurrent 시 AuthBroadcastListener 제외 — fetchMe() 초기 호출이 Promise 큐 카운터(meCallCount)를 오염시키기 때문.
 // [수정 시 고려사항] 이 페이지는 e2e 테스트 외 목적으로 사용하지 않는다.
 //   concurrent 파라미터가 없으면 API 호출을 생략해 테스트 간섭 방지.
 
@@ -39,7 +40,7 @@ export default function ConcurrentAuthTestPage() {
 
   return (
     <>
-      <AuthBroadcastListener />
+      {mode !== "concurrent" && <AuthBroadcastListener />}
       <div data-testid="status">{status}</div>
     </>
   );

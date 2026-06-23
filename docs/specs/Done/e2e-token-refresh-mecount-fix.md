@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Done
 created: 2026-06-23
 updated: 2026-06-23
 ---
 
 # E2E 토큰 갱신 테스트 픽스 — meCallCount 오차 수정
 
-> 상태: **Draft**
+> 상태: Draft → **Done** (2026-06-23, concurrent-auth 픽스처 1줄 조건부 마운트 수정)
 > 관련 Spec: [[oauth-consent-enforcement]] (middleware 변경 후 dc-test-verify에서 발견)
 > 발견 경위: 2026-06-23 dc-test-verify 실행 — stash 검증으로 기존 결함 확인
 
