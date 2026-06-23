@@ -11,6 +11,28 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (28차) | 종목 검색 키보드 네비게이션 + WAI-ARIA + Playwright E2E
+
+**산출**:
+- FE: `portfolios/new/page.tsx` — `onKeyDown` 확장(ArrowDown/Up 순환·Enter·Escape), `activeIndex` state, `aria-activedescendant`, `role="option"` + `aria-selected` 동적 반영, `scrollIntoView`
+- FE: `StockSearchCombobox.tsx` — 동일 키보드 패턴(sc-option prefix), `aria-haspopup="listbox"` 추가, value-based 디바운스로 단순화(`setDebounced` 제거)
+- FE: `lib/hooks/useDebounce.ts` 공유 훅 신설 — 두 파일의 중복 로컬 `useDebounce` 통합
+- FE: `e2e/portfolios/keyboard-nav.spec.ts` — Playwright (a)ArrowDown+Enter→라우팅, (b)순환 wrap, (c)Escape 3케이스
+- Docs: `portfolio-search-keyboard-nav` Approved→Done, MOC 갱신
+
+### 결정 (코드에 드러나지 않는 사항)
+- **id prefix 분리**: `stock-option-${i}` (new/page) vs `sc-option-${i}` (StockSearchCombobox) — PortfolioSheet가 Combobox를 렌더하는 알림·온보딩 페이지와 new/page가 동일 viewport에서 공존할 경우 DOM id 충돌 방지. prefix 변경 시 반드시 양쪽 맞출 것.
+- **`role="presentation"` 패턴**: "검색 중..." / "검색 결과 없음" li는 listbox 자식으로 선택 불가 → `role="presentation"` + 외부 `aria-live="polite"` sr-only 영역으로 이중 알림(시각+스크린리더). WAI-ARIA 1.2 listbox children 규칙 준수.
+- **value-based debounce 전환**: Combobox의 imperative `setDebounced` 패턴은 `handleChange`에서 두 번 setState 했음 → value 기반으로 전환해 단일 `setQuery` 로 축약. 동작 동등하나 코드가 간결해짐.
+- **atLimit + Enter 가드**: new/page.tsx에서 Enter 선택 시 `!atLimit` 체크 — 버튼 `disabled` 상태와 동기화. Free 3종목 한도 초과 시 키보드로도 추가 불가.
+
+### 미완료 → 다음 세션
+- Playwright keyboard-nav 테스트 실제 실행 검증 (dev 서버 필요, 현재 typecheck만 통과)
+- `fe-accessibility-skeleton-ui` Spec (Approved) 구현 예정 (다음 우선순위)
+- `e2e-token-refresh-mecount-fix` Draft Spec 구현 (1줄 fix — concurrent-auth fixture 조건부 mount)
+
+---
+
 ## 2026-06-23 (27차) | E4 OAuth 약관게이트 + JWT claim + Vitest
 
 **산출**:

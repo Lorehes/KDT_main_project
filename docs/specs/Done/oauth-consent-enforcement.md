@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-16
 updated: 2026-06-23
 ---
 
 # OAuth 동의 완료 강제화 및 UX 개선 Spec
 
-> 상태: **Approved** (2026-06-23, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-06-23, 카드 #1~#8 구현 + Vitest 30건·BE 42건 통과)
 
 ## 배경 / 목적
 

@@ -48,9 +48,9 @@ docs/specs/
 
 ### Approved
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
-- [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 키보드 네비: ArrowKey·Enter·activedescendant (new/page + Combobox 2곳, 2026-06-23 Approved)
 
 ### Done
+- [[portfolio-search-keyboard-nav]] — 종목 검색 드롭다운 키보드 네비: ArrowKey·Enter·activedescendant + useDebounce 공유훅 + Playwright 3케이스 (2026-06-23)
 - [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware E4 게이트 + JWT onboarding_completed + OAuthTermsPage + Vitest 30건 (2026-06-23)
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 PageResponse(P0) + rcept_dt YYYYMMDD(P1) + Stage null 문서화 (2026-06-23)
 - [[code-review-fixes-onboarding-portfolio]] — 온보딩·포트폴리오 리뷰 수정: C-1·H 7건·M 5건·L 4건 완료 (2026-06-18)

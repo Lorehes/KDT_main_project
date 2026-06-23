@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-22
 updated: 2026-06-23
 ---
 
 # BE/DB API 정합 MVP R1 Spec
 
-> 상태: **Approved** (2026-06-23, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-06-23, 전체 작업 카드 구현 + dc-test-verify 통과)
 > 근거: dc-review-frontend 2026-06-22 실행 결과 + FE API 계약 전수 비교
 > 참고 Spec: [[payment-pg-integration]] (결제 연동은 별도 Spec, 본 범위 제외)
 

@@ -83,6 +83,7 @@ updated: 2026-06-02
 | 2026-06-22 | Jin | 73d5488 | docs(spec): FE↔BE API 정합 Spec 수립 [5/8 S] | Docs | 5 | 8 | S | FE↔BE API 정합 Spec 수립 |
 | 2026-06-23 | Jin | f3ce93f | fix(notification,disclosure): FE-BE API 정합 P0·P1 수정 [7/8 M] | Notification/Disclosure/Frontend | 7 | 8 | M | 알림페이지네이션+rcept_dt포맷정합 |
 | 2026-06-23 | Jin | bf83745 | fix(user,frontend): E4 OAuth 약관게이트+JWT claim+Vitest 30테스트 [8/8 L] | User/Shared/Frontend | 8 | 8 | L | E4 OAuth 약관게이트+JWT claim+Vitest |
+| 2026-06-23 | Jin | 81eaeae | feat(frontend): 종목검색 키보드네비+WAI-ARIA+Playwright E2E [6/8 M] | Frontend | 6 | 8 | M | 종목검색 키보드네비+WAI-ARIA+Playwright |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -90,5 +91,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 2 | 32 | 70 | 8.0 | 6.2 |
+| Jin | 3 | 33 | 71 | 8.0 | 6.2 |
 <!-- SUMMARY:END -->

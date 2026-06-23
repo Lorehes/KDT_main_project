@@ -1,12 +1,13 @@
 "use client";
 
-// [목적] 종목 관리 페이지(D12/m05·D12b/m05b) — 좌: 검색+CSV업로드 / 우: 등록된 종목+알림 CTA
-// [이유] 검색과 등록 목록을 패널로 분리해 종목 추가 흐름을 명확히 함 (이전: 단일 패널)
+// [목적] 종목 관리 페이지(D12/m05·D12b/m05b) — 좌: 검색+CSV업로드 / 우: 등록된 종목+알림 CTA (WAI-ARIA Combobox)
+// [이유] 검색과 등록 목록을 패널로 분리해 종목 추가 흐름을 명확히 함. WCAG 2.1 AA 키보드 네비(페르소나 E — 시니어 투자자).
 // [사이드 임팩트] usePortfolios·useDeletePortfolio 쿼리. 삭제 후 ["portfolios"] 자동 무효화.
-//   useStockSearch 직접 사용(실시간 드롭다운) — StockSearchCombobox 제거.
+//   activeIndex state로 ArrowDown/Up/Enter 키보드 네비. id="stock-option-${i}" (Combobox의 sc-option과 충돌 없음).
+//   searchResults 변경 시 activeIndex 리셋(useEffect). 활성 옵션 scrollIntoView(nearest).
 // [수정 시 고려사항] Free 3종목 초과 시 422 BUSINESS_RULE_VIOLATION — atLimit에 isLoading 포함.
-//   매수가·수량은 console.log 절대 금지(금융 개인정보, CLAUDE.md §7).
-//   종목 선택 후 이동 경로: /portfolios/add?code=...&name=... (기존 /portfolios/new → /portfolios/add 로 변경)
+//   매수가·수량 console.log 절대 금지(금융 개인정보, CLAUDE.md §7). 종목 선택 후 /portfolios/add?code=...&name=... 라우팅.
+//   Enter 선택 시 atLimit 체크 필수(disabled 상태와 동일 처리). stock-option prefix는 StockSearchCombobox와 맞출 것.
 
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,7 @@ import { usePortfolios, useDeletePortfolio } from "@/lib/api/portfolios";
 import { useStockSearch } from "@/lib/api/stocks";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -25,15 +27,6 @@ import {
 import type { StockSearchResult } from "@/lib/api/stocks";
 
 const FREE_LIMIT = 3;
-
-function useDebounce(value: string, delay = 300) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(id);
-  }, [value, delay]);
-  return debounced;
-}
 
 export default function PortfoliosNewPage() {
   const router = useRouter();
@@ -46,18 +39,23 @@ export default function PortfoliosNewPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const activeOptionRef = useRef<HTMLLIElement | null>(null);
   const debouncedQuery = useDebounce(searchInput);
   const { data: searchResults, isLoading: isSearching } = useStockSearch(debouncedQuery);
+
+  useEffect(() => { setActiveIndex(-1); }, [searchResults]);
+  useEffect(() => { activeOptionRef.current?.scrollIntoView({ block: "nearest" }); }, [activeIndex]);
 
   const count = portfolios?.length ?? 0;
   const atLimit = isLoading || (!isPro && count >= FREE_LIMIT);
 
-  const handleSelect = (stock: StockSearchResult) => {
+  const handleSelect = useCallback((stock: StockSearchResult) => {
     setSearchInput("");
     setDropdownOpen(false);
     router.push(`/portfolios/add?code=${stock.stock_code}&name=${encodeURIComponent(stock.corp_name)}&market=${stock.market}`);
-  };
+  }, [router]);
 
   const handleDelete = useCallback((id: number, name: string) => {
     setDeleteTarget({ id, name });
@@ -95,7 +93,22 @@ export default function PortfoliosNewPage() {
                   onChange={(e) => { setSearchInput(e.target.value); setDropdownOpen(e.target.value.trim().length > 0); }}
                   onFocus={() => { if (searchInput.trim()) setDropdownOpen(true); }}
                   onBlur={(e) => { if (!searchContainerRef.current?.contains(e.relatedTarget as Node)) setDropdownOpen(false); }}
-                  onKeyDown={(e) => { if (e.key === "Escape") { setDropdownOpen(false); } }}
+                  onKeyDown={(e) => {
+                    const len = searchResults?.length ?? 0;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      if (len > 0) { setDropdownOpen(true); setActiveIndex((i) => (i + 1) % len); }
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      if (len > 0) setActiveIndex((i) => (i - 1 + len) % len);
+                    } else if (e.key === "Enter" && activeIndex >= 0 && searchResults?.[activeIndex] && !atLimit) {
+                      e.preventDefault();
+                      handleSelect(searchResults[activeIndex]);
+                    } else if (e.key === "Escape") {
+                      setDropdownOpen(false);
+                      setActiveIndex(-1);
+                    }
+                  }}
                   placeholder={atLimit ? "Free 플랜 3종목 초과 — Pro 업그레이드 후 추가" : "종목명 또는 코드 검색"}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                   aria-label="종목 검색"
@@ -104,12 +117,16 @@ export default function PortfoliosNewPage() {
                   aria-controls="stock-dropdown"
                   aria-haspopup="listbox"
                   role="combobox"
+                  aria-activedescendant={dropdownOpen && activeIndex >= 0 ? `stock-option-${activeIndex}` : undefined}
                 />
               </div>
               <Button className="shrink-0" onClick={() => { if (searchInput.trim()) setDropdownOpen(true); }}>검색</Button>
             </div>
 
             {/* 드롭다운 */}
+            <div aria-live="polite" className="sr-only">
+              {isSearching ? "검색 중..." : !isSearching && (searchResults?.length === 0) && searchInput.trim() ? "검색 결과가 없습니다" : ""}
+            </div>
             {dropdownOpen && searchInput.trim() && (
               <ul
                 id="stock-dropdown"
@@ -118,14 +135,20 @@ export default function PortfoliosNewPage() {
                 className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-md"
               >
                 {isSearching && (
-                  <li className="px-4 py-3 text-sm text-muted-foreground" role="status" aria-live="polite">검색 중...</li>
+                  <li role="presentation" className="px-4 py-3 text-sm text-muted-foreground">검색 중...</li>
                 )}
                 {!isSearching && searchResults?.length === 0 && (
-                  <li className="px-4 py-3 text-sm text-muted-foreground">검색 결과가 없습니다.</li>
+                  <li role="presentation" className="px-4 py-3 text-sm text-muted-foreground">검색 결과가 없습니다.</li>
                 )}
-                {!isSearching && searchResults?.map((stock) => (
-                  <li key={stock.stock_code} role="option" aria-selected={false}>
-                    <div className="flex items-center justify-between px-4 py-3 hover:bg-muted">
+                {!isSearching && searchResults?.map((stock, i) => (
+                  <li
+                    key={stock.stock_code}
+                    id={`stock-option-${i}`}
+                    role="option"
+                    aria-selected={activeIndex === i}
+                    ref={activeIndex === i ? activeOptionRef : undefined}
+                  >
+                    <div className={`flex items-center justify-between px-4 py-3 hover:bg-muted${activeIndex === i ? " bg-muted" : ""}`}>
                       <div className="flex items-center gap-2.5">
                         <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary font-extrabold text-xs text-primary-foreground" aria-hidden>
                           {stock.corp_name.slice(0, 2)}
