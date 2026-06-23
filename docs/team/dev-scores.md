@@ -89,6 +89,7 @@ updated: 2026-06-02
 | 2026-06-23 | Jin | 2a5f497 | chore(spec): fe-accessibility-skeleton-ui Approved→Done [2/8 S] | Docs | 2 | 8 | S | fe-accessibility-skeleton-ui Spec Done 전환 |
 | 2026-06-23 | Jin | 0fd5092 | feat(frontend): 포트폴리오 알림 토글 dead code 제거 [3/8 S] | Frontend | 3 | 8 | S | 알림토글 제거+설정 링크 안내 |
 | 2026-06-23 | Jin | 928dcf8 | fix(user): OAuth agreed_at 정합+좀비계정 배치 [7/7 M] | User | 7 | 7 | M | OAuth agreed_at 정합+좀비계정 배치 |
+| 2026-06-23 | Jin | 5c6e7a0 | feat(disclosure,frontend): 대시보드 오늘 필터+Free 5건/일 강제 [7/8 M] | Disclosure/Frontend | 7 | 8 | M | 대시보드 오늘필터+Free 5건 강제 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -96,5 +97,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 8 | 25 | 76 | 8.0 | 6.2 |
+| Jin | 9 | 26 | 77 | 8.0 | 6.2 |
 <!-- SUMMARY:END -->

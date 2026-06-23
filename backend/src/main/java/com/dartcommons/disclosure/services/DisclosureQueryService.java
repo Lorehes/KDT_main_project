@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,11 +34,13 @@ import java.util.stream.Collectors;
  * [사이드 임팩트] PortfolioRepository 직접 의존 제거 — UserStockCodesProvider 인터페이스로 격리(R4).
  *               sentiment 필터를 DB 레벨 native query JOIN으로 처리 — totalElements/totalPages 정확도 개선.
  *               scope=all은 Free 사용자 차단 — Pro 이상만 전체 공시 피드 열람 가능.
+ *               Free 티어: fromDate/toDate=오늘(Asia/Seoul) + page=0 + size≤5 강제(dashboard-real-data R3).
  * [수정 시 고려사항] stock_code 파라미터와 scope=portfolio 동시 지정 시 교집합 필터로 처리.
  *                  stockCodes null 분기(scope=all)는 findAllFilteredWithSentiment, non-null은 findFilteredByStocksWithSentiment.
  *                  ids.isEmpty() 가드: Hibernate가 IN()을 SQL 오류로 변환하므로 빈 컬렉션일 때 DB 호출 생략.
  *                  sentimentStr: Sentiment enum → name() 변환 후 native query에 전달. null → 전체 반환.
  *                  size 이중 방어: 컨트롤러 @Max(100) + 서비스 진입부 Math.min — AOP 우회(직접 호출 등) 방어선.
+ *                  Free 강제 블록은 scope=all 403 분기 이후에 위치 — scope=all FREE는 이미 차단됨.
  */
 @Service
 @RequiredArgsConstructor
@@ -69,6 +72,16 @@ public class DisclosureQueryService {
                 && tier == Tier.FREE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "scope=all은 Pro 이상 플랜에서 사용 가능합니다.");
+        }
+
+        // Free 티어: 오늘(Asia/Seoul) + page=0 + 최대 5건 강제 (BM 정책 일 5건, dashboard-real-data R3)
+        // scope=all FREE는 위 403에서 이미 차단됨 — 여기는 scope=portfolio 또는 stockCode 단건 경로
+        if (tier == Tier.FREE) {
+            LocalDate seoulToday = LocalDate.now(ZoneId.of("Asia/Seoul"));
+            fromDate = seoulToday;
+            toDate = seoulToday;
+            page = 0;
+            size = Math.min(size, 5);
         }
 
         List<String> stockCodes = resolveStockCodes(userId, scope, stockCode);

@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (oauth-consent-data-integrity Done)
+updated: 2026-06-23 (dashboard-real-data Approved)
 ---
 
 # Specs MOC
@@ -39,6 +39,7 @@ docs/specs/
 
 
 ### Approved
+- [[dashboard-real-data]] — 대시보드 실데이터 연동: R2 오늘 필터 + R3 Free 일 5건 BE 강제 + R4 FE 제한 안내 (2026-06-23 Approved)
 
 ### Done
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable(V21) + 좀비 계정 배치 정리 (2026-06-23 Done)

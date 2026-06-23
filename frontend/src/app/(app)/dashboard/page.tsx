@@ -1,16 +1,17 @@
 "use client";
 
-// [목적] 대시보드(D2/m03) — 통계 카드 + 공시 피드. 종목 0건 시 Empty state(D11/m15) 표시
+// [목적] 대시보드(D2/m03) — 오늘의 보유 종목 공시 레이더: 통계 카드 + 공시 피드. 종목 0건 시 Empty state(D11/m15) 표시
 // [이유] 앱 홈으로 매일 방문하는 핵심 화면. 빈 상태는 종목 등록으로 즉시 유도
-// [사이드 임팩트] useDisclosures(scope=portfolio)·usePortfolios·useAuthStore 의존.
-//   W4에서 DisclosureCard 피드를 실제 데이터로 교체 예정 — 현재는 구조 + empty state 중심 구현
-// [수정 시 고려사항] 통계 카드 수치는 W4에서 /disclosures 응답 집계로 교체.
-//   모바일에서 통계 카드는 2열 grid. 공시 피드는 무한 스크롤 예정(W4)
+// [사이드 임팩트] useDisclosures(scope=portfolio, from/to=오늘 Asia/Seoul)·usePortfolios·useAuthStore·useUIStore 의존.
+//   Free 티어는 BE가 오늘+page0+5건 강제(dashboard-real-data R3). total_elements>5 시 업그레이드 배너 표시(R4).
+// [수정 시 고려사항] Free 제한 배너 문구는 자본시장법 §11.1 — 투자 권유 표현 금지, 기능 안내로 한정.
+//   평가 손익(StatCard)은 KRX 현재가 연동 전까지 placeholder. 모바일에서 통계 카드는 2열 grid.
 
 import Link from "next/link";
-import { Briefcase, Bell, TrendingUp } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { Briefcase, Bell } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/stores/authStore";
+import { useUIStore } from "@/lib/stores/uiStore";
 import { usePortfolios } from "@/lib/api/portfolios";
 import { useDisclosures } from "@/lib/api/disclosures";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
@@ -20,13 +21,18 @@ import { StatCard, SentimentStatCard } from "@/components/domain/StatCards";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const { setUpsellModalOpen } = useUIStore();
   const { data: portfolios } = usePortfolios();
-  const { data: disclosurePage, isLoading } = useDisclosures({ scope: "portfolio", size: 10 });
+  // "sv" locale → YYYY-MM-DD, Asia/Seoul 기준 오늘 날짜 — BE Free 강제와 동일 기준
+  const today = new Intl.DateTimeFormat("sv", { timeZone: "Asia/Seoul" }).format(new Date());
+  const { data: disclosurePage, isLoading } = useDisclosures({ scope: "portfolio", size: 10, from: today, to: today });
   const showSkeleton = useDelayedLoading(isLoading);
 
   const hasPortfolios = (portfolios?.length ?? 0) > 0;
   const disclosures = disclosurePage?.content ?? [];
   const nickname = user?.nickname ?? "투자자";
+  // total_elements는 BE가 size 클램핑 전 오늘 전체 카운트를 반환 → >5면 Free 제한 도달
+  const isFreeLimited = user?.tier === "FREE" && (disclosurePage?.page.total_elements ?? 0) > 5;
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,7 +49,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* 통계 카드 — 호재/악재/보류는 1개 카드로 통합 표기. W4에서 실제 데이터로 교체.
+      {/* 통계 카드 — 호재/악재/보류는 1개 카드로 통합 표기.
           평가 손익은 KRX 현재가 연동 전까지 placeholder("DB 연동 필요") */}
       <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="오늘 공시 통계">
         <StatCard label="오늘 공시" value={disclosures.length} unit="건" />
@@ -93,6 +99,21 @@ export default function DashboardPage() {
               </li>
             ))}
           </ul>
+          {isFreeLimited && (
+            <div
+              className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+              role="status"
+              aria-label="Free 플랜 일 5건 조회 완료 안내"
+            >
+              <p className="text-sm text-muted-foreground">
+                오늘 5건 조회 완료 —{" "}
+                <span className="font-bold text-foreground">Pro 플랜</span>에서 전체 공시를 확인할 수 있어요.
+              </p>
+              <Button size="sm" onClick={() => setUpsellModalOpen(true)} className="shrink-0" aria-label="Pro 플랜 업그레이드">
+                Pro 보기
+              </Button>
+            </div>
+          )}
         </section>
       )}
     </div>

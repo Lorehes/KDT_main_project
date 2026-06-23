@@ -11,6 +11,24 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (33차) | 대시보드 오늘 필터 + Free 5건/일 강제 (dashboard-real-data Wave 1+2)
+
+**산출**:
+- BE(수정): `DisclosureQueryService.java` — `tier==FREE` 분기: `fromDate/toDate=LocalDate.now(ZoneId.of("Asia/Seoul"))` 강제, `page=0`, `size=Math.min(size,5)`. ZoneId import 추가. 403 체크를 Free 블록 위로 이동(리뷰 Medium 즉시 수정).
+- FE(수정): `dashboard/page.tsx` — `useDisclosures`에 `from/to=오늘(Intl.DateTimeFormat sv, Asia/Seoul)` 추가. outdated 주석 정정("W4 교체 예정" 제거). `isFreeLimited(total_elements>5&&FREE)` 배너 추가 + ProUpsellModal CTA.
+- Docs: issues 2건 신규 (`disclosure-free-tier-enforcement-test.md`, `dashboard-today-midnight-staleness.md`)
+
+### 결정
+- **Free 강제 메커니즘**: size 클램핑만으로는 `page=1,2…` 페이지네이션 우회 가능. 오늘+page0+5건 강제(3중) 채택.
+- **`total_elements` 활용**: `free_limit_reached` 신규 필드 불필요 — `total_elements > 5`로 클라이언트가 추론.
+- **타임존 기준**: BE `ZoneId.of("Asia/Seoul")`, FE `Intl.DateTimeFormat("sv", {timeZone:"Asia/Seoul"})` 동일 기준. Free는 BE가 항상 오늘 강제(FE 전달값 무시).
+
+### 미완료
+- `DisclosureQueryService` Free 강제 Testcontainers 통합 테스트 미작성 → `docs/issues/disclosure-free-tier-enforcement-test.md` (P2)
+- `today` 자정 고착 엣지케이스(Pro/Premium) → `docs/issues/dashboard-today-midnight-staleness.md` (P3, `useTodaySeoul` 훅 방향)
+
+---
+
 ## 2026-06-23 (32차) | OAuth 동의 데이터 정합 + 좀비 계정 배치 정리 (oauth-consent-data-integrity)
 
 **산출**:
