@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-23
 ---
 
 # 요금제 진입 시 로그인 사용자 네비/셸 정합성 Spec
 
-> 상태: Draft → **Approved** (2026-06-22, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-22, dc-tech-review 승인) → **Done** (2026-06-23, 구현·리뷰·커밋 완료)
 > 관련: [[design_structure]] §1·§5.1, [[api_spec]] §2.6, [[payment-pg-integration]]
 
 ## 배경 / 목적

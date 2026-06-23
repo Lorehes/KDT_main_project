@@ -44,6 +44,7 @@ docs/specs/
 ### Approved
 
 ### Done
+- [[pricing-nav-auth-consistency]] — 요금제 네비/셸 정합: PublicNavbar auth-aware화 + (public)/layout 서버 쿠키 presence 판정 (2026-06-23 Done)
 - [[portfolio-management-e2e]] — 포트폴리오 종목 관리 E2E: corp_name 응답·staleTime·알림 토글 Option A(설정 링크 교체) (2026-06-23 Done)
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-23 Done)
 - [[performance-caching-staletime]] — 성능/캐싱: Caffeine+portfolioStockCodes/analysisResult + TanStack staleTime — 149/149 + 30/30 통과 (2026-06-23)
