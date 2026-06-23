@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-16
 updated: 2026-06-23
 ---
 
 # 투자 경험 · 주 사용 시점 DB 저장 Spec
 
-> 상태: Draft → **Approved** (2026-06-23, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-23, Wave 1+2 구현 완료)
 
 ## 배경 / 목적
 

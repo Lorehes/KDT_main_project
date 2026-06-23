@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (user-profile-investment-experience Approved)
+updated: 2026-06-23 (user-profile-investment-experience Done)
 ---
 
 # Specs MOC
@@ -39,9 +39,9 @@ docs/specs/
 
 
 ### Approved
-- [[user-profile-investment-experience]] — 투자 경험·주 사용 시점 DB 저장: V22 마이그레이션 + UserEntity enum + DTO nickname nullable + FE 호출 복원 (2026-06-23 Approved)
 
 ### Done
+- [[user-profile-investment-experience]] — 투자 경험·주 사용 시점 DB 저장: V22 마이그레이션 + nickname nullable + FE 호출 복원 (2026-06-23 Done)
 - [[dashboard-real-data]] — 대시보드 실데이터 연동: R2 오늘 필터 + R3 Free 일 5건 BE 강제 + R4 FE 제한 안내 (2026-06-23 Done)
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable(V21) + 좀비 계정 배치 정리 (2026-06-23 Done)
 - [[pricing-nav-auth-consistency]] — 요금제 네비/셸 정합: PublicNavbar auth-aware화 + (public)/layout 서버 쿠키 presence 판정 (2026-06-23 Done)
