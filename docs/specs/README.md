@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (e2e-token-refresh-mecount-fix Draft 추가)
+updated: 2026-06-23 (be-api-alignment-mvp-r1·oauth-consent-enforcement Approved→Done)
 ---
 
 # Specs MOC
@@ -48,10 +48,11 @@ docs/specs/
 - [[e2e-token-refresh-mecount-fix]] — E2E 토큰 갱신 테스트 픽스: AuthBroadcastListener 조건부 마운트로 meCallCount 오차 수정 (1줄 수정)
 
 ### Approved
-- [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware consent 체크 + JWT onboarding_completed 인코딩 + OAuthTermsPage 분리 (2026-06-23 Approved)
 - [[fe-accessibility-skeleton-ui]] — FE 접근성/Skeleton/UI 완성도: WCAG 2.1 AA + Skeleton 패턴 + AlertDialog (2026-06-22 Approved)
 
 ### Done
+- [[oauth-consent-enforcement]] — OAuth 동의 강제화·UX: middleware E4 게이트 + JWT onboarding_completed + OAuthTermsPage + Vitest 30건 (2026-06-23)
+- [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 PageResponse(P0) + rcept_dt YYYYMMDD(P1) + Stage null 문서화 (2026-06-23)
 - [[code-review-fixes-onboarding-portfolio]] — 온보딩·포트폴리오 리뷰 수정: C-1·H 7건·M 5건·L 4건 완료 (2026-06-18)
 - [[mvp-missing-endpoints]] — MVP 미구현 엔드포인트: phone verify · consents · pricing plans (2026-06-11)
 - [[frontend-oauth-social]] — 소셜 OAuth 실연동: 카카오·구글 콜백 Route Handler 구현 (2026-06-11)
