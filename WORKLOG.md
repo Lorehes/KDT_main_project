@@ -11,6 +11,32 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (32차) | OAuth 동의 데이터 정합 + 좀비 계정 배치 정리 (oauth-consent-data-integrity)
+
+**산출**:
+- BE(신규): `V21__nullable_agreed_at.sql` — `users.terms_agreed_at / privacy_agreed_at` NOT NULL 해제 + COMMENT
+- BE(수정): `UserEntity.java` — `@Column(nullable = true)` 전환, 클래스 주석 V21 반영
+- BE(수정): `AuthService.java` — `autoSignup()` `.termsAgreedAt(now)` `.privacyAgreedAt(now)` 빌더 호출 제거, 클래스 주석 정정
+- BE(수정): `ConsentService.java` — stale 주석("OAuth 로그인마다" → "POST /me/oauth-consent 멱등 체크 시") 정정
+- BE(수정): `ConsentLogRepository.java` — stale 주석 동일 정정
+- BE(수정): `UserRepository.java` — `findIncompleteOAuthAccountIds` + `softDeleteByIdIn(@Modifying clearAutomatically=true)` 신규
+- BE(수정): `RefreshTokenRepository.java` — `deleteByUserIdIn` 벌크 삭제 신규
+- BE(신규): `OAuthIncompleteAccountCleanupJob.java` — `@Scheduled(cron="0 0 3 * * *")`, `@ConditionalOnProperty`, soft delete 배치
+
+### 결정 (코드에 드러나지 않는 사항)
+- **E3 수정 범위**: `autoSignup()`만 수정. `signup()`(이메일 가입)은 동의와 동시 발생 — `now()` 정합 유지, 변경 금지.
+- **M-P2 Drop**: `oauthCallback`이 V20 이후 `onboarding_completed_at` 기준으로 전환되어 `hasRequiredConsents()` 매 로그인 호출이 없어짐. 캐싱 전제 소멸 → Wave 2 전체 제거.
+- **M-M2 삭제 기준 변경**: `hasRequiredConsents()=false` → `onboarding_completed_at IS NULL` (더 정확한 미완료 지표).
+- **soft delete 확정**: `consent_logs` INSERT-only 보존 의무(통합기획서 §11.1) — hard delete 금지. 좀비 계정 `deleted_at` 설정으로 인증 흐름 제외.
+- **마이그레이션 V21**: Spec 원안 "V19"는 V20이 이미 존재하여 사용 불가(Flyway out-of-order 방지). V21 사용.
+- **FE 변경 불필요 확인**: `authStore.ts:27-28` `terms_agreed_at?` 이미 optional 타입, UI 렌더링 없음.
+
+### 미완료 (다음 세션 이어갈 작업)
+- **테스트 미작성**: `OAuthIncompleteAccountCleanupJob` 통합 테스트(Testcontainers) 미포함. 구현 후 별도 파이프라인에서 추가 권장.
+- **Spec 완료 처리**: `/dc-spec-move oauth-consent-data-integrity Done` 대기 (다음 `/dc-push` 시).
+
+---
+
 ## 2026-06-23 (31차) | 포트폴리오 알림 토글 dead code 제거 (portfolio-management-e2e R3)
 
 **산출**:

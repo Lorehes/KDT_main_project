@@ -13,7 +13,7 @@ import java.util.Optional;
  * [이유] 동의 이력은 법적 증거 — 삭제·수정 불가(db_schema §3.7, 통합기획서 §11.1).
  *       최신 동의 상태 = (user_id, consent_type) MAX(agreed_at) 행.
  * [사이드 임팩트] JpaRepository의 delete 메서드는 상속되지만 서비스 계층에서 호출 금지.
- *               countAgreedRequiredConsents()는 hasRequiredConsents()에서 OAuth 로그인마다 호출됨 —
+ *               countAgreedRequiredConsents()는 hasRequiredConsents()에서 POST /me/oauth-consent 멱등 체크 시 호출됨 —
  *               idx_consent_logs_user_type 인덱스(V8)로 최적화됨.
  * [수정 시 고려사항] 필수 동의 항목(REQUIRED_TYPES) 변경 시 ConsentService.REQUIRED_CONSENT_TYPES와 동기화.
  *                  메이저 버전 재동의 정책 도입 시 policy_version 필터 쿼리 추가.

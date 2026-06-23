@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
  * [수정 시 고려사항] OAuth 계정 연동(이메일 충돌 시 자동 연결) 허용 정책 전환 시 oauthCallback의 충돌 처리 로직 수정.
  *                  로그인 시도 횟수 제한(rate-limit) 추가 시 AuthController AOP/Bucket4j 레이어.
  *                  다중 기기 로그인은 user_id당 refresh_tokens 복수 허용(현재 구조 지원).
- *                  온보딩 미완료 계정 정리가 필요하면 배치로 onboarding_completed_at IS NULL + created_at 경과 기준 삭제.
+ *                  온보딩 미완료 계정 정리는 OAuthIncompleteAccountCleanupJob(매일 새벽 3시, 3일 grace)이 담당.
  */
 @Service
 @Transactional
@@ -271,7 +271,6 @@ public class AuthService {
      * is_new_user=true 반환 → FE가 약관 동의 페이지로 리다이렉트.
      */
     private AuthResponse autoSignup(UserEntity.OAuthProvider oauthProvider, OAuthUserInfo userInfo) {
-        OffsetDateTime now = OffsetDateTime.now();
         // 이메일 미동의 시 placeholder 생성 — 실 서비스 전환 후 이메일 동의 활성화 시 제거
         String email = (userInfo.email() != null && !userInfo.email().isBlank())
                 ? userInfo.email()
@@ -280,13 +279,12 @@ public class AuthService {
                 ? userInfo.nickname()
                 : email.split("@")[0];
 
+        // termsAgreedAt / privacyAgreedAt 미설정 — OAuth 동의 SSOT는 consent_logs(V21, E3 수정)
         UserEntity user = UserEntity.builder()
                 .email(email)
                 .oauthProvider(oauthProvider)
                 .oauthId(userInfo.providerId())
                 .nickname(nickname)
-                .termsAgreedAt(now)
-                .privacyAgreedAt(now)
                 .build();
         userRepository.save(user);
 

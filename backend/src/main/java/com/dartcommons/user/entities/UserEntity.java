@@ -7,15 +7,19 @@ import lombok.*;
 import java.time.OffsetDateTime;
 
 /*
- * [목적] users 테이블(V1+V7+V10 마이그레이션) JPA 엔티티 — 사용자·인증·BM 등급·알림 설정 루트 엔티티.
+ * [목적] users 테이블(V1+V7+V10+V21 마이그레이션) JPA 엔티티 — 사용자·인증·BM 등급·알림 설정 루트 엔티티.
  * [이유] soft delete(deleted_at) + OAuth2 계정(password_hash nullable) 지원.
  *       V7 알림 빈도/필터/거래시간외 컬럼 포함.
  *       V10 onboarding_completed_at: OAuth 로그인 is_new_user 판단 기준. NULL=미완료, NOT NULL=완료.
+ *       V21 terms_agreed_at / privacy_agreed_at: OAuth 가입은 동의 SSOT를 consent_logs로 일원화,
+ *            users 컬럼은 이메일 가입 전용(nullable 전환). OAuth 계정에 now() 기록 시 불일치(E3) 방지.
  *       Enum은 VARCHAR+CHECK DB 제약과 @Enumerated(STRING) 동기화(db_schema §3.1, CLAUDE.md §6-3).
  * [사이드 임팩트] portfolios/notifications/consent_logs/feedbacks가 users.id FK 참조.
  *               soft delete 후 email UNIQUE 충돌 가능 — findByEmailAndDeletedAtIsNull 사용 필수.
+ *               terms_agreed_at / privacy_agreed_at null = OAuth 가입 계정 (이메일 가입은 항상 not-null).
  * [수정 시 고려사항] phone_number_enc는 BYTEA — AesGcmEncryptor로만 암복호. 평문 저장/로깅 절대 금지.
  *                  tier 변경(Pro 구독 만료)은 별도 스케줄러 담당 — 여기선 단순 필드.
+ *                  동의 시각이 필요하면 users 컬럼 대신 consent_logs.agreed_at을 조회할 것.
  */
 @Entity
 @Table(name = "users")
@@ -77,10 +81,12 @@ public class UserEntity {
     @Builder.Default
     private boolean notifyEnabled = true;
 
-    @Column(name = "terms_agreed_at", nullable = false)
+    /** 이메일 가입 시 동의 시각. OAuth 가입은 consent_logs가 SSOT → null 허용(V21). */
+    @Column(name = "terms_agreed_at")
     private OffsetDateTime termsAgreedAt;
 
-    @Column(name = "privacy_agreed_at", nullable = false)
+    /** 이메일 가입 시 동의 시각. OAuth 가입은 consent_logs가 SSOT → null 허용(V21). */
+    @Column(name = "privacy_agreed_at")
     private OffsetDateTime privacyAgreedAt;
 
     @Column(name = "marketing_agreed_at")

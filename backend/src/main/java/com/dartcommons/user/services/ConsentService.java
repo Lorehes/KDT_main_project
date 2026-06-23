@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  *       requires_renewal 산출로 FE가 재동의 흐름을 트리거할 수 있게 함.
  * [사이드 임팩트] AuthService.signup()이 recordSignupConsents() 호출 — 회원가입 트랜잭션 내 4개 INSERT.
  *               getStatus()는 읽기 전용 — 트랜잭션 propagation REQUIRED이나 dirty read 없음.
- *               hasRequiredConsents()는 OAuth 로그인마다 호출 — countAgreedRequiredConsents() 단일 쿼리로 최적화됨.
+ *               hasRequiredConsents()는 POST /me/oauth-consent 멱등 체크 시 1회 호출 — countAgreedRequiredConsents() 단일 쿼리로 최적화됨.
  *               REQUIRED_CONSENT_TYPES 변경 시 FE terms/page.tsx TERMS_ITEMS, OAuthConsentRequest @AssertTrue와 동기화 필수.
  * [수정 시 고려사항] CURRENT_POLICY_VERSION 변경 시 기존 사용자 getStatus() 응답이 requires_renewal=true 됨.
  *                  메이저 버전 변경 시 별도 스케줄러/이메일 발송으로 사용자 안내 병행 권장.
@@ -83,7 +83,7 @@ public class ConsentService {
     /**
      * REQUIRED_CONSENT_TYPES(TERMS·PRIVACY·DISCLAIMER) 모두 최신 기록이 agreed=true인지 확인.
      * 전용 countAgreedRequiredConsents() 쿼리 사용 — 4개 타입 전체 로드 대신 필요 타입만 조회(DB I/O 절감).
-     * OAuth 로그인마다 호출되므로 단일 COUNT 쿼리로 최적화.
+     * POST /me/oauth-consent 멱등 체크 시 1회 호출(UserController) — 매 로그인 호출 아님(V20 이후).
      */
     @Transactional(readOnly = true)
     public boolean hasRequiredConsents(Long userId) {
