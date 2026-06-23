@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-16
 updated: 2026-06-23
 ---
 
 # 대시보드 실데이터 연동 Spec (dashboard-real-data)
 
-> 상태: Draft → **Approved** (2026-06-23, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-23) → **Done** (2026-06-23, Wave 1+2 구현 완료)
 
 ## 배경 / 목적
 

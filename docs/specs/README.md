@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (dashboard-real-data Approved)
+updated: 2026-06-23 (dashboard-real-data Done)
 ---
 
 # Specs MOC
@@ -39,9 +39,9 @@ docs/specs/
 
 
 ### Approved
-- [[dashboard-real-data]] — 대시보드 실데이터 연동: R2 오늘 필터 + R3 Free 일 5건 BE 강제 + R4 FE 제한 안내 (2026-06-23 Approved)
 
 ### Done
+- [[dashboard-real-data]] — 대시보드 실데이터 연동: R2 오늘 필터 + R3 Free 일 5건 BE 강제 + R4 FE 제한 안내 (2026-06-23 Done)
 - [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable(V21) + 좀비 계정 배치 정리 (2026-06-23 Done)
 - [[pricing-nav-auth-consistency]] — 요금제 네비/셸 정합: PublicNavbar auth-aware화 + (public)/layout 서버 쿠키 presence 판정 (2026-06-23 Done)
 - [[portfolio-management-e2e]] — 포트폴리오 종목 관리 E2E: corp_name 응답·staleTime·알림 토글 Option A(설정 링크 교체) (2026-06-23 Done)
