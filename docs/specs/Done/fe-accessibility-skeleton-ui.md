@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
-updated: 2026-06-22
+updated: 2026-06-23
 ---
 
 # FE 접근성 · Skeleton · UI 완성도 Spec
 
-> 상태: Draft → **Approved** (2026-06-22, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-22, dc-tech-review 승인) → **Done** (2026-06-23, 구현·리뷰·커밋 완료)
 
 ## 배경 / 목적
 

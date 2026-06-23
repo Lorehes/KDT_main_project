@@ -86,6 +86,7 @@ updated: 2026-06-02
 | 2026-06-23 | Jin | 81eaeae | feat(frontend): 종목검색 키보드네비+WAI-ARIA+Playwright E2E [6/8 M] | Frontend | 6 | 8 | M | 종목검색 키보드네비+WAI-ARIA+Playwright |
 | 2026-06-23 | Jin | 4dc407c | fix(frontend): E2E meCallCount 픽스 — AuthBroadcastListener 조건부 마운트 [4/8 S] | Frontend/Docs | 4 | 8 | S | E2E meCallCount 픽스 |
 | 2026-06-23 | Jin | 15fac11 | feat(perf): Caffeine 캐시 인프라 + staleTime 정책 [7/8 L] | Shared/Analysis/User/Frontend | 7 | 8 | L | Caffeine 캐시 인프라 + staleTime 정책 |
+| 2026-06-23 | Jin | 2a5f497 | chore(spec): fe-accessibility-skeleton-ui Approved→Done [2/8 S] | Docs | 2 | 8 | S | fe-accessibility-skeleton-ui Spec Done 전환 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -93,5 +94,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 5 | 35 | 73 | 8.0 | 6.3 |
+| Jin | 6 | 23 | 74 | 8.0 | 6.2 |
 <!-- SUMMARY:END -->
