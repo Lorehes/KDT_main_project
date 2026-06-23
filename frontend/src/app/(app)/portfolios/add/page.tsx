@@ -56,7 +56,8 @@ function AddPortfolioForm() {
   const handlePriceStep = (direction: "up" | "down") => {
     const current = Number(getValues("avg_buy_price")) || 0;
     if (direction === "up") {
-      setValue("avg_buy_price", String(current + 10000), { shouldValidate: true });
+      if (current >= 999_999_999) return;
+      setValue("avg_buy_price", String(Math.min(current + 10000, 999_999_999)), { shouldValidate: true });
     } else {
       if (current <= 10000) return;
       setValue("avg_buy_price", String(current - 10000), { shouldValidate: true });
@@ -66,7 +67,8 @@ function AddPortfolioForm() {
   const handleQuantityStep = (direction: "up" | "down") => {
     const current = Number(getValues("quantity")) || 0;
     if (direction === "up") {
-      setValue("quantity", String(current + 1), { shouldValidate: true });
+      if (current >= 100_000_000) return;
+      setValue("quantity", String(Math.min(current + 1, 100_000_000)), { shouldValidate: true });
     } else {
       if (current <= 1) return;
       setValue("quantity", String(current - 1), { shouldValidate: true });
@@ -159,7 +161,10 @@ function AddPortfolioForm() {
                 <Controller
                   control={control}
                   name="avg_buy_price"
-                  rules={{ min: { value: 1, message: "1원 이상 입력해주세요" } }}
+                  rules={{
+                    min: { value: 1, message: "1원 이상 입력해주세요" },
+                    max: { value: 999_999_999, message: "9억 9천만 원을 초과할 수 없습니다" },
+                  }}
                   render={({ field: { onChange, value, ref } }) => (
                     <div className={`flex items-center overflow-hidden rounded-xl border bg-background focus-within:ring-2 focus-within:ring-primary/20 ${errors.avg_buy_price ? "border-destructive" : "border-border focus-within:border-primary"}`}>
                       <input
@@ -231,6 +236,7 @@ function AddPortfolioForm() {
                     }}
                     {...register("quantity", {
                       min: { value: 1, message: "1 이상" },
+                      max: { value: 100_000_000, message: "1억 주를 초과할 수 없습니다" },
                       validate: (v) => !v || Number.isInteger(Number(v)) || "정수만 입력",
                     })}
                   />

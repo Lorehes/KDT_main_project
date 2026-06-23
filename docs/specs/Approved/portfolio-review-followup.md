@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-21
-updated: 2026-06-21
+updated: 2026-06-23
 ---
 
 # 포트폴리오 리뷰 후속 수정 Spec (portfolio-review-followup)
 
-> 상태: **Draft** (2026-06-21, dc-review-code 미수정 항목 Spec화)
+> 상태: Draft → **Approved** (2026-06-23, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -229,3 +229,73 @@ R3 옵션 A(per-stock 알림 토글 MVP 제외) 이후 Bell 아이콘이 `aria-h
   - R6는 UI 결정 필요 — `/dc-review-frontend` 시 확정 권장
 
 <!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+
+## Tech Review (dc-tech-review · 2026-06-23)
+
+### ⚠️ 전제 재검증 — Spec 작성(2026-06-21) 이후 코드 실측
+
+Spec 작성 후 `performance-caching-staletime`(Done)·`portfolio-management-e2e R3`·포트폴리오 라우트 개편이 머지되어 전제 4건이 어긋났다.
+
+| 항목 | Spec 원전제 | 실측 결과 (2026-06-23) | 판정 |
+|------|------------|----------------------|------|
+| **R1** toResponse 오버로드 | 단건 오버로드가 `findById` 숨김 | `PortfolioService.java:130` 오버로드 존재, `getPortfolio`(73)·`updatePortfolio`(113)가 호출 | ✅ 유효 |
+| **R2** 캐시 적용 방식 | `application.yml`에 `caffeine.spec` 추가 + `@Cacheable findById` | **application.yml은 `CacheConfig.java` 프로그래밍 방식으로 전환됨**(`registerCustomCache`). `findById`는 JpaRepository 기본 메서드 → `@Cacheable` 직접 부착 불가 | 🔧 **구현 방식 전면 정정** |
+| **R3** parseSafe NFE 방어 | `new BigDecimal(decrypted)` 무방비 | `PortfolioService.java:144-145` 무방비 확인 | ✅ 유효 |
+| **R4** toMap merge 함수 | merge 누락 | `PortfolioService.java:66` merge 함수 없음 확인 | ✅ 유효 |
+| **R5** max 검증 대상 파일 | `portfolios/new/page.tsx`의 `avg_buy_price register` | **라우트 개편: `new`=검색 전용, `add`=등록 상세.** `avg_buy_price`는 `portfolios/add/page.tsx:160` `Controller`(rules `min`만, `max` 없음) | 🔧 **대상 `add/page.tsx`로 정정, register→Controller** |
+| **R6·R7** PortfolioListItem | corp_name 폴백 · Bell 장식 수정 | **`PortfolioListItem.tsx`는 dead component — 자신 외 import 0건.** `portfolios/page.tsx`가 대시보드로 개편되며 `StatCard` 사용, 이 컴포넌트 미참조 | ⚠️ **dead code — 수정 대신 삭제 권장** |
+
+### 사용자 결정 필요 (1건)
+
+**R6·R7 — PortfolioListItem.tsx 처리 방향**:
+- **삭제 (권장)**: dead component(import 0). corp_name 폴백·Bell 링크화는 살아있지 않은 코드를 고치는 것 → 가치 없음. 컴포넌트 + `PortfolioListItem` 관련 dead export 제거가 정합.
+- **보존+수정**: 향후 목록 UI 복원 의도가 있다면 R6·R7 원안대로 수정 후 유지. 단 현재 진입점 없음.
+- 구현 시점에 `/dc-implement` 또는 사용자 확정으로 결정. 본 검토는 **삭제** 가정으로 카드 구성.
+
+### 아키텍처 분해
+
+- **영향 레이어**: backend(`user/services`, `stocks/repositories`, `stocks`, `shared/config`) + frontend(`portfolios/add`, `components/domain`)
+- **신규**: 없음 (CacheConfig에 캐시 등록 추가, StockMasterSyncJob에 evict 추가)
+- **수정**: `PortfolioService`(R1·R3·R4), `CacheConfig`(R2 캐시 등록), `StockRepository` 또는 `StockMasterService`(R2 @Cacheable 위임), `StockMasterSyncJob`(R2 evict), `portfolios/add/page.tsx`(R5)
+- **삭제**: `PortfolioListItem.tsx`(R6·R7, 삭제안 채택 시)
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| **Wave 1 — BE PortfolioService** | | | | | |
+| 1 | R1: `toResponse(PortfolioEntity)` 단건 오버로드 제거 → `getPortfolio`/`updatePortfolio` 호출부를 명시적 `findById` corpName 조회로 교체 (M-5 자동 해소) | backend/user | BE | 하 | - |
+| 2 | R3: `parseSafe(String)` 헬퍼 추가 — NFE catch 후 원문 미포함 예외. `toResponse(e, corpName)`의 BigDecimal 변환 2곳 교체 | backend/user | BE | 하 | #1 |
+| 3 | R4: `listPortfolios()` `Collectors.toMap`에 merge 함수 `(a,b)->a` 추가 | backend/user | BE | 하 | - |
+| **Wave 1 — BE Stock 캐시 (R2)** | | | | | |
+| 4 | R2: `CacheConfig.java`에 `stockByCode`·`stocksByCodeIn` `registerCustomCache`(TTL 4h+) 추가. `StockMasterService`(또는 명시 메서드)에 `@Cacheable` 위임 — `findById`/`findByStockCodeIn` 경유. `StockMasterSyncJob` 완료 후 `@CacheEvict(allEntries=true)` 추가 | backend/stocks·shared | BE | 중 | - |
+| **Wave 2 — FE** | | | | | |
+| 5 | R5: `portfolios/add/page.tsx` `avg_buy_price` `Controller` `rules`에 `max: { value: 999_999_999, ... }` 추가 (BE `@DecimalMax` 정합). quantity(233)도 max 누락 시 동반 점검 | frontend/portfolios | FE | 하 | - |
+| 6 | R6·R7: `PortfolioListItem.tsx` 삭제(dead component) — 삭제안 확정 시. 보존 시 corp_name 폴백 + Bell 링크화 | frontend/components | FE | 하 | 사용자 결정 |
+
+### DB / 마이그레이션 영향
+
+- **없음.** 컬럼·인덱스·스키마 변경 없음. R2는 애플리케이션 캐시 레이어만 추가.
+
+### 외부 계약 영향
+
+- **없음.** DART/KRX/카카오/LLM 무관. REST 응답 스키마(`PortfolioResponse`) 필드 불변 — R1·R3은 내부 조회 경로만 변경, R4는 동작 동일(방어적).
+
+### 리스크 & 법적 검토
+
+- **금융 PII(중) — R3**: `parseSafe` 예외 메시지·로그에 `decryptedPrice`/`decryptedQty` 원문 절대 미포함(CLAUDE.md §7). 현재 무방비 `new BigDecimal()`은 NFE 스택트레이스에 복호화 시도값 노출 위험 → R3가 이를 차단.
+- **stale corpName(하) — R2**: `StockMasterSyncJob`(분기 배치) 완료 후 evict 누락 시 옛 종목명 제공. 카드 #4에 evict 포함 필수. 변동성 극저(분기 1회)라 영향 경미하나 누락 금지.
+- **캐시 키 충돌(하) — R2**: `stocksByCodeIn` 키가 `Collection` 순서/타입에 민감. `Set` 전달 시 동등성 보장 확인 — MVP 규모(Free 3·Pro 10)에서는 단건 `stockByCode` 캐시만으로도 충분, bulk 캐시는 선택.
+- **dead code 회귀(하) — R6·R7**: 삭제 시 `PortfolioListItem` import 잔존 여부 빌드 확인(현재 0건이므로 안전).
+
+### 예상 wave 수
+
+- **2 wave**:
+  - **Wave 1**(BE): 카드 #1~#4. R1→R3 의존(같은 메서드), R4·R2 독립. 1 PR.
+  - **Wave 2**(FE): 카드 #5·#6. R5 즉시, R6·R7은 삭제/보존 결정 후. 1 PR.
+
+### 확인 필요 (구현 시점)
+
+1. **카드 #4 (R2)** — `@Cacheable`을 `StockRepository`(JpaRepository) 기본 `findById`에 직접 부착 불가. `StockMasterService`에 위임 메서드를 두거나, Repository에 `findByStockCode`(명시 쿼리 메서드)를 추가해 부착. `performance-caching-staletime`의 `AnalysisResultCacheService` 분리 패턴(Optional 언랩 SpEL 이슈 회피) 참고 권장.
+2. **카드 #6 (R6·R7)** — `PortfolioListItem.tsx` 삭제 vs 보존 사용자 확정. 삭제가 기본 권장(dead code).
+3. **카드 #5 (R5)** — `add/page.tsx` quantity register(233줄)도 max 누락 여부 확인해 동반 수정 검토.

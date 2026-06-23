@@ -33,12 +33,9 @@ docs/specs/
 
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 페이지네이션(P0) + rcept_dt 형식 수정(P1) + Stage 3/5 null 문서화 (2개 버그, DB 변경 없음)
 
-**2026-06-21 portfolio-management-e2e 리뷰 후속**
-
-- [[portfolio-review-followup]] — 포트폴리오 리뷰 후속: toResponse 오버로드·Stock 캐시·NFE 방어·max 검증·Bell 링크화 (M-1·M-4·M-5·M-6·L-1·L-2·L-3·L-5)
-
-
 ### Approved
+
+- [[portfolio-review-followup]] — 포트폴리오 리뷰 후속: toResponse 오버로드·Stock 캐시·NFE 방어·max 검증·dead code 정리 (2026-06-23 Approved)
 
 ### Done
 - [[user-profile-investment-experience]] — 투자 경험·주 사용 시점 DB 저장: V22 마이그레이션 + nickname nullable + FE 호출 복원 (2026-06-23 Done)

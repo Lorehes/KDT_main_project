@@ -11,6 +11,29 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-23 (35차) | 포트폴리오 캐시·NFE방어·FE검증 정리 (portfolio-review-followup Wave 1+2)
+
+**산출**:
+- BE(수정): `CacheConfig.java` — `stockByCode`(TTL 4h, maxSize 1000)·`stocksByCodeIn`(TTL 4h, maxSize 500) `registerCustomCache` 추가
+- BE(수정): `StockMasterService.java` — `findByStockCode/@Cacheable`·`findByStockCodeIn/@Cacheable` 위임 메서드 추가; `sync()`에 `@CacheEvict(allEntries=true)` 추가; TreeSet SpEL 키 전제(6자리숫자)·@CacheEvict+@Transactional 순서 주석 추가
+- BE(수정): `PortfolioService.java` — `StockRepository→StockMasterService` 전환(R2); 단건 `toResponse` 오버로드 제거(R1); `parseSafe()` NFE방어 헬퍼(R3); `Collectors.toMap` merge(R4); user→stocks 의존 근거 주석 추가
+- FE(수정): `portfolios/add/page.tsx` — `avg_buy_price` max(999_999_999)·`quantity` max(100_000_000) 검증 추가(R5); handlePriceStep/handleQuantityStep 상한 클램핑
+- FE(삭제): `PortfolioListItem.tsx` — dead component (import 0건, portfolios/page.tsx 대시보드 개편 후 미참조)
+- Docs: `docs/issues/portfolio-review-cache-parsesafe-test.md` (P2)
+
+### 결정
+- **StockMasterService 위임 패턴**: JpaRepository `findById()`에 `@Cacheable` 직접 부착 불가(기본 메서드) → StockMasterService 위임(AnalysisResultCacheService 동일 패턴). PortfolioService 주입을 `StockRepository→StockMasterService`로 전환.
+- **stocksByCodeIn 캐시 키**: `TreeSet.toString()` — 입력 순서 무관 안정 키. 종목코드 6자리숫자 전제(충돌 없음) 주석 명시.
+- **@CacheEvict+@Transactional 순서**: Spring Boot 3.x 기본 프록시 순서("Cache 바깥, Transaction 안")에서 보장되지만 `@Order` 미명시. 분기 배치라 실위험 무시. 주석으로 기록.
+- **PortfolioListItem.tsx 삭제**: import 0건 확인 후 삭제. dead code 유지보수 부담 제거.
+
+### 미완료
+- `PortfolioIntegrationTest` 캐시 hit/miss 검증 (A-1·A-2) → `docs/issues/portfolio-review-cache-parsesafe-test.md` (P2)
+- `parseSafe()` NFE 경로 단위 테스트 (B-1·B-2) — package-private 추출 후 → 동일 이슈 파일 (P2)
+- `portfolio-review-followup` Approved → 구현 완료. 다음 push 후 Done 전환 가능.
+
+---
+
 ## 2026-06-23 (34차) | 투자 경험·주 사용 시점 DB 저장 활성화 (user-profile-investment-experience Wave 1+2)
 
 **산출**:
