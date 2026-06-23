@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-23 (performance-caching-staletime Done)
+updated: 2026-06-23 (oauth-consent-data-integrity Approved)
 ---
 
 # Specs MOC
@@ -37,11 +37,9 @@ docs/specs/
 
 - [[portfolio-review-followup]] — 포트폴리오 리뷰 후속: toResponse 오버로드·Stock 캐시·NFE 방어·max 검증·Bell 링크화 (M-1·M-4·M-5·M-6·L-1·L-2·L-3·L-5)
 
-**2026-06-16 OAuth 소셜 가입 플로우 수정 후속 (코드리뷰 Medium/High 이슈 Spec화)**
-
-- [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable 마이그레이션(V21) + 캐싱 + 미완료 계정 배치 정리
 
 ### Approved
+- [[oauth-consent-data-integrity]] — OAuth 동의 데이터 정합성: agreed_at nullable(V21) + 좀비 계정 배치 정리 (2026-06-23)
 
 ### Done
 - [[pricing-nav-auth-consistency]] — 요금제 네비/셸 정합: PublicNavbar auth-aware화 + (public)/layout 서버 쿠키 presence 판정 (2026-06-23 Done)
