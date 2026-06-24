@@ -97,7 +97,7 @@ updated: 2026-06-02
 | 2026-06-24 | Jin | 06facca | fix(infra,stocks): KRX 이상치 2단 방어+리뷰 Low 수정+이슈 문서화 [6/8 M] | Infra/Stocks/Docs | 6 | 8 | M | KRX 이상치 2단 방어+리뷰 Low 수정 |
 | 2026-06-24 | Jin | f2f3a07 | test(user,stocks,infra): eval-pnl 통합 테스트 17케이스+isValidPrice package-private [7/8 M] | User/Stocks/Infra | 7 | 8 | M | eval-pnl/KRX 통합 테스트 17케이스 |
 | 2026-06-24 | Jin | b545bfc | chore(stocks,infra): KRX 잡 테스트 격리+B128 HTTPS [4/9 M] | Stocks/Infra | 4 | 9 | M | KRX 잡 테스트 격리+B128 HTTPS |
-| 2026-06-24 | Jin | 6dc641c | feat(frontend): CSV 업로드 일괄등록+EUC-KR 바이너리 테스트 [7/9 M] | Frontend | 7 | 9 | M | CSV업로드 드래그앤드롭+EUC-KR 바이너리 |
+| 2026-06-24 | Jin | c7b8064 | feat(frontend): CSV 업로드 일괄등록+EUC-KR 바이너리 테스트 [7/9 M] | Frontend | 7 | 9 | M | CSV업로드 드래그앤드롭+EUC-KR 바이너리 |
 <!-- SCORES -->
 
 ## 기간별 집계
