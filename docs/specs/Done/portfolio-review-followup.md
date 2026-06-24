@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-21
-updated: 2026-06-23
+updated: 2026-06-24
 ---
 
 # 포트폴리오 리뷰 후속 수정 Spec (portfolio-review-followup)
 
-> 상태: Draft → **Approved** (2026-06-23, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-23) → **Done** (2026-06-24, Wave 1+2 구현 완료)
 
 ## 배경 / 목적
 
