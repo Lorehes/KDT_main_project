@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-22
 updated: 2026-06-24
 ---
 
 # 대시보드 평가 손익(포트폴리오 수익률) Spec (dashboard-eval-pnl)
 
-> 상태: **Approved** (2026-06-24, dc-tech-review 승인 · KRX BLD 실측 완료)
+> 상태: Approved → **Done** (2026-06-24, dc-push abc7c2e · FE Vitest는 fe-unit-test-infra P1 이슈로 보류)
 
 ## 배경 / 목적
 
