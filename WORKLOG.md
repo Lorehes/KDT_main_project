@@ -11,6 +11,24 @@ updated: 2026-06-24
 
 ---
 
+## 2026-06-24 (44차) | review-frontend-hover-capture — dc-review-frontend hover 상태 자동 캡처
+
+**산출**:
+- Skill(수정): `.claude/skills/dc-review-frontend/scripts/review-capture.js` — `captureHoverStates()` 추가. `data-pw-hover-idx` 속성 주입→`page.locator()` 안전 재선택 패턴(page.$$()[index] DOM 재정렬 위험 회피). viewport 내 visible 인터랙티브 요소(button/a[href]/[role='button']) 면적 상위 6개 자동 감지·hover()·200ms·boundingBox crop(+20px padding)·cleanup. `reviewPage()` 루프에 full-page 캡처 직후 통합. JSON 리포트에 `hoverCaptures` 배열 추가(`authMode`와 공존).
+- Skill(수정): `.claude/skills/dc-review-frontend/references/checklist.md` — PC #8 "호버/인터랙션" 기준 `{name}-hover-{n}.png 캡처 이미지 기반 평가`로 개정.
+- Skill(수정): `.claude/skills/dc-review-frontend/SKILL.md` — Phase 1 출력 파일 목록·report 구조 갱신.
+- Spec: `docs/specs/Approved/review-frontend-hover-capture.md` (Draft→Approved, Tech Review 갱신 섹션 포함)
+- DevLog: `docs/dev-log/frontend.jsonl` — hover 캡처 구현 기록
+
+**결정**:
+- **data-pw-hover-idx 안전 재선택 패턴**: `evaluate()`와 `$$()` 사이 DOM 변경 시 인덱스 어긋남 방지. `evaluate()` 내에서 선택과 동시에 속성 주입, 이후 `page.locator('[data-pw-hover-idx="n"]')`로 안전 선택. 캡처 후 `evaluate()`에서 일괄 cleanup.
+- **6/22 Tech Review 이후 드리프트**: `review-frontend-auth-capture`(커밋 `432aa37`) 전면 재작성으로 `reviewPage()` 루프 구조·모바일 메뉴 토글 위치·JSON 리포트 필드 변경. 6/24 Tech Review갱신 섹션에서 보정 완료.
+- **`.claude/` gitignore**: 스킬 스크립트 3개 로컬 전용 — Spec + dev-log만 커밋 대상.
+
+**테스트**: 해당 없음 (스킬 스크립트 로컬 전용, 단위 테스트 대상 아님)
+
+---
+
 ## 2026-06-24 (43차) | review-frontend-auth-capture — dc-review-frontend --auth 인증 모드 확장
 
 **산출**:

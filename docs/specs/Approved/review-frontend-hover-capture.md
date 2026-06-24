@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-24
 ---
 
 # dc-review-frontend 호버 상태 캡처 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-24, dc-tech-review 승인)
 > 발견: `pricing-nav-auth-consistency` dc-review-frontend Info 이슈
 > 관련: [[pricing-nav-auth-consistency]]
 
@@ -178,3 +178,52 @@ await page.evaluate(() => {
 
 ### 예상 wave 수
 - **1 wave** (단일 소규모 스크립트 PR, 스킬 파일 3개 수정)
+
+---
+
+## Tech Review 갱신 (dc-tech-review · 2026-06-24)
+
+> 6/22 Tech Review 이후 `review-frontend-auth-capture` Spec 구현(커밋 `432aa37`)으로 **`review-capture.js`가 전면 재작성**됐다. Spec 본문·기존 Tech Review의 라인 참조·통합 지점을 현재 코드(2026-06-24) 기준으로 보정한다. **작업 카드 #1~#4는 그대로 유효**하되 통합 패턴을 갱신한다.
+
+### ⚠️ 드리프트 — review-capture.js 구조 변경 (auth 모드 추가分)
+
+`review-capture.js`가 `--auth` 4모드 지원으로 재작성되어 hover 캡처 통합 지점이 바뀌었다. 현재 코드(2026-06-24) 실측:
+
+| 항목 | 6/22 Spec 참조 | 현재 (재작성 후) |
+|------|---------------|-----------------|
+| `reviewPage()` 시그니처 | `(url, outputDir)` | **`(url, outputDir, authMode)`** |
+| 뷰포트 루프 | `for (const [name, ctx] of [['pc',pcCtx],['mobile',mobileCtx]])` | **`for (const { name, opts } of viewports)`** + 루프 내 `createAuthContext()` 호출 (`:202-203`) |
+| full-page 캡처 | (기존 위치) | `:214` `${name}-full.png` |
+| 모바일 메뉴 토글 | `:88~95` | **`:250~256`** |
+| JSON 리포트 구조 | `{overflows, brokenImages, errors, a11y, bodyOverflow}` | **`{authMode, overflows, brokenImages, errors, a11y, bodyOverflow}`** (`:271`) |
+
+### 갱신된 통합 패턴 (카드 #2 보정)
+
+`captureHoverStates()` 호출은 **현재 `for (const { name, opts } of viewports)` 루프 내부, full-page 캡처(`:214`) 직후**에 삽입한다. 루프 변수는 `name`(문자열)이며 `page`/`ctx`는 루프 내에서 `createAuthContext` → `ctx.newPage()`로 생성된 것을 그대로 사용한다.
+
+```js
+// :214 full-page 캡처 직후 삽입
+const hoverCaptures = await captureHoverStates(page, outputDir, name);
+```
+
+JSON 리포트(`:268-272`)는 `authMode`와 `hoverCaptures`를 **공존**시킨다:
+
+```js
+JSON.stringify(
+  { authMode, overflows, brokenImages, errors, a11y, bodyOverflow, hoverCaptures },
+  null, 2
+)
+```
+
+### ✅ 재검증된 사실 (변동 없음)
+
+- **`data-pw-hover-idx` 안전 재선택 패턴**: 6/22 Tech Review의 핵심 보정(`page.$$()[index]` → data-attr) **그대로 유효**. `evaluate()`와 요소 선택 사이 DOM 변경 리스크는 재작성과 무관.
+- **checklist.md PC #8 현재 텍스트**: `references/checklist.md:19` `| 8 | **호버/인터랙션** | 호버 상태가 자연스러운가 |` 확인. 카드 #3 개정 대상 그대로.
+- **모바일 hover 시뮬레이션 한계 / 실행 시간 증가 / `waitForTimeout` deprecated**: 6/22 리스크 항목 모두 유효.
+- **`.claude/` gitignore**: `review-capture.js`·`checklist.md`·`SKILL.md` 모두 git 미추적(로컬 전용). 커밋 대상은 Spec + dev-log뿐. (`review-frontend-auth-capture` 구현 시 확인된 사실)
+
+### 갱신 결론
+
+- 작업 카드 #1~#4 **그대로 유효**. 추가/삭제 없음.
+- 카드 #2 통합 패턴만 위 신규 루프 구조(`viewports` 배열 + `authMode` 리포트 공존)에 맞춰 구현.
+- 여전히 **1 wave**, skill 스크립트 전용, FE/BE/DB 무변경. Approved 전환 가능.
