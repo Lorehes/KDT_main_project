@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-24 (eval-pnl-integration-tests Approved)
+updated: 2026-06-24 (eval-pnl-integration-tests Done)
 ---
 
 # Specs MOC
@@ -41,9 +41,9 @@ docs/specs/
 
 - [[dashboard-eval-pnl]] — 대시보드 평가 손익: KRX 종가 수집(MDCSTAT01501) + V23 마이그레이션 + 집계 API + FE 카드 교체 (2026-06-24 Approved)
 - [[krx-price-source-resilience]] — KRX 종가 소스 신뢰성: 이상치 필터(절대+전일비 ±50%) + HostWhitelist 주석 + 중장기 대체 소스 조사 (2026-06-24 Approved)
-- [[eval-pnl-integration-tests]] — eval-pnl 통합 테스트 보강: summary 6케이스 + KrxPriceSyncJobIntegrationTest 5케이스 + KrxClientTest isValidPrice 6경계값 (Option C, 테스트 전용) (2026-06-24 Approved)
 
 ### Done
+- [[eval-pnl-integration-tests]] — eval-pnl 통합 테스트 보강: summary 6케이스 + KrxPriceSyncJobIntegrationTest 5케이스 + KrxClientTest isValidPrice 6경계값 (Option C, 166/166) (2026-06-24 Done)
 - [[kakao-notification-channel]] — 알림채널 dev안정화: send() dev모드·isDevMode통일·.env.example SMTP/Kakao정합·설정저장토스트 (2026-06-24 Done)
 - [[portfolio-review-followup]] — 포트폴리오 리뷰 후속: toResponse 오버로드·Stock 캐시·NFE 방어·max 검증·dead code 정리 (2026-06-24 Done)
 - [[user-profile-investment-experience]] — 투자 경험·주 사용 시점 DB 저장: V22 마이그레이션 + nickname nullable + FE 호출 복원 (2026-06-23 Done)

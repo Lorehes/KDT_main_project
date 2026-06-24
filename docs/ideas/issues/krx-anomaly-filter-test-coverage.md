@@ -1,13 +1,13 @@
 ---
 type: issue
-status: open
+status: closed
 created: 2026-06-24
 updated: 2026-06-24
 ---
 
 # [이슈] KRX 이상치 필터 테스트 커버리지 없음
 
-> 상태: **Open** — dc-review-code Low 미결. [[eval-pnl-integration-tests]] Spec R2-추가·R3에 추적 중.
+> 상태: **Closed** — 2026-06-24 [[eval-pnl-integration-tests]] Spec 구현 완료. KrxClientTest(6케이스) + KrxPriceSyncJobIntegrationTest R2-추가(2케이스) 구현됨. 166/166 통과.
 
 ## 현상
 
