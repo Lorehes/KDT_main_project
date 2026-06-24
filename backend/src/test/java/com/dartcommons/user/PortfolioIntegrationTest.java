@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -59,10 +60,18 @@ class PortfolioIntegrationTest {
     @Autowired MockMvc       mockMvc;
     @Autowired ObjectMapper  objectMapper;
     @Autowired JdbcTemplate  jdbcTemplate;
+    @Autowired CacheManager  cacheManager;
 
     @BeforeEach
     void bypassEmailVerification() {
         when(emailVerificationService.isEmailVerified(anyString())).thenReturn(true);
+    }
+
+    @BeforeEach
+    void resetStockPrices() {
+        jdbcTemplate.update("UPDATE stocks SET close_price = NULL, price_asof = NULL");
+        cacheManager.getCache("stockByCode").clear();
+        cacheManager.getCache("stocksByCodeIn").clear();
     }
 
     private String uniqueEmail() {
@@ -238,5 +247,131 @@ class PortfolioIntegrationTest {
 
         assertThat(priceEnc).isNotNull().hasSizeGreaterThan(12);
         assertThat(qtyEnc).isNotNull().hasSizeGreaterThan(12);
+    }
+
+    // ── R1: summary 엔드포인트 ────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("summary — 포트폴리오 없음 → 200 + 전체 0 값, as_of·pnl_rate null")
+    void summary_noPortfolios_returns200WithZeros() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        String resp = mockMvc.perform(get("/api/v1/portfolios/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("priced_count").asInt()).isZero();
+        assertThat(json.get("unpriced_count").asInt()).isZero();
+        assertThat(json.get("total_cost_basis").decimalValue()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(json.get("total_pnl").decimalValue()).isEqualByComparingTo(BigDecimal.ZERO);
+        JsonNode asOf = json.get("as_of");
+        assertThat(asOf == null || asOf.isNull()).isTrue();
+        JsonNode pnlRate = json.get("pnl_rate");
+        assertThat(pnlRate == null || pnlRate.isNull()).isTrue();
+    }
+
+    @Test
+    @DisplayName("summary — 응답 필드 snake_case 회귀 방지 (@JsonProperty 검증)")
+    void summary_snakeCaseFieldNames_verified() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        String resp = mockMvc.perform(get("/api/v1/portfolios/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.has("total_cost_basis")).isTrue();
+        assertThat(json.has("totalCostBasis")).isFalse();
+        assertThat(json.has("total_eval_amount")).isTrue();
+        assertThat(json.has("priced_count")).isTrue();
+        assertThat(json.has("unpriced_count")).isTrue();
+    }
+
+    @Test
+    @DisplayName("summary — 종가 DB 직접 주입 후 집계 수학적 정확성 검증")
+    void summary_withClosePriceViaDb_aggregatesCorrectly() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        createPortfolio(token, "005930"); // avgBuyPrice=50000, quantity=10
+
+        jdbcTemplate.update(
+                "UPDATE stocks SET close_price = ?, price_asof = CURRENT_DATE WHERE stock_code = '005930'",
+                new BigDecimal("60000"));
+
+        String resp = mockMvc.perform(get("/api/v1/portfolios/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("priced_count").asInt()).isEqualTo(1);
+        assertThat(json.get("unpriced_count").asInt()).isZero();
+        assertThat(json.get("total_cost_basis").decimalValue()).isEqualByComparingTo(new BigDecimal("500000"));
+        assertThat(json.get("total_eval_amount").decimalValue()).isEqualByComparingTo(new BigDecimal("600000"));
+        assertThat(json.get("total_pnl").decimalValue()).isEqualByComparingTo(new BigDecimal("100000"));
+        assertThat(json.get("pnl_rate").decimalValue()).isEqualByComparingTo(new BigDecimal("20"));
+    }
+
+    @Test
+    @DisplayName("summary — 종가 NULL 종목 → unpriced_count=1")
+    void summary_nullClosePrice_countsAsUnpriced() throws Exception {
+        // @BeforeEach에서 이미 NULL로 초기화됨
+        String token = signupAndGetToken(uniqueEmail());
+        createPortfolio(token, "005930");
+
+        String resp = mockMvc.perform(get("/api/v1/portfolios/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("unpriced_count").asInt()).isEqualTo(1);
+        assertThat(json.get("priced_count").asInt()).isZero();
+    }
+
+    @Test
+    @DisplayName("summary — avgBuyPrice/quantity 미입력(null) 포트폴리오 → unpriced_count=1")
+    void summary_nullAvgBuyPrice_countsAsUnpriced() throws Exception {
+        jdbcTemplate.update(
+                "UPDATE stocks SET close_price = 60000, price_asof = CURRENT_DATE WHERE stock_code = '005930'");
+        String token = signupAndGetToken(uniqueEmail());
+
+        // avgBuyPrice/quantity 없이 POST
+        ObjectNode body = objectMapper.createObjectNode().put("stock_code", "005930");
+        mockMvc.perform(post("/api/v1/portfolios")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.toString()))
+                .andExpect(status().isCreated());
+
+        String resp = mockMvc.perform(get("/api/v1/portfolios/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("unpriced_count").asInt()).isEqualTo(1);
+        assertThat(json.get("priced_count").asInt()).isZero();
+    }
+
+    @Test
+    @DisplayName("summary — 종가있는 종목 1 + 종가없는 종목 1 → priced=1, unpriced=1")
+    void summary_mixedPortfolios_splitCounts() throws Exception {
+        jdbcTemplate.update(
+                "UPDATE stocks SET close_price = 60000, price_asof = CURRENT_DATE WHERE stock_code = '005930'");
+        // 000660은 @BeforeEach에서 NULL로 초기화됨
+
+        String token = signupAndGetToken(uniqueEmail());
+        createPortfolio(token, "005930"); // priced (close_price=60000, avgBuyPrice=50000)
+        createPortfolio(token, "000660"); // unpriced (close_price=NULL)
+
+        String resp = mockMvc.perform(get("/api/v1/portfolios/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("priced_count").asInt()).isEqualTo(1);
+        assertThat(json.get("unpriced_count").asInt()).isEqualTo(1);
     }
 }

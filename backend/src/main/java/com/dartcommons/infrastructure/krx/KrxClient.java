@@ -328,8 +328,8 @@ public class KrxClient {
         return result;
     }
 
-    /** 가격 이상치 1단 방어 — 1원 미만은 명백한 데이터 오류(상장 종목 최저가 1원). */
-    private boolean isValidPrice(BigDecimal price) {
+    /** 가격 이상치 1단 방어 — 1원 미만은 명백한 데이터 오류(상장 종목 최저가 1원). package-private: KrxClientTest 직접 호출(Option C). */
+    boolean isValidPrice(BigDecimal price) {
         return price != null && price.compareTo(BigDecimal.ONE) >= 0;
     }
 

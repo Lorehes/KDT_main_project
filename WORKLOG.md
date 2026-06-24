@@ -11,6 +11,27 @@ updated: 2026-06-24
 
 ---
 
+## 2026-06-24 (39차) | eval-pnl-integration-tests — 통합 테스트 17케이스 + isValidPrice package-private
+
+**산출**:
+- BE(수정): `KrxClient.java` — `isValidPrice()` `private` → package-private (Option C, KrxClientTest 직접 호출)
+- BE(수정): `PortfolioIntegrationTest.java` — R1 summary 6케이스 추가 + `@BeforeEach resetStockPrices()`(close_price NULL + 캐시 clear) + `CacheManager` 주입
+- BE(신규): `KrxPriceSyncJobIntegrationTest.java` — R2 3케이스(updatesClosePrice·emptyMap·evictsCache) + R2-추가 2케이스(anomalySkip·nullPrevAllowed) = 5케이스
+- BE(신규): `KrxClientTest.java` — R3 isValidPrice 경계값 6케이스(null·0·-1·0.99·1·60000)
+- 전체 **166/166** 통과 (기존 149 + 신규 17)
+
+### 결정 (코드에 드러나지 않는 사항)
+- **isValidPrice Option C**: 메서드를 package-private으로만 완화해 직접 호출. `KrxClient` 생성자가 RestClient를 내부 빌드하므로 `MockRestServiceServer` 바인딩 불가 → 순수 단위 테스트 대신 `@SpringBootTest` 컨텍스트에서 직접 메서드 접근.
+- **캐시 evict 테스트 가격 선택**: `syncPrices_evictsCache_freshPriceServedNextQuery`에서 60000→75000(+25%)을 사용. 50% 이상치 필터를 통과해야 실제 DB 갱신이 일어나기 때문. 100000 등 2배 값은 이상치로 스킵돼 DB가 안 바뀌어 캐시 evict를 검증할 수 없음.
+- **@BeforeEach resetStockPrices**: stocks 테이블의 close_price는 DB 전체를 NULL로 초기화 + Caffeine stockByCode·stocksByCodeIn 캐시도 함께 clear. JDBC bypass로 캐시에 스테일 값이 남는 것을 방지. 기존 8케이스는 close_price를 읽지 않으므로 영향 없음.
+- **anomaly 경계 수치**: 4999원 → 전일 10000 대비 50.01% 변동 → 스킵. 6000원 → 40% 변동 → 허용. `ANOMALY_THRESHOLD=0.5` 기준.
+
+### 미완료 → 다음 세션
+- `krx-job-test-isolation` Spec Draft — `KrxPriceSyncJob @ConditionalOnProperty` 누락 + B128 HTTP→HTTPS URL 조사. 본 Spec의 @Scheduled 격리 리스크와 연관.
+- `be-api-alignment-mvp-r1` Spec Draft — 알림 페이지네이션 P0 + rcept_dt 형식 P1 수정 대기.
+
+---
+
 ## 2026-06-24 (38차) | krx-price-source-resilience — KRX 종가 이상치 2단 방어
 
 **산출**:
