@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-16
 updated: 2026-06-24
 ---
 
 # 알림 채널 설정 완성 Spec (kakao-notification-channel)
 
-> 상태: Draft → **Approved** (2026-06-24, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-24) → **Done** (2026-06-24, Wave 1 구현 완료)
 
 ## 배경 / 목적
 

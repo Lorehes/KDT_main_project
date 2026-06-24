@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-24 (kakao-notification-channel Approved)
+updated: 2026-06-24 (kakao-notification-channel Done)
 ---
 
 # Specs MOC
@@ -35,9 +35,10 @@ docs/specs/
 
 ### Approved
 
-- [[kakao-notification-channel]] — 알림 채널 설정 완성: Wave 1(R1 send() dev모드 + R2 .env.example SMTP정합 + R3 저장 성공토스트). R5 이미 완료, R4 수동검증·Wave 3 카카오 비즈채널 연기 (2026-06-24 Approved)
+_(없음)_
 
 ### Done
+- [[kakao-notification-channel]] — 알림채널 dev안정화: send() dev모드·isDevMode통일·.env.example SMTP/Kakao정합·설정저장토스트 (2026-06-24 Done)
 - [[portfolio-review-followup]] — 포트폴리오 리뷰 후속: toResponse 오버로드·Stock 캐시·NFE 방어·max 검증·dead code 정리 (2026-06-24 Done)
 - [[user-profile-investment-experience]] — 투자 경험·주 사용 시점 DB 저장: V22 마이그레이션 + nickname nullable + FE 호출 복원 (2026-06-23 Done)
 - [[dashboard-real-data]] — 대시보드 실데이터 연동: R2 오늘 필터 + R3 Free 일 5건 BE 강제 + R4 FE 제한 안내 (2026-06-23 Done)
