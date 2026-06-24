@@ -76,6 +76,12 @@ public class KakaoAlimtalkClient {
         if (message == null || message.isBlank()) {
             throw new IllegalArgumentException("message must not be blank");
         }
+        // 개발 환경 placeholder 모드 — 실제 Kakao API 호출 없이 로그만 기록 (운영 전 Kakao 비즈채널 등록 필요).
+        // sendOtp()와 동일 패턴. 전화번호·메시지 본문 평문 로깅 금지(CLAUDE.md §7) — phone=[REDACTED] 유지.
+        if (isDevMode()) {
+            log.info("[DEV] Kakao Alimtalk SKIP (placeholder mode) phone=[REDACTED]");
+            return true;
+        }
         log.debug("Kakao Alimtalk send attempt: phone=[REDACTED]");
         var request = new AlimtalkRequest(props.senderKey(), props.templateCode(), phoneNumber, message);
         restClient.post()
@@ -100,7 +106,7 @@ public class KakaoAlimtalkClient {
             throw new IllegalArgumentException("phoneNumber must not be blank");
         }
         // 개발 환경 placeholder 모드 — 실제 Kakao API 호출 없이 콘솔에 OTP 출력 (운영 전 Kakao 비즈채널 등록 필요)
-        if ("placeholder".equals(props.senderKey())) {
+        if (isDevMode()) {
             log.info("[DEV] Kakao Alimtalk OTP (placeholder mode) phone=[REDACTED] code={}", code);
             return true;
         }

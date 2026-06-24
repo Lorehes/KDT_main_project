@@ -92,6 +92,7 @@ updated: 2026-06-02
 | 2026-06-23 | Jin | 7061755 | feat(disclosure,frontend): 대시보드 오늘 필터+Free 5건/일 강제 [7/8 M] | Disclosure/Frontend | 7 | 8 | M | 대시보드 오늘필터+Free 5건 강제 |
 | 2026-06-23 | Jin | 01b9f3f | feat(user,frontend): 투자경험·주사용시점 DB 저장 활성화 (V22) [7/8 L] | User/Frontend | 7 | 8 | L | 투자경험·사용시점 DB 저장 활성화 |
 | 2026-06-23 | Jin | 6227306 | refactor(stocks,user,frontend): 포트폴리오 캐시+NFE방어+FE검증+dead code 정리 [5/8 M] | Stocks/User/Frontend | 5 | 8 | M | 포트폴리오 캐시·NFE방어·FE검증 정리 |
+| 2026-06-24 | Jin | 2f9c166 | feat(notification,infra): 알림채널 dev안정화+이메일폴백+설정저장토스트 [5/8 M] | Notification/Infra/Frontend | 5 | 8 | M | 알림채널 dev안정화+이메일폴백 정합 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -99,5 +100,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 11 | 28 | 79 | 8.0 | 6.2 |
+| Jin | 12 | 29 | 80 | 8.0 | 6.2 |
 <!-- SUMMARY:END -->

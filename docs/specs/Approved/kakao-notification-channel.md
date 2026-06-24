@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-24
 ---
 
 # 알림 채널 설정 완성 Spec (kakao-notification-channel)
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-24, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -170,5 +170,59 @@ dartcommons:
 Wave 1(R1·R2·R3) → Wave 2(R4·R5) 순서로 즉시 진행 가능.
 Wave 3는 카카오 비즈 채널 심사(수일~수주 소요) 후 진행.
 **MVP 출시는 이메일 채널 기반(Wave 2 완료)으로 가능** — 카카오 알림톡은 추후 활성화.
+
+## Tech Review (dc-tech-review · 2026-06-24)
+
+> 검토 시점 코드 실측(SSOT: BE 코드) 결과, Spec(2026-06-16 작성) 대비 일부 항목이 이미 해소됨.
+> 아래는 **현재 코드 기준 재검증** 결과다.
+
+### 코드 실측 재검증 (Spec claim vs 현재 코드)
+
+| Req | Spec 주장 | 현재 코드 실측 | 판정 |
+|-----|----------|---------------|------|
+| R1 | `send()` dev 모드 미구현 | `KakaoAlimtalkClient.send()`(L72-87) placeholder 분기 없음. `sendOtp()`(L103-106)에만 존재. `ChannelSender.sendKakao()`(L65-66)이 `send()` 후 무조건 `markSent()` → placeholder 모드에서 `send()`가 실 API 호출 시도→예외 | **유효 — 구현 필요** |
+| R2 | SMTP 미설정 부팅 실패 | `application.yml`(L34-44)에 `MAIL_HOST:localhost`·port 1025(MailHog 기본)·auth=false 안전 기본값 존재 → **부팅 실패 위험 없음**. 단 `.env.example`에 `MAIL_*` 전무 + Kakao 변수명 불일치(yml `KAKAO_ALIMTALK_API_KEY`/`KAKAO_SENDER_KEY` vs .env.example `KAKAO_ALIMTALK_APP_KEY`/`KAKAO_ALIMTALK_SENDER_KEY`) | **부분 해소 — .env.example 정합만** |
+| R3 | 저장 후 성공 토스트 없음 | `useUpdateNotificationSettings` `onSuccess`(notifications.ts L79)가 invalidate만, `toast.success` 없음 | **유효 — 구현 필요** |
+| R4 | 이메일 E2E 검증 | SMTP 발송 검증은 GreenMail/MailHog 필요 — 코드 변경 아닌 수동/통합검증 | **수동 검증 — 별도 분리** |
+| R5 | 알림 이력 FE 미연결 | `notifications/page.tsx`(L52,67)가 이미 `useNotifications()`→`data.content` 소비. **완료 상태** | **이미 완료 — no-op** |
+| R6~R8 | 카카오 비즈채널/템플릿/endpoint | 외부 심사(카카오 비즈채널 승인) 의존 | **Wave 3 연기** |
+
+### 아키텍처 분해
+
+- 영향 레이어: backend(`infrastructure/kakao`) + 설정(`.env.example`) + frontend(`lib/api/notifications`, `notifications/settings`)
+- 신규: 없음 (전부 기존 파일 수정)
+- 수정: `KakaoAlimtalkClient.send()`(R1), `.env.example`(R2), `notifications.ts` `useUpdateNotificationSettings`(R3) + `settings/page.tsx` 저장 핸들러(R3 토스트 발화 경로)
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `KakaoAlimtalkClient.send()` placeholder 분기 추가 (`sendOtp()` 패턴 동일) | backend/infrastructure | BE | 하 | - |
+| 2 | `.env.example` `MAIL_*` 5종 추가 + Kakao 변수명 yml 정합 | infra/config | BE | 하 | - |
+| 3 | `useUpdateNotificationSettings` `onSuccess` → `toast.success` 추가 | frontend | FE | 하 | - |
+
+### DB / 마이그레이션 영향
+
+- 없음. `notification_logs` 기존 구조 활용 (Spec §영향범위 일치).
+
+### 외부 계약 영향
+
+- Wave 1: 없음 (placeholder 모드는 외부 호출 안 함).
+- Wave 3(연기): 카카오 비즈메시지 API endpoint·request body 실측 필요 — 채널 승인 후.
+
+### 리스크 & 법적 검토
+
+- **전화번호 평문 로깅 금지**(CLAUDE.md §7): R1 dev 로그는 반드시 `phone=[REDACTED]` 유지 — `sendOtp()`와 동일 패턴 강제.
+- **투자 권유 표현 금지**(§7, 통합기획서 §11.1): R3는 설정 저장 토스트로 분석 문구 무관 — 해당 없음.
+- 카카오 비즈채널 비승인 발송 시 계정 정지(Spec 리스크표) → Wave 3 반드시 승인 후.
+
+### 예상 wave 수
+
+- **Wave 1 (이번)**: R1·R2·R3 — 단일 wave (3파일, 난이도 하).
+- **Wave 2**: R4(이메일 E2E 수동검증)·R5(완료) — R5 no-op, R4는 `/dc-test-verify` 또는 운영 검증으로 분리.
+- **Wave 3**: R6~R8 — 카카오 비즈채널 승인 외부 의존, 별도 Spec/후속.
+
+> 결론: Wave 1(R1·R2·R3) 즉시 구현 가능. R4는 SMTP 실환경 수동검증으로 분리, R5는 이미 완료.
+> MVP 권장 충족 = Wave 1 완료 + 이메일 폴백 안전 동작 보장.
 
 <!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->

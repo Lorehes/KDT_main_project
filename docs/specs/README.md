@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-24 (portfolio-review-followup Done)
+updated: 2026-06-24 (kakao-notification-channel Approved)
 ---
 
 # Specs MOC
@@ -35,7 +35,7 @@ docs/specs/
 
 ### Approved
 
-_(없음)_
+- [[kakao-notification-channel]] — 알림 채널 설정 완성: Wave 1(R1 send() dev모드 + R2 .env.example SMTP정합 + R3 저장 성공토스트). R5 이미 완료, R4 수동검증·Wave 3 카카오 비즈채널 연기 (2026-06-24 Approved)
 
 ### Done
 - [[portfolio-review-followup]] — 포트폴리오 리뷰 후속: toResponse 오버로드·Stock 캐시·NFE 방어·max 검증·dead code 정리 (2026-06-24 Done)

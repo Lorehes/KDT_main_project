@@ -5,7 +5,8 @@
 //   useUnreadCount: staleTime 30초 — TopBar 벨 뱃지 실데이터. WebSocket 도입 시 대체 가능.
 //   useNotifications: staleTime 30초 + refetchOnWindowFocus:true — 알림 목록은 즉시성 우선.
 //   useNotificationSettings: staleTime 5분 — 설정은 자주 변경되지 않음. refetchOnWindowFocus:true 유지.
-//   useUpdateNotificationSettings·useTestNotification onError → Sonner toast.error 발화.
+//   useUpdateNotificationSettings: onSuccess → 쿼리 무효화 + Sonner toast.success("저장됐습니다") / onError → toast.error.
+//   useTestNotification onError → Sonner toast.error 발화.
 // [수정 시 고려사항] useTestNotification은 설정 검증용 — 실제 알림 발송 트리거.
 //   WebSocket 연결 시 useUnreadCount 폴링 → 서버 푸시 이벤트 구독으로 교체.
 
@@ -76,7 +77,10 @@ export function useUpdateNotificationSettings() {
         method: "PUT",
         body: JSON.stringify(body),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notification-settings"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notification-settings"] });
+      toast.success("알림 설정이 저장됐습니다.");
+    },
     onError: (err) =>
       toast.error(err instanceof ApiException ? err.body.message : "설정 저장에 실패했습니다."),
   });

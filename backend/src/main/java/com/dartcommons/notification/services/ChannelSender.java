@@ -62,6 +62,8 @@ public class ChannelSender {
             notificationRepository.save(record);
             return;
         }
+        // dev mode(senderKey=placeholder) 시 send()가 실 API 미호출 후 true 반환 → markSent() 기록됨.
+        // notification_logs에 SENT로 남지만 실제 전달 없음 — 개발 환경 한정, 운영 전 카카오 비즈채널 등록 필수.
         kakaoAlimtalkClient.send(phoneNumber, record.getMessageBody());
         record.markSent();
         notificationRepository.save(record);

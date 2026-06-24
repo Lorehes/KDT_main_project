@@ -11,6 +11,25 @@ updated: 2026-06-23
 
 ---
 
+## 2026-06-24 (36차) | 알림채널 dev안정화·이메일폴백 정합·설정저장토스트 (kakao-notification-channel Wave 1)
+
+**산출**:
+- BE(수정): `KakaoAlimtalkClient.java` — R1: `send()` placeholder dev 모드 분기 추가(`isDevMode()` 헬퍼 사용, sendOtp 패턴 통일). L1 픽스: `sendOtp()` 인라인 check → `isDevMode()` 헬퍼로 통일.
+- BE(수정): `ChannelSender.java` — L2 픽스: `sendKakao()` 내 dev mode SENT 기록 동작 주석 추가.
+- Infra(수정): `.env.example` — R2: Kakao 변수명 5종 yml 정합(`APP_KEY→API_KEY`, `KAKAO_SENDER_KEY` 등) + `MAIL_*` 7종 추가(MailHog 기본값 + Gmail/MailHog 안내 주석).
+- FE(수정): `frontend/src/lib/api/notifications.ts` — R3: `useUpdateNotificationSettings` `onSuccess` → `toast.success("알림 설정이 저장됐습니다.")` 추가.
+
+### 결정
+- **R5(알림이력 FE) no-op 확인**: `notifications/page.tsx` 이미 `useNotifications()` 연결 완료. Spec 작성(2026-06-16) 이후 구현됨.
+- **isDevMode() 헬퍼 통일**: `sendOtp()` 인라인 check와 `send()` 헬퍼 혼재 → 전부 `isDevMode()` 로 통일. dev mode 판단 기준이 단일 포인트.
+- **Wave 3(카카오 비즈채널) 연기**: 비즈채널 승인 + 알림톡 템플릿 심사 외부 의존. MVP는 이메일 폴백 채널 기반으로 Go/No-Go 통과.
+
+### 미완료
+- R4(이메일 E2E 흐름 수동 검증): SMTP 실환경 or MailHog 연동 후 `AnalysisCompletedEvent` 수동 트리거 → `notification_logs.status=SENT` 확인. 별도 수동 검증 또는 `/dc-test-verify` 단계.
+- R6~R8(카카오 비즈채널·템플릿·endpoint): 외부 승인 후 Wave 3.
+
+---
+
 ## 2026-06-23 (35차) | 포트폴리오 캐시·NFE방어·FE검증 정리 (portfolio-review-followup Wave 1+2)
 
 **산출**:
