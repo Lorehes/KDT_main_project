@@ -11,6 +11,27 @@ updated: 2026-06-24
 
 ---
 
+## 2026-06-24 (41차) | portfolio-csv-upload + csv-euckr-binary-test — CSV 일괄 등록 + EUC-KR 바이너리 테스트
+
+**산출**:
+- FE(신규): `frontend/src/lib/csv/parsePortfolioCsv.ts` — EUC-KR/UTF-8-BOM 이중 디코딩 + `/\b\d{6}\b/g` 종목코드 추출. 종목코드만 반환, 매수가·수량 추출 없음(CLAUDE.md §7)
+- FE(신규): `frontend/src/lib/csv/parsePortfolioCsv.test.ts` — Vitest 44케이스: 기본 4 + 인코딩 2 + EUC-KR 바이너리 2(skipIf 가드) + 경계값 6. 44/44 GREEN
+- FE(수정): `frontend/src/app/(app)/portfolios/new/page.tsx` — CSV 드래그앤드롭 업로드 존 + 리뷰 패널 + apiClient 직접 순차 POST + 단일 invalidateQueries
+- Spec: `docs/specs/Approved/portfolio-csv-upload.md` (Draft→Approved→이번 커밋)
+- Spec: `docs/specs/Approved/csv-euckr-binary-test.md` (신규 Approved)
+
+**결정**:
+- **방향 A(FE 단독)** 채택: BE 엔드포인트 변경 없이 기존 `POST /portfolios` 순차 호출. N번 invalidateQueries 문제는 apiClient 직접 호출 + 루프 후 단일 invalidate로 해결.
+- **EUC-KR 바이너리 ICU 가드**: `eucKrSupported` IIFE + `it.skipIf(!eucKrSupported)` 패턴으로 small-icu Node.js 빌드에서 false failure 방지.
+- **0xA1 0xA1 선택 이유**: KS X 1001 이상적 공백(U+3000), EUC-KR 유효 범위(0xA1~0xFE) 2바이트로 TextDecoder 성공 경로를 실제 바이너리로 검증.
+- **0xFF 선택 이유**: EUC-KR 유효 범위 초과 → `fatal: true` throw 즉시 유발 → UTF-8 폴백 경로 검증.
+- **skippedFailed 컬렉션**: 비-ApiException 에러(네트워크 타임아웃 등)를 무음 삼키지 않고 toast에 "N 오류" 포함(dc-review-code High 수정).
+- **csvPhase !== "idle" 가드**: handleDrop에서 parsing 중 중복 drop 차단(dc-review-code Medium 수정).
+
+**테스트**: Vitest 44/44 GREEN
+
+---
+
 ## 2026-06-24 (40차) | krx-job-test-isolation — KRX 잡 테스트 격리 + B128 HTTPS 전환
 
 **산출**:

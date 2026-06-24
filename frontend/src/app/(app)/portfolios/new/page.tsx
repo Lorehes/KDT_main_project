@@ -5,19 +5,27 @@
 // [사이드 임팩트] usePortfolios·useDeletePortfolio 쿼리. 삭제 후 ["portfolios"] 자동 무효화.
 //   activeIndex state로 ArrowDown/Up/Enter 키보드 네비. id="stock-option-${i}" (Combobox의 sc-option과 충돌 없음).
 //   searchResults 변경 시 activeIndex 리셋(useEffect). 활성 옵션 scrollIntoView(nearest).
+//   CSV 업로드: parsePortfolioCsv → 종목코드 추출 → 확인 UI → apiClient 순차 POST → invalidateQueries 1회.
+//   CSV 개인정보 보호: 종목코드만 추출해 POST — 매수가·수량은 절대 추출·전송·로그 금지(CLAUDE.md §7).
 // [수정 시 고려사항] Free 3종목 초과 시 422 BUSINESS_RULE_VIOLATION — atLimit에 isLoading 포함.
-//   매수가·수량 console.log 절대 금지(금융 개인정보, CLAUDE.md §7). 종목 선택 후 /portfolios/add?code=...&name=... 라우팅.
+//   매수가·수량 console.log 절대 금지(금융 개인정보). 종목 선택 후 /portfolios/add?code=...&name=... 라우팅.
 //   Enter 선택 시 atLimit 체크 필수(disabled 상태와 동일 처리). stock-option prefix는 StockSearchCombobox와 맞출 것.
+//   CSV 일괄 등록 후 invalidateQueries 1회 — useCreatePortfolio 루프 시 N회 리페치 발생(portfolios.ts 주석 참고).
+//   방향 B(POST /portfolios/bulk) 전환 시 handleBulkRegister를 단일 API 호출로 교체하면 됨.
 
-import { useCallback, useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Search, Upload, X, CircleHelp } from "lucide-react";
 import { usePortfolios, useDeletePortfolio } from "@/lib/api/portfolios";
 import { useStockSearch } from "@/lib/api/stocks";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { useDebounce } from "@/lib/hooks/useDebounce";
+import { apiClient, ApiException } from "@/lib/api/client";
+import { parsePortfolioCsv } from "@/lib/csv/parsePortfolioCsv";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -28,8 +36,17 @@ import type { StockSearchResult } from "@/lib/api/stocks";
 
 const FREE_LIMIT = 3;
 
+type CsvPhase = "idle" | "parsing" | "review" | "registering";
+
+interface CsvItem {
+  code: string;
+  isDuplicate: boolean; // already in portfolios — skip pre-registration
+  checked: boolean;     // user selection when Free tier quota is exceeded
+}
+
 export default function PortfoliosNewPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const { isPro } = useTierCheck();
   const { data: portfolios, isLoading } = usePortfolios();
   const { mutate: deletePortfolio, isPending: isDeleting } = useDeletePortfolio();
@@ -45,11 +62,25 @@ export default function PortfoliosNewPage() {
   const debouncedQuery = useDebounce(searchInput);
   const { data: searchResults, isLoading: isSearching } = useStockSearch(debouncedQuery);
 
+  // CSV upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [csvPhase, setCsvPhase] = useState<CsvPhase>("idle");
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [csvItems, setCsvItems] = useState<CsvItem[]>([]);
+
   useEffect(() => { setActiveIndex(-1); }, [searchResults]);
   useEffect(() => { activeOptionRef.current?.scrollIntoView({ block: "nearest" }); }, [activeIndex]);
 
   const count = portfolios?.length ?? 0;
   const atLimit = isLoading || (!isPro && count >= FREE_LIMIT);
+  const remainingSlots = isPro ? Infinity : Math.max(0, FREE_LIMIT - count);
+
+  // Derived CSV review state
+  const validCsvCount = useMemo(() => csvItems.filter(i => !i.isDuplicate).length, [csvItems]);
+  // Show checkboxes only when Free user has more valid codes than remaining slots (and quota > 0)
+  const showCheckboxes = !isPro && remainingSlots > 0 && validCsvCount > remainingSlots;
+  const toRegisterCount = useMemo(() => csvItems.filter(i => !i.isDuplicate && i.checked).length, [csvItems]);
 
   const handleSelect = useCallback((stock: StockSearchResult) => {
     setSearchInput("");
@@ -69,6 +100,137 @@ export default function PortfoliosNewPage() {
       onError: () => setDeleteError("삭제에 실패했습니다. 잠시 후 다시 시도해주세요."),
     });
   }, [deleteTarget, deletePortfolio]);
+
+  const resetCsvState = useCallback(() => {
+    setCsvPhase("idle");
+    setCsvItems([]);
+    setCsvError(null);
+  }, []);
+
+  const handleFileAccepted = useCallback(async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setCsvError("CSV 파일(.csv)만 지원합니다.");
+      return;
+    }
+    setCsvError(null);
+    setCsvPhase("parsing");
+    try {
+      const codes = await parsePortfolioCsv(file);
+      if (codes.length === 0) {
+        setCsvError("종목코드를 찾을 수 없습니다. 다른 파일을 사용해주세요.");
+        setCsvPhase("idle");
+        return;
+      }
+      const portfolioSet = new Set(portfolios?.map(p => p.stock_code) ?? []);
+      const remaining = isPro ? Infinity : Math.max(0, FREE_LIMIT - (portfolios?.length ?? 0));
+      const items: CsvItem[] = [];
+      let nonDupCount = 0;
+      for (const code of codes) {
+        const isDuplicate = portfolioSet.has(code);
+        // Auto-check non-duplicates up to remaining quota; Pro users get all checked
+        const checked = !isDuplicate && (isPro || nonDupCount < remaining);
+        if (!isDuplicate) nonDupCount++;
+        items.push({ code, isDuplicate, checked });
+      }
+      setCsvItems(items);
+      setCsvPhase("review");
+    } catch {
+      setCsvError("CSV 파싱에 실패했습니다. 파일을 확인해주세요.");
+      setCsvPhase("idle");
+    }
+  }, [portfolios, isPro]);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (csvPhase !== "idle") return; // parsing 중 중복 drop 차단 — 비결정적 상태 덮어쓰기 방지
+    const file = e.dataTransfer.files[0];
+    if (file) void handleFileAccepted(file);
+  }, [csvPhase, handleFileAccepted]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      void handleFileAccepted(file);
+      e.target.value = ""; // reset so same file triggers onChange again
+    }
+  }, [handleFileAccepted]);
+
+  const toggleCsvItem = useCallback((code: string) => {
+    const remaining = isPro ? Infinity : Math.max(0, FREE_LIMIT - (portfolios?.length ?? 0));
+    setCsvItems(prev => {
+      const currentChecked = prev.filter(i => !i.isDuplicate && i.checked).length;
+      return prev.map(item => {
+        if (item.code !== code || item.isDuplicate) return item;
+        // Block checking when at Free limit and this item is unchecked
+        if (!item.checked && currentChecked >= remaining) return item;
+        return { ...item, checked: !item.checked };
+      });
+    });
+  }, [isPro, portfolios]);
+
+  const handleBulkRegister = useCallback(async () => {
+    const toRegister = csvItems.filter(i => !i.isDuplicate && i.checked).map(i => i.code);
+    if (!toRegister.length) {
+      resetCsvState();
+      return;
+    }
+    setCsvPhase("registering");
+
+    const added: string[] = [];
+    const skippedDuplicate: string[] = csvItems.filter(i => i.isDuplicate).map(i => i.code);
+    const skippedUnsupported: string[] = [];
+    const skippedFailed: string[] = []; // 네트워크 오류 등 비-ApiException 실패
+    // Codes user did not select (Free tier over-quota)
+    const skippedLimit: string[] = csvItems.filter(i => !i.isDuplicate && !i.checked).map(i => i.code);
+
+    for (let idx = 0; idx < toRegister.length; idx++) {
+      const code = toRegister[idx];
+      try {
+        await apiClient<unknown>("/portfolios", {
+          method: "POST",
+          // stock_code only — avg_buy_price/quantity NOT sent (CSV financial PII protection)
+          body: JSON.stringify({ stock_code: code }),
+        });
+        added.push(code);
+      } catch (e) {
+        if (e instanceof ApiException) {
+          if (e.body.status === 409) {
+            // Duplicate detected by BE (concurrent registration edge case)
+            skippedDuplicate.push(code);
+          } else if (e.body.status === 422 || e.body.code === "BUSINESS_RULE_VIOLATION") {
+            // Free limit reached unexpectedly (e.g. concurrent manual registration)
+            skippedLimit.push(...toRegister.slice(idx));
+            break;
+          } else {
+            // 400 = unsupported stock (not in stocks master: 코스피200+코스닥150)
+            skippedUnsupported.push(code);
+          }
+        } else {
+          // 네트워크 타임아웃·DNS 오류 등 — 침묵 실패 방지를 위해 집계 후 토스트에 포함
+          skippedFailed.push(code);
+        }
+      }
+    }
+
+    // 1 invalidateQueries after loop — avoids N re-fetches from per-call invalidation
+    await qc.invalidateQueries({ queryKey: ["portfolios"] });
+
+    const parts: string[] = [];
+    if (added.length) parts.push(`${added.length}종목 등록됨`);
+    if (skippedDuplicate.length) parts.push(`${skippedDuplicate.length} 중복`);
+    if (skippedUnsupported.length) parts.push(`${skippedUnsupported.length} 미지원`);
+    if (skippedLimit.length) parts.push(`${skippedLimit.length} 한도 초과`);
+    if (skippedFailed.length) parts.push(`${skippedFailed.length} 오류`);
+
+    if (added.length > 0) {
+      toast.success(parts.join(" · "));
+    } else {
+      toast.info(parts.length ? parts.join(" · ") : "등록된 종목이 없습니다.");
+    }
+
+    resetCsvState();
+  }, [csvItems, qc, resetCsvState]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -183,14 +345,161 @@ export default function PortfoliosNewPage() {
             )}
           </div>
 
-          {/* CSV 업로드 */}
-          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background py-8 text-center">
-            <div className="grid size-10 place-items-center rounded-xl border border-border bg-card">
-              <Upload className="size-5 text-muted-foreground" aria-hidden />
+          {/* CSV 업로드존 (idle·parsing) / 리뷰·등록 패널 (review·registering) */}
+          {csvPhase === "idle" || csvPhase === "parsing" ? (
+            <div
+              className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 text-center transition-colors ${
+                isDragging ? "border-primary bg-primary/5" : "border-border bg-background"
+              } ${csvPhase === "idle" ? "cursor-pointer" : "cursor-wait"}`}
+              onDragOver={(e) => { e.preventDefault(); if (csvPhase === "idle") setIsDragging(true); }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false); }}
+              onDrop={handleDrop}
+              onClick={() => { if (csvPhase === "idle") fileInputRef.current?.click(); }}
+              role="button"
+              tabIndex={csvPhase === "idle" ? 0 : -1}
+              aria-label="증권사 CSV 파일 업로드 — 클릭하거나 파일을 끌어다 놓으세요"
+              onKeyDown={(e) => {
+                if ((e.key === "Enter" || e.key === " ") && csvPhase === "idle") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="sr-only"
+                aria-hidden
+                tabIndex={-1}
+                onChange={handleFileChange}
+              />
+              <div className="grid size-10 place-items-center rounded-xl border border-border bg-card">
+                <Upload className="size-5 text-muted-foreground" aria-hidden />
+              </div>
+              {csvPhase === "parsing" ? (
+                <p className="text-sm font-semibold text-foreground" aria-live="polite">CSV 파일 분석 중...</p>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-foreground">증권사 거래내역 CSV 업로드</p>
+                  <p className="text-xs text-muted-foreground">파일을 끌어다 놓거나 클릭하세요 (EUC-KR·UTF-8 지원)</p>
+                  {csvError && (
+                    <p className="text-xs text-destructive" role="alert">{csvError}</p>
+                  )}
+                </>
+              )}
             </div>
-            <p className="text-sm font-semibold text-foreground">증권사 거래내역 CSV 업로드</p>
-            <p className="text-xs text-muted-foreground">파일을 끌어다 놓으면 보유 종목을 자동 추출</p>
-          </div>
+          ) : (
+            /* 리뷰 / 등록 진행 패널 */
+            <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  추출된 종목 {csvItems.length}개
+                  {validCsvCount > 0 && (
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      ({validCsvCount}개 신규 · {csvItems.length - validCsvCount}개 중복)
+                    </span>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={resetCsvState}
+                  disabled={csvPhase === "registering"}
+                  className="rounded text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label="CSV 업로드 취소"
+                >
+                  취소
+                </button>
+              </div>
+
+              {/* 잔여 한도 안내 (Free 전용) */}
+              {!isPro && (
+                <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  잔여 등록 가능:{" "}
+                  <span className="font-bold text-foreground">
+                    {remainingSlots === 0 ? "없음" : `${remainingSlots}종목`}
+                  </span>{" "}
+                  (Free 플랜 최대 {FREE_LIMIT}종목)
+                  {showCheckboxes && (
+                    <span> — 등록할 종목을 {remainingSlots}개 선택하세요</span>
+                  )}
+                </div>
+              )}
+
+              {/* 종목 목록 */}
+              <ul
+                className="flex max-h-48 flex-col gap-0.5 overflow-y-auto"
+                role="list"
+                aria-label="추출된 종목 목록"
+              >
+                {csvItems.map(item => (
+                  <li
+                    key={item.code}
+                    className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 ${
+                      item.isDuplicate ? "opacity-50" : ""
+                    }`}
+                  >
+                    {showCheckboxes && !item.isDuplicate && (
+                      <input
+                        type="checkbox"
+                        id={`csv-${item.code}`}
+                        checked={item.checked}
+                        onChange={() => toggleCsvItem(item.code)}
+                        disabled={
+                          csvPhase === "registering" ||
+                          (!item.checked && toRegisterCount >= remainingSlots)
+                        }
+                        className="size-4 shrink-0 accent-primary"
+                        aria-label={`${item.code} 등록 선택`}
+                      />
+                    )}
+                    <span className="flex-1 font-mono text-sm text-foreground">{item.code}</span>
+                    {item.isDuplicate && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+                        이미 등록됨
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Free 한도 초과 업그레이드 안내 */}
+              {!isPro && remainingSlots === 0 && validCsvCount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Free 플랜 등록 한도에 도달했습니다.{" "}
+                  <Link href="/pricing" className="font-bold text-primary hover:underline">
+                    Pro로 업그레이드 →
+                  </Link>
+                </p>
+              )}
+
+              {/* 액션 버튼 */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={resetCsvState}
+                  disabled={csvPhase === "registering"}
+                >
+                  취소
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => void handleBulkRegister()}
+                  disabled={csvPhase === "registering" || toRegisterCount === 0}
+                  aria-label={toRegisterCount > 0 ? `${toRegisterCount}종목 포트폴리오에 등록` : "등록할 종목 없음"}
+                >
+                  {csvPhase === "registering"
+                    ? "등록 중..."
+                    : toRegisterCount > 0
+                    ? `${toRegisterCount}종목 등록`
+                    : "등록할 종목 없음"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 우측: 등록된 종목 */}

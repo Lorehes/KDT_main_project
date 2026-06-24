@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-24 (dashboard-eval-pnl Done)
+updated: 2026-06-24 (portfolio-csv-upload Approved)
 ---
 
 # Specs MOC
@@ -25,18 +25,19 @@ docs/specs/
 - [[payment-pg-integration]] — 결제 PG 연동: 카카오페이 정기결제·구독 관리·환불
 - [[frontend-share-card-image]] — 공유 카드 이미지: html2canvas PNG 다운로드·SNS 공유
 
-**2026-06-22 dc-review-frontend 리뷰 후속 (portfolios 페이지)**
+**2026-06-24 dc-review-code 이슈 후속**
 
-- [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 (P3)
 
 **2026-06-22 FE 최종 점검 후속 — FE↔BE API 전수 비교**
 
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 페이지네이션(P0) + rcept_dt 형식 수정(P1) + Stage 3/5 null 문서화 (2개 버그, DB 변경 없음)
 
 ### Approved
-- [[krx-job-test-isolation]] — KRX 배치 잡 테스트 격리: KrxPriceSyncJob @ConditionalOnProperty + 전역 test disable + B128 HTTP→HTTPS 조사 (2026-06-24 Approved)
+- [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 · 방향 A(FE 단독) 확정 (2026-06-24 Approved)
+- [[csv-euckr-binary-test]] — parsePortfolioCsv EUC-KR 실인코딩 바이너리 테스트 보강: 성공 경로(0xA1A1) + 폴백 경로(0xFF) + ICU skipIf 가드 (2026-06-24 Approved)
 
 ### Done
+- [[krx-job-test-isolation]] — KRX 배치 잡 테스트 격리: @ConditionalOnProperty + 전역 test disable + B128 HTTPS 전환 (2026-06-24 Done)
 - [[dashboard-eval-pnl]] — 대시보드 평가 손익: KRX 종가 수집(MDCSTAT01501) + V23 마이그레이션 + 집계 API + FE 카드 교체 (2026-06-24 Done)
 - [[krx-price-source-resilience]] — KRX 종가 소스 신뢰성: 이상치 필터(절대+전일비 ±50%) + HostWhitelist 주석 + 중장기 대체 소스 조사 (2026-06-24 Done)
 - [[eval-pnl-integration-tests]] — eval-pnl 통합 테스트 보강: summary 6케이스 + KrxPriceSyncJobIntegrationTest 5케이스 + KrxClientTest isValidPrice 6경계값 (Option C, 166/166) (2026-06-24 Done)
