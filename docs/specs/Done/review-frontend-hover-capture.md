@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-22
 updated: 2026-06-24
 ---
 
 # dc-review-frontend 호버 상태 캡처 Spec
 
-> 상태: Draft → **Approved** (2026-06-24, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-06-24, 구현 완료 · dev-log 기록)
 > 발견: `pricing-nav-auth-consistency` dc-review-frontend Info 이슈
 > 관련: [[pricing-nav-auth-consistency]]
 

@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-22
 updated: 2026-06-24
 ---
 
 # dc-review-frontend 인증 세션 캡처 Spec
 
-> 상태: **Approved** (2026-06-24, dc-tech-review 승인 + 코드 드리프트 재검증)
+> 상태: Approved → **Done** (2026-06-24, 구현 완료 · 커밋 432aa37 · dev-log 기록)
 > 발견: `pricing-nav-auth-consistency` dc-review-frontend Info 이슈
 > 관련: [[pricing-nav-auth-consistency]], [[review-frontend-hover-capture]]
 
