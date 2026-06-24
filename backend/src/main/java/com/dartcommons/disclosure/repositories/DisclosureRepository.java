@@ -24,7 +24,10 @@ import java.util.Optional;
  *               Pageable은 Sort 없이(PageRequest.of(page, size)) 전달 — ORDER BY와 이중 적용 방지.
  * [수정 시 고려사항] native query는 PostgreSQL ANSI SQL — dialect 전환 시 재검토 필요.
  *                  (stock_code, rcept_dt DESC) 복합 인덱스 추가는 performance-caching-staletime Spec 위임.
- *                  sentiment IS NULL 패턴: sentiment=null → 전체 공시 반환(필터 미적용). 정상 동작.
+ *                  날짜 파라미터 null 처리: PostgreSQL extended protocol은 parse 단계에서 파라미터 타입 OID를 결정.
+ *                  `:param IS NULL` 패턴의 null 파라미터는 OID 미지정 시 "could not determine data type" 오류 발생.
+ *                  JPQL: COALESCE(:fromDate, d.rceptDt) 사용 → null 시 d.rceptDt와 비교(항상 true, 필터 없음).
+ *                  native: CAST(:fromDate AS date) IS NULL 사용 → PostgreSQL이 CAST에서 타입 결정.
  */
 public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
 
@@ -45,15 +48,15 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
     @Query(value = """
             SELECT d FROM Disclosure d
             WHERE d.stockCode IN :stockCodes
-              AND (:fromDate IS NULL OR d.rceptDt >= :fromDate)
-              AND (:toDate IS NULL OR d.rceptDt <= :toDate)
+              AND d.rceptDt >= coalesce(:fromDate, d.rceptDt)
+              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
             ORDER BY d.rceptDt DESC, d.id DESC
             """,
             countQuery = """
             SELECT COUNT(d) FROM Disclosure d
             WHERE d.stockCode IN :stockCodes
-              AND (:fromDate IS NULL OR d.rceptDt >= :fromDate)
-              AND (:toDate IS NULL OR d.rceptDt <= :toDate)
+              AND d.rceptDt >= coalesce(:fromDate, d.rceptDt)
+              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
             """)
     Page<Disclosure> findFilteredByStocks(
             @Param("stockCodes") List<String> stockCodes,
@@ -68,14 +71,14 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
      */
     @Query(value = """
             SELECT d FROM Disclosure d
-            WHERE (:fromDate IS NULL OR d.rceptDt >= :fromDate)
-              AND (:toDate IS NULL OR d.rceptDt <= :toDate)
+            WHERE d.rceptDt >= coalesce(:fromDate, d.rceptDt)
+              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
             ORDER BY d.rceptDt DESC, d.id DESC
             """,
             countQuery = """
             SELECT COUNT(d) FROM Disclosure d
-            WHERE (:fromDate IS NULL OR d.rceptDt >= :fromDate)
-              AND (:toDate IS NULL OR d.rceptDt <= :toDate)
+            WHERE d.rceptDt >= coalesce(:fromDate, d.rceptDt)
+              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
             """)
     Page<Disclosure> findAllFiltered(
             @Param("fromDate") LocalDate fromDate,
@@ -94,20 +97,20 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             SELECT d.* FROM disclosures d
             LEFT JOIN analysis_results ar ON ar.disclosure_id = d.id
             WHERE d.stock_code IN :stockCodes
-              AND (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
-              AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
-              AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
-              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
+              AND (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
+              AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
             ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
             SELECT COUNT(d.id) FROM disclosures d
             LEFT JOIN analysis_results ar ON ar.disclosure_id = d.id
             WHERE d.stock_code IN :stockCodes
-              AND (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
-              AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
-              AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
-              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
+              AND (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
+              AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
             """,
             nativeQuery = true)
     Page<Disclosure> findFilteredByStocksWithSentiment(
@@ -126,19 +129,19 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
     @Query(value = """
             SELECT d.* FROM disclosures d
             LEFT JOIN analysis_results ar ON ar.disclosure_id = d.id
-            WHERE (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
-              AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
-              AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
-              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
+            WHERE (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
+              AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
             ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
             SELECT COUNT(d.id) FROM disclosures d
             LEFT JOIN analysis_results ar ON ar.disclosure_id = d.id
-            WHERE (:fromDate IS NULL OR d.rcept_dt >= :fromDate)
-              AND (:toDate IS NULL OR d.rcept_dt <= :toDate)
-              AND (:sentiment IS NULL OR ar.sentiment = :sentiment)
-              AND (:withheld IS NULL OR ar.is_withheld = :withheld)
+            WHERE (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
+              AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
             """,
             nativeQuery = true)
     Page<Disclosure> findAllFilteredWithSentiment(

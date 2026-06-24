@@ -6,6 +6,7 @@
 //   useDeletePortfolio·useUpdatePortfolio onError → Sonner toast.error 발화.
 //   useCreatePortfolio는 portfolios/new에서 mutateAsync+try/catch로 폼 에러 처리 — onError 없음.
 //   staleTime: 2분 + refetchOnWindowFocus:true — 포트폴리오 변경은 즉시성 필요. BE @CacheEvict로 서버 캐시도 즉시 무효화됨.
+//   usePortfolioSummary staleTime: 5분 — KrxPriceSyncJob 일 1회 배치(18:00 KST) 기준. 창 포커스 리패치 활성.
 // [수정 시 고려사항] corp_name은 nullable 유지 — stocks 마스터 미등재 엣지케이스 대비(BE corpName: null 허용).
 //   staleTime 연장 시 알림 설정 변경 후 목록 반영 지연 가능 — invalidateQueries로 강제 무효화 가능.
 
@@ -32,6 +33,31 @@ export interface CreatePortfolioBody {
 }
 
 export type UpdatePortfolioBody = Omit<CreatePortfolioBody, "stock_code">;
+
+/** GET /api/v1/portfolios/summary 응답 — KRX 종가 기반 평가 손익 집계. */
+export interface PortfolioSummary {
+  /** 총 매수금액 (close_price 있는 종목만 합산). null이면 데이터 없음 */
+  total_cost_basis: number;
+  total_eval_amount: number;
+  total_pnl: number;
+  /** 수익률(%). total_cost_basis == 0 이면 null. */
+  pnl_rate: number | null;
+  /** 종가 수집 완료 종목 수 */
+  priced_count: number;
+  /** 종가 미수집 또는 매수가/수량 미입력 종목 수 */
+  unpriced_count: number;
+  /** 종가 기준일 (YYYY-MM-DD). priced_count == 0이면 null. */
+  as_of: string | null;
+}
+
+export function usePortfolioSummary() {
+  return useQuery({
+    queryKey: ["portfolios", "summary"],
+    queryFn: () => apiClient<PortfolioSummary>("/portfolios/summary"),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
 
 export function usePortfolios() {
   return useQuery({

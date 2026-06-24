@@ -19,6 +19,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -141,8 +143,10 @@ class DisclosureControllerTest {
         String token = signupAndGetToken(uniqueEmail());
         addPortfolio(token, "005930");
 
-        insertDisclosure(uniqueRceptNo(), "005930", "2025-06-01");
-        insertDisclosure(uniqueRceptNo(), "000660", "2025-06-01");
+        // FREE 티어는 오늘 날짜만 반환 — 과거 날짜 삽입 시 0건 (BM 정책, dashboard-real-data R3)
+        String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
+        insertDisclosure(uniqueRceptNo(), "005930", today);
+        insertDisclosure(uniqueRceptNo(), "000660", today);
 
         String resp = mockMvc.perform(get("/api/v1/disclosures")
                         .header("Authorization", "Bearer " + token))
@@ -236,12 +240,14 @@ class DisclosureControllerTest {
         String token = signupAndGetToken(uniqueEmail());
         addPortfolio(token, "005930");
 
+        // FREE 티어는 오늘 날짜만 반환 — 과거 날짜 삽입 시 0건 (BM 정책, dashboard-real-data R3)
+        String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
         String withheldRcept = uniqueRceptNo();
-        long withheldId = insertDisclosure(withheldRcept, "005930", "2025-06-07");
+        long withheldId = insertDisclosure(withheldRcept, "005930", today);
         insertAnalysisWith(withheldId, "NEGATIVE", true);   // 판단 보류
 
         String normalRcept = uniqueRceptNo();
-        long normalId = insertDisclosure(normalRcept, "005930", "2025-06-07");
+        long normalId = insertDisclosure(normalRcept, "005930", today);
         insertAnalysisWith(normalId, "POSITIVE", false);    // 비보류
 
         String resp = mockMvc.perform(get("/api/v1/disclosures")
@@ -342,7 +348,8 @@ class DisclosureControllerTest {
     void list_rceptDt_basicIsoDate_noHyphens() throws Exception {
         String token = signupAndGetToken(uniqueEmail());
         addPortfolio(token, "005930");
-        insertDisclosure(uniqueRceptNo(), "005930", "2024-06-22");
+        // FREE 티어는 오늘 날짜만 반환 — 과거 날짜 삽입 시 0건 (BM 정책, dashboard-real-data R3)
+        insertDisclosure(uniqueRceptNo(), "005930", LocalDate.now(ZoneId.of("Asia/Seoul")).toString());
 
         String resp = mockMvc.perform(get("/api/v1/disclosures")
                         .header("Authorization", "Bearer " + token))

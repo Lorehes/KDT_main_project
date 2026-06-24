@@ -6,6 +6,8 @@
 //        미들웨어에서 /dashboard/preview를 PUBLIC_PATHS에 추가해 인증 우회.
 // [사이드 임팩트] AppShell이 NotificationModal/TopBar 등을 마운트하나 user=null이므로 graceful degradation.
 //               목업 데이터는 이 파일에만 정의 — 실제 API 호출 없음.
+//               PnlStatCard 목업값(+1,234,000원/+3.4%)은 실제 대시보드와 동일 컴포넌트로 UX 일관성 유지
+//               (한국 시장 컨벤션 상승=빨강 ▲, WCAG 색+아이콘+텍스트 3중 표현 자동 적용).
 // [수정 시 고려사항] 실제 최신 DART 공시로 목업 교체 시 이 파일의 MOCK_DISCLOSURES 수정.
 //                  가입 전환 CTA 문구는 A/B 테스트 대상.
 
@@ -14,7 +16,7 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
-import { StatCard, SentimentStatCard } from "@/components/domain/StatCards";
+import { StatCard, SentimentStatCard, PnlStatCard } from "@/components/domain/StatCards";
 import type { Disclosure } from "@/lib/api/disclosures";
 
 const MOCK_DISCLOSURES: Disclosure[] = [
@@ -147,7 +149,8 @@ export default function DashboardPreviewPage() {
         </Link>
       </div>
 
-      {/* 통계 카드 4종 — 호재/악재/보류는 1개 카드로 통합. 평가 손익은 목업(+3.4%) */}
+      {/* 통계 카드 4종 — 호재/악재/보류는 1개 카드로 통합.
+          평가 손익은 PnlStatCard 목업(+3.4%, +1,234,000원) — 실제 대시보드와 동일 컴포넌트로 일관성 유지. */}
       <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="오늘 공시 통계">
         <StatCard label="오늘 공시" value={MOCK_DISCLOSURES.length} unit="건" />
         <SentimentStatCard
@@ -157,7 +160,12 @@ export default function DashboardPreviewPage() {
           withheld={withheldCount}
         />
         <StatCard label="보유 종목" value={MOCK_PORTFOLIOS.length} unit="종목" />
-        <StatCard label="평가 손익" value="+3.4" unit="%" />
+        <PnlStatCard
+          pnl={1_234_000}
+          pnlRate={3.4}
+          asOf="2026-06-11"
+          unpricedCount={0}
+        />
       </ul>
 
       {/* 공시 피드 */}

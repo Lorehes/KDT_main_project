@@ -4,8 +4,10 @@ import com.dartcommons.shared.crypto.AesGcmEncryptor;
 import com.dartcommons.shared.enums.Tier;
 import com.dartcommons.stocks.entities.Stock;
 import com.dartcommons.stocks.services.StockMasterService;
+import com.dartcommons.stocks.services.StockPriceProvider;
 import com.dartcommons.user.dto.PortfolioRequest;
 import com.dartcommons.user.dto.PortfolioResponse;
+import com.dartcommons.user.dto.PortfolioSummaryResponse;
 import com.dartcommons.user.entities.PortfolioEntity;
 import com.dartcommons.user.repositories.PortfolioRepository;
 import org.springframework.cache.annotation.CacheEvict;
@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +41,7 @@ import java.util.stream.Collectors;
  *                  동시 요청 경쟁 조건: @Transactional + DB UNIQUE(user_id, stock_code) 이중 방어.
  *                  avg_buy_price·quantity는 DB 정렬/집계 불가 — 손익계산은 복호화 후 앱 계층에서만.
  *                  listPortfolios() bulk IN 절은 portfolios 행이 수천 건 이상이면 페이지네이션 도입 검토.
+ *                  summarize()는 복호화 후 즉시 계산 — 중간 값 절대 로그 출력 금지.
  */
 @Service
 @Transactional
@@ -46,14 +51,77 @@ public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
     private final StockMasterService  stockMasterService;
+    private final StockPriceProvider  stockPriceProvider;
     private final AesGcmEncryptor     encryptor;
 
     public PortfolioService(PortfolioRepository portfolioRepository,
                             StockMasterService stockMasterService,
+                            StockPriceProvider stockPriceProvider,
                             AesGcmEncryptor encryptor) {
         this.portfolioRepository = portfolioRepository;
         this.stockMasterService  = stockMasterService;
+        this.stockPriceProvider  = stockPriceProvider;
         this.encryptor           = encryptor;
+    }
+
+    /**
+     * 전체 포트폴리오 평가 손익 집계.
+     * close_price + avgBuyPrice/quantity가 모두 있는 종목만 totalCostBasis·totalEvalAmount에 합산.
+     * 복호화 중간 값은 절대 로그 출력 금지 — 금융 개인정보(CLAUDE.md §7).
+     */
+    @Transactional(readOnly = true)
+    public PortfolioSummaryResponse summarize(Long userId) {
+        List<PortfolioEntity> portfolios = portfolioRepository.findByUserId(userId);
+        if (portfolios.isEmpty()) {
+            return new PortfolioSummaryResponse(
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, 0, 0, null);
+        }
+
+        Set<String> stockCodes = portfolios.stream()
+                .map(PortfolioEntity::getStockCode)
+                .collect(Collectors.toSet());
+        Map<String, StockPriceProvider.PriceInfo> priceMap = stockPriceProvider.findLatestPrices(stockCodes);
+
+        BigDecimal totalCostBasis  = BigDecimal.ZERO;
+        BigDecimal totalEvalAmount = BigDecimal.ZERO;
+        int pricedCount   = 0;
+        int unpricedCount = 0;
+        LocalDate asOf    = null;
+
+        for (PortfolioEntity p : portfolios) {
+            String decryptedPrice = encryptor.decrypt(p.getAvgBuyPriceEnc());
+            String decryptedQty   = encryptor.decrypt(p.getQuantityEnc());
+            // 복호화 값은 변수에 보관 후 즉시 계산 — 절대 로그 출력 금지
+            BigDecimal buyPrice = parseSafe(decryptedPrice);
+            BigDecimal qty      = parseSafe(decryptedQty);
+
+            if (buyPrice == null || qty == null) {
+                unpricedCount++;
+                continue;
+            }
+            StockPriceProvider.PriceInfo pi = priceMap.get(p.getStockCode());
+            if (pi == null) {
+                unpricedCount++;
+                continue;
+            }
+            totalCostBasis  = totalCostBasis.add(buyPrice.multiply(qty));
+            totalEvalAmount = totalEvalAmount.add(pi.closePrice().multiply(qty));
+            pricedCount++;
+            if (asOf == null || pi.priceAsof().isAfter(asOf)) {
+                asOf = pi.priceAsof();
+            }
+        }
+
+        BigDecimal totalPnl = totalEvalAmount.subtract(totalCostBasis);
+        BigDecimal pnlRate  = null;
+        if (totalCostBasis.compareTo(BigDecimal.ZERO) != 0) {
+            pnlRate = totalPnl.divide(totalCostBasis, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        return new PortfolioSummaryResponse(
+                totalCostBasis, totalEvalAmount, totalPnl, pnlRate,
+                pricedCount, unpricedCount, asOf);
     }
 
     @Transactional(readOnly = true)

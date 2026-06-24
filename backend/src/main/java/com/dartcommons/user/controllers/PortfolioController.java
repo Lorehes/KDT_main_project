@@ -4,6 +4,7 @@ import com.dartcommons.shared.enums.Tier;
 import com.dartcommons.shared.security.SecurityUtils;
 import com.dartcommons.user.dto.PortfolioRequest;
 import com.dartcommons.user.dto.PortfolioResponse;
+import com.dartcommons.user.dto.PortfolioSummaryResponse;
 import com.dartcommons.user.services.PortfolioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,12 @@ public class PortfolioController {
 
     public PortfolioController(PortfolioService portfolioService) {
         this.portfolioService = portfolioService;
+    }
+
+    /** 평가 손익 집계 — literal "summary"로 /{id}(Long 타입)와 충돌 없음. */
+    @GetMapping("summary")
+    public PortfolioSummaryResponse summary(@AuthenticationPrincipal Long userId) {
+        return portfolioService.summarize(userId);
     }
 
     @GetMapping

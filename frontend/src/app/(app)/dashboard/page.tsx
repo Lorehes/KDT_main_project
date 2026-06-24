@@ -12,17 +12,18 @@ import { Briefcase, Bell } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useUIStore } from "@/lib/stores/uiStore";
-import { usePortfolios } from "@/lib/api/portfolios";
+import { usePortfolios, usePortfolioSummary } from "@/lib/api/portfolios";
 import { useDisclosures } from "@/lib/api/disclosures";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatCard, SentimentStatCard } from "@/components/domain/StatCards";
+import { StatCard, SentimentStatCard, PnlStatCard } from "@/components/domain/StatCards";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { setUpsellModalOpen } = useUIStore();
   const { data: portfolios } = usePortfolios();
+  const { data: summary } = usePortfolioSummary();
   // "sv" locale → YYYY-MM-DD, Asia/Seoul 기준 오늘 날짜 — BE Free 강제와 동일 기준
   const today = new Intl.DateTimeFormat("sv", { timeZone: "Asia/Seoul" }).format(new Date());
   const { data: disclosurePage, isLoading } = useDisclosures({ scope: "portfolio", size: 10, from: today, to: today });
@@ -60,7 +61,12 @@ export default function DashboardPage() {
           withheld={disclosures.filter((d) => d.is_withheld === true).length}
         />
         <StatCard label="보유 종목" value={portfolios?.length ?? 0} unit="개" />
-        <StatCard label="평가 손익" value="—" muted note="DB 연동 필요" />
+        <PnlStatCard
+          pnl={summary?.priced_count ? summary.total_pnl : null}
+          pnlRate={summary?.pnl_rate ?? null}
+          asOf={summary?.as_of ?? null}
+          unpricedCount={summary?.unpriced_count ?? 0}
+        />
       </ul>
 
       {/* 공시 피드 or Empty state */}

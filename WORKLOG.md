@@ -2,12 +2,45 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-23
+updated: 2026-06-24
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-24 (37차) | dashboard-eval-pnl — 평가손익 카드+KRX 종가 동기화+버그3건 픽스
+
+**산출**:
+- BE(신규): `KrxPriceSyncJob.java` — 일배치 종가 동기화 (`@Scheduled` + `@ConditionalOnProperty` 기본 false)
+- BE(신규): `StockPriceProvider.java` / `StockPriceService.java` — 종가 조회 seam (Caffeine 캐시 경유)
+- BE(신규): `V23__add_price_to_stocks.sql` — stocks 테이블에 `close_price`, `price_asof` 컬럼 추가
+- BE(수정): `KrxClient.java` — `fetchAllClosePrices()` 추가 (KRX MDCSTAT01501 직접 → GitHub cache CSV 폴백), B128.bld 최근 거래일 조회
+- BE(수정): `Stock.java` — `closePrice`, `priceAsof` 필드 추가 (V23 대응)
+- BE(수정): `PortfolioService.java` — `summarize()`: 전 포트폴리오 평가손익 집계 (복호화 후 계산, 중간값 로그 금지)
+- BE(수정): `PortfolioController.java` — `GET /api/portfolios/summary` 엔드포인트
+- BE(버그픽스): `DisclosureRepository.java` — PostgreSQL null 파라미터 타입추론 오류 수정 (JPQL: COALESCE, native: CAST 패턴)
+- BE(버그픽스): `StockMasterService.java` — SpEL 캐시 키 `T(Type).new()` → `new Type()` 수정
+- Test(수정): `DisclosureControllerTest.java` — FREE tier 날짜 강제 정합 (오늘 날짜 사용, 149/149 Green)
+- FE(신규): `StatCards.tsx` — `PnlStatCard` 컴포넌트 (한국 컨벤션 상승=빨강 ▲/하락=파랑 ▼, 万/億 컴팩트 표기, WCAG AA)
+- FE(신규): `portfolios.ts` — `usePortfolioSummary()` TanStack Query 훅
+- FE(수정): `dashboard/page.tsx` — `PnlStatCard` 실데이터 연동
+- FE(수정): `dashboard/preview/page.tsx` — 목업 `PnlStatCard` 추가
+- Spec: `dashboard-eval-pnl.md` Draft→Approved; 신규 Draft 3개 (`eval-pnl-integration-tests`, `krx-price-source-resilience`, `krx-job-test-isolation`)
+
+### 결정
+- **KRX 종가 2-hop 폴백**: KRX 직접 접근이 환경에 따라 차단될 수 있어 GitHub cache CSV(`FinanceDataReader/fdr_krx_data_cache`)를 폴백으로 채택. MVP 허용 범위; 장기 대안은 `krx-price-source-resilience` Spec에 위임.
+- **StockPriceProvider seam**: `KrxClient`를 `PortfolioService`에 직접 주입하지 않고 인터페이스 경유. Stage 5 착수 시 시계열 테이블 기반으로 교체 가능(이 클래스 변경 최소화).
+- **KrxPriceSyncJob ConditionalOnProperty**: `krx.price-sync.enabled=false`(기본값) — 운영 비활성화 방어. 운영 활성화 시 환경변수 투입 필요.
+- **PostgreSQL null 타입 추론 패턴 확립**: JPQL은 `COALESCE(:param, col)`, native는 `CAST(:param AS type)` — DisclosureRepository 헤더 주석으로 메커니즘 문서화.
+- **복호화 중간값 로그 금지**: `PortfolioService.summarize()` 주석에 명시. summarize()는 집계값(총손익/수익률)만 반환, 종목별 매수가 재노출 없음.
+
+### 미완료
+- `eval-pnl-integration-tests` Spec — `PortfolioService.summarize()` + `KrxPriceSyncJob` Testcontainers 통합테스트 (Draft 생성 완료)
+- `krx-price-source-resilience` Spec — 이상치 필터(±30% WARN+무시) + GitHub cache 공급망 리스크 감사 (Draft 생성 완료)
+- `krx-job-test-isolation` Spec — `@ConditionalOnProperty` 표준화 + `@TestPropertySource` 세트 (Draft 생성 완료)
 
 ---
 

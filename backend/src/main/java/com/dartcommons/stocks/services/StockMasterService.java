@@ -64,7 +64,7 @@ public class StockMasterService {
      * 전제: 종목코드는 6자리 숫자(',' '[' ']' 미포함) — 키 충돌 없음. 종목코드 형식 변경 시 key 재검토 필요.
      */
     @Cacheable(value = "stocksByCodeIn",
-               key = "T(java.util.TreeSet).new(#stockCodes).toString()")
+               key = "new java.util.TreeSet(#stockCodes).toString()")
     @Transactional(readOnly = true)
     public List<Stock> findByStockCodeIn(Collection<String> stockCodes) {
         return stockRepository.findByStockCodeIn(stockCodes);
