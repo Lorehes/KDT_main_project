@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-24
 updated: 2026-06-24
 ---
 
 # KRX 배치 잡 테스트 환경 격리 Spec
 
-> 상태: **Approved** (2026-06-24, dc-tech-review 승인 — 카드 3 전역 disable 권장안 채택)
+> 상태: **Done** (2026-06-24, 구현 완료 — 166/166 GREEN, 7ae71b4)
 
 ## 배경 / 목적
 

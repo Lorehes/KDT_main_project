@@ -11,6 +11,29 @@ updated: 2026-06-24
 
 ---
 
+## 2026-06-24 (42차) | frontend-share-card-image + share-card-capture-playwright-test — 공유 카드 이미지 캡처 + Playwright E2E 6건
+
+**산출**:
+- FE(수정): `frontend/src/app/(app)/share/page.tsx` — html2canvas-pro 기반 PNG 캡처·다운로드·모바일 파일 공유 완성. `captureShareCard()` (`document.fonts.ready` 대기 → `toBlob`), `triggerDownload()` (Firefox DOM-append 패턴), `handleShareImage()` (`canShare→share→download` 3단 폴백). `capturing` 상태 기반 두 버튼 `disabled`+`aria-busy`, `role="status"` aria-live 접근성.
+- FE(신규): `frontend/e2e/helpers/session.ts` — Playwright 공통 세션 픽스처 (fake JWT, `setAuthCookie`, `mockMeResponse` — 민감정보 미포함)
+- FE(신규): `frontend/e2e/share/capture.spec.ts` — Playwright E2E 6건: T1(파일명·크기), T2/T3(DOM 색상 비-블랙), T4(disabled·aria-busy 상태), T5(share 미지원→다운로드 폴백), T6(AbortError 에러 토스트 미발화). 5/5 GREEN (T4 포함)
+- FE(의존성): `frontend/package.json` + `pnpm-lock.yaml` — `html2canvas-pro 2.2.0` 추가
+- Spec: `docs/specs/Approved/frontend-share-card-image.md` (Draft→Approved)
+- Spec: `docs/specs/Approved/share-card-capture-playwright-test.md` (신규 Approved)
+
+**결정**:
+- **html2canvas-pro 채택 이유**: Tailwind 4의 `oklch()` + CSS 변수(`--color-brand-navy`)를 구버전 html2canvas가 검정/투명으로 렌더링하는 P0. 활성 포크인 html2canvas-pro 2.2.0이 유일한 현실적 선택. satori/`@vercel/og`도 oklch 미지원 + 기존 컴포넌트 재사용 불가로 기각.
+- **Firefox triggerDownload 패턴**: `document.body.appendChild(a) → click → removeChild → setTimeout(revoke, 1000)`. Firefox는 DOM에 없는 `<a>`의 click을 무시하는 경우 있음. `setTimeout(1000)`은 다운로드 시작 전 revoke 방지.
+- **T4 addInitScript 전략**: 헤드리스 Chromium에서 html2canvas가 너무 빠르게 완료 → transient `capturing=true` 상태를 Playwright가 못 잡음. `document.fonts` 을 2초 지연 Promise로 override해 안정적인 검증 윈도우 확보.
+- **catch-all BE mock 등록 순서**: Playwright last-registered-first-matched 규칙에 따라 catch-all(`${BE_BASE}/**`)을 먼저 등록(낮은 우선순위), 특정 mock을 나중에 등록(높은 우선순위로 override). AppShell 미모킹 BE 호출로 인한 `/login` 리다이렉트 차단.
+
+**미완료**:
+- R5 `GET /users/me/share-summary` 실 API — 현재 클라이언트 집계 유지. 별도 Spec/wave로 분리 예정.
+
+**테스트**: Vitest 44/44 GREEN | Playwright 5/5 GREEN
+
+---
+
 ## 2026-06-24 (41차) | portfolio-csv-upload + csv-euckr-binary-test — CSV 일괄 등록 + EUC-KR 바이너리 테스트
 
 **산출**:
