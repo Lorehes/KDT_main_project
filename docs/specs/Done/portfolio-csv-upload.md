@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-22
 updated: 2026-06-24
 ---
 
 # 증권사 CSV 업로드로 포트폴리오 일괄 등록 Spec
 
-> 상태: Draft → **Approved** (2026-06-24, dc-tech-review 승인 — 방향 A FE 단독 확정)
+> 상태: Draft → Approved → **Done** (2026-06-24, 구현+테스트 완료 — Vitest 44/44 GREEN)
 
 ## 배경 / 목적
 

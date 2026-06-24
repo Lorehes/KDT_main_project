@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-24 (portfolio-csv-upload Approved)
+updated: 2026-06-24 (portfolio-csv-upload + csv-euckr-binary-test Done)
 ---
 
 # Specs MOC
@@ -33,10 +33,10 @@ docs/specs/
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 페이지네이션(P0) + rcept_dt 형식 수정(P1) + Stage 3/5 null 문서화 (2개 버그, DB 변경 없음)
 
 ### Approved
-- [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 · 방향 A(FE 단독) 확정 (2026-06-24 Approved)
-- [[csv-euckr-binary-test]] — parsePortfolioCsv EUC-KR 실인코딩 바이너리 테스트 보강: 성공 경로(0xA1A1) + 폴백 경로(0xFF) + ICU skipIf 가드 (2026-06-24 Approved)
 
 ### Done
+- [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 · 방향 A(FE 단독) 확정, Vitest 44/44 (2026-06-24 Done)
+- [[csv-euckr-binary-test]] — parsePortfolioCsv EUC-KR 실인코딩 바이너리 테스트 보강: 성공 경로(0xA1A1) + 폴백 경로(0xFF) + ICU skipIf 가드 (2026-06-24 Done)
 - [[krx-job-test-isolation]] — KRX 배치 잡 테스트 격리: @ConditionalOnProperty + 전역 test disable + B128 HTTPS 전환 (2026-06-24 Done)
 - [[dashboard-eval-pnl]] — 대시보드 평가 손익: KRX 종가 수집(MDCSTAT01501) + V23 마이그레이션 + 집계 API + FE 카드 교체 (2026-06-24 Done)
 - [[krx-price-source-resilience]] — KRX 종가 소스 신뢰성: 이상치 필터(절대+전일비 ±50%) + HostWhitelist 주석 + 중장기 대체 소스 조사 (2026-06-24 Done)

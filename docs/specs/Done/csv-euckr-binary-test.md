@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-24
 updated: 2026-06-24
 ---
 
 # parsePortfolioCsv EUC-KR 실인코딩 바이너리 테스트 보강 Spec
 
-> 상태: Draft → **Approved** (2026-06-24, dc-tech-review 승인 — portfolio-csv-upload와 동일 wave 묶기)
+> 상태: Draft → Approved → **Done** (2026-06-24, 구현+테스트 완료 — Vitest 44/44 GREEN, skipIf ICU 가드)
 
 ## 배경 / 목적
 
