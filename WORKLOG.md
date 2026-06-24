@@ -11,6 +11,23 @@ updated: 2026-06-24
 
 ---
 
+## 2026-06-24 (40차) | krx-job-test-isolation — KRX 잡 테스트 격리 + B128 HTTPS 전환
+
+**산출**:
+- BE(수정): `KrxPriceSyncJob.java` — `@ConditionalOnProperty(price-sync.enabled, matchIfMissing=true)` 추가
+- BE(수정): `src/main/resources/application.yml` — `dartcommons.krx.price-sync.enabled: true` 추가
+- BE(수정): `src/test/resources/application.yml` — `dartcommons.krx.price-sync.enabled: false` 전역 추가
+- BE(수정): `KrxPriceSyncJobIntegrationTest.java` — `@TestPropertySource`에 `enabled=true` override 추가
+- BE(수정): `KrxClient.java` — `B128_URL` http→https 전환 (curl 200 실측)
+
+**결정**:
+- 전역 test disable 전략 채택: Spec 원안(PortfolioIntegrationTest 단건)보다 test yml 전역 1줄이 유지보수·정합 우수. 신규 `@SpringBootTest` 클래스도 자동 적용됨.
+- B128 HTTPS: curl 200 확인 즉시 전환 완료. 별도 조사 불필요.
+
+**테스트**: 166/166 GREEN (Testcontainers)
+
+---
+
 ## 2026-06-24 (39차) | eval-pnl-integration-tests — 통합 테스트 17케이스 + isValidPrice package-private
 
 **산출**:

@@ -39,6 +39,8 @@ dartcommons:
   krx:
     api-key: test-key
     base-url: http://localhost
+    price-sync:
+      enabled: false   # KrxPriceSyncJob Bean 전역 비활성화 — @Scheduled 실 KRX 호출 차단. KrxPriceSyncJobIntegrationTest만 enabled=true override
 
 pricing:
   plans:

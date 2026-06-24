@@ -90,6 +90,8 @@ dartcommons:
     api-key: ${KRX_API_KEY}
     timeout-ms: 10000
     max-retries: 3
+    price-sync:
+      enabled: true   # false로 설정 시 KrxPriceSyncJob Bean 비활성화 (테스트·로컬 개발용)
   # /admin/** HTTP Basic 인증 (MVP 단순 가드)
   admin:
     username: ${ADMIN_USERNAME:admin}

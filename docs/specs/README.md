@@ -33,11 +33,8 @@ docs/specs/
 
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 페이지네이션(P0) + rcept_dt 형식 수정(P1) + Stage 3/5 null 문서화 (2개 버그, DB 변경 없음)
 
-**2026-06-24 dashboard-eval-pnl 코드리뷰 후속 이슈**
-
-- [[krx-job-test-isolation]] — KRX 배치 잡 테스트 격리: KrxPriceSyncJob @ConditionalOnProperty + B128 HTTP→HTTPS 조사
-
 ### Approved
+- [[krx-job-test-isolation]] — KRX 배치 잡 테스트 격리: KrxPriceSyncJob @ConditionalOnProperty + 전역 test disable + B128 HTTP→HTTPS 조사 (2026-06-24 Approved)
 
 ### Done
 - [[dashboard-eval-pnl]] — 대시보드 평가 손익: KRX 종가 수집(MDCSTAT01501) + V23 마이그레이션 + 집계 API + FE 카드 교체 (2026-06-24 Done)

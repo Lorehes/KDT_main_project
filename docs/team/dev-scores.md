@@ -96,6 +96,7 @@ updated: 2026-06-02
 | 2026-06-24 | Jin | abc7c2e | feat(stocks,user,frontend): 평가손익PnlCard+KRX종가동기화+버그3건픽스 [8/8 L] | Stocks/User/Infra/Frontend | 8 | 8 | L | 평가손익PnlCard+KRX종가+버그3건픽스 |
 | 2026-06-24 | Jin | 06facca | fix(infra,stocks): KRX 이상치 2단 방어+리뷰 Low 수정+이슈 문서화 [6/8 M] | Infra/Stocks/Docs | 6 | 8 | M | KRX 이상치 2단 방어+리뷰 Low 수정 |
 | 2026-06-24 | Jin | f2f3a07 | test(user,stocks,infra): eval-pnl 통합 테스트 17케이스+isValidPrice package-private [7/8 M] | User/Stocks/Infra | 7 | 8 | M | eval-pnl/KRX 통합 테스트 17케이스 |
+| 2026-06-24 | Jin | b545bfc | chore(stocks,infra): KRX 잡 테스트 격리+B128 HTTPS [4/9 M] | Stocks/Infra | 4 | 9 | M | KRX 잡 테스트 격리+B128 HTTPS |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -103,5 +104,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 4 | 26 | 84 | 8.0 | 6.2 |
+| Jin | 5 | 27 | 85 | 8.1 | 6.2 |
 <!-- SUMMARY:END -->

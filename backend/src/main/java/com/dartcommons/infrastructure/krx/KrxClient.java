@@ -36,6 +36,7 @@ import java.util.Map;
  *               GitHub cache 폴백 URL은 외부 레포 의존 — 서비스 중단·포맷 변경 시 종가 미수집(다음 배치 재시도).
  *               이상치 필터 2단: 1단(isValidPrice — 1원 미만 절대 차단) + 2단(KrxPriceSyncJob — 전일 대비 ±50%).
  *               externalRestClient는 HostWhitelist 밖 — URL을 컴파일 상수로만 제한하여 SSRF 방어.
+ *               B128_URL: 2026-06-24 HTTPS 200 확인, http→https 전환 완료. KRX 서버 설정 변경으로 HTTPS 차단 시 http 롤백 필요.
  * [수정 시 고려사항] MDCSTAT01901 필드(MKT_NM·IDX_IND_NM), MDCSTAT01501 필드(ISU_SRT_CD·TDD_CLSPRC)는
  *                  KRX 페이지 변경 시 해당 record만 갱신.
  *                  Stage 5 착수 시 fetchAllClosePrices()를 stock_prices 시계열 테이블 기반으로 교체 가능
@@ -52,8 +53,8 @@ public class KrxClient {
     private static final String BLD_STOCK_INFO  = "dbms/MDC/STAT/standard/MDCSTAT01901";
     /** 전종목 시세(종가) BLD — pykrx·FinanceDataReader 소스 실측 확인(TDD_CLSPRC 필드). */
     private static final String BLD_STOCK_PRICE = "dbms/MDC/STAT/standard/MDCSTAT01501";
-    /** 최근 거래일 조회 — B128.bld resource bundle. HTTP(not HTTPS) 응답 정상 확인. */
-    private static final String B128_URL = "http://data.krx.co.kr/comm/bldAttendant/executeForResourceBundle.cmd?baseName=krx.mdc.i18n.component&key=B128.bld";
+    /** 최근 거래일 조회 — B128.bld resource bundle. HTTPS 200 정상 확인 (2026-06-24). */
+    private static final String B128_URL = "https://data.krx.co.kr/comm/bldAttendant/executeForResourceBundle.cmd?baseName=krx.mdc.i18n.component&key=B128.bld";
     /** GitHub cache CSV 폴백 — FinanceDataReader 프로젝트 유지. 포맷: Code,Close 컬럼 포함. */
     private static final String GITHUB_CACHE_URL = "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/refs/heads/master/data/listing/krx/%s.csv";
 

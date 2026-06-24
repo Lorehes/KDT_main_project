@@ -7,6 +7,7 @@ import com.dartcommons.stocks.repositories.StockRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -23,7 +24,9 @@ import java.util.Map;
  * [이유] 평일 장 마감(15:30) + KRX 데이터 확정(~16:30) 후 여유를 두고 18:00에 실행.
  *       KrxClient.fetchAllClosePrices()는 KRX 직접(MDCSTAT01501) → GitHub cache CSV 폴백 2단계.
  *       캐시 evict 없이는 TTL(4h) 만료 전까지 stale 종가가 평가 손익 집계에 반영될 수 있음.
- * [사이드 임팩트] JPA dirty-checking으로 변경 종목만 UPDATE 발생(SELECT 후 비교).
+ * [사이드 임팩트] @ConditionalOnProperty(price-sync.enabled): false이면 Bean 자체가 컨텍스트에서 제외 — @Autowired 시 NoSuchBeanDefinition 발생.
+ *               테스트에서 Job이 필요하면 @TestPropertySource로 enabled=true override 필수 (KrxPriceSyncJobIntegrationTest 참고).
+ *               JPA dirty-checking으로 변경 종목만 UPDATE 발생(SELECT 후 비교).
  *               빈 Map 반환 시(KRX·GitHub 모두 실패) UPDATE 0건 — 이전 종가 유지, 캐시는 그래도 evict.
  *               @CacheEvict + @Transactional 프록시 순서 이슈: StockMasterService.sync()와 동일 패턴.
  *               Spring Boot 3.x 기본 프록시 순서에서 캐시 evict는 트랜잭션 커밋 후 발생 — 분기 1회 배치라 실위험 무시.
@@ -35,6 +38,7 @@ import java.util.Map;
  *                  배치 실패 알림이 필요하면 ApplicationEventPublisher로 NotificationDispatcher에 이벤트 발행.
  *                  ±50% 임계는 상수화 권장 — 향후 조정 필요 시 한 곳만 수정.
  */
+@ConditionalOnProperty(name = "dartcommons.krx.price-sync.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 @RequiredArgsConstructor
 public class KrxPriceSyncJob {

@@ -50,6 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "dartcommons.dart.base-url=http://localhost",
         "dartcommons.krx.api-key=test-key",
         "dartcommons.krx.base-url=http://localhost",
+        "dartcommons.krx.price-sync.enabled=true",   // 전역 false override — KrxPriceSyncJob Bean 필요(@Autowired), 실 API는 @MockitoBean KrxClient로 차단
         "dartcommons.admin.username=admin",
         "dartcommons.admin.password=test-admin-password",
         "dartcommons.llm.provider=mock"
