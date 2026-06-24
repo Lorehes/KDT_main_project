@@ -99,6 +99,7 @@ updated: 2026-06-02
 | 2026-06-24 | Jin | b545bfc | chore(stocks,infra): KRX 잡 테스트 격리+B128 HTTPS [4/9 M] | Stocks/Infra | 4 | 9 | M | KRX 잡 테스트 격리+B128 HTTPS |
 | 2026-06-24 | Jin | c7b8064 | feat(frontend): CSV 업로드 일괄등록+EUC-KR 바이너리 테스트 [7/9 M] | Frontend | 7 | 9 | M | CSV업로드 드래그앤드롭+EUC-KR 바이너리 |
 | 2026-06-24 | Jin | 64848e7 | feat(frontend): 공유 카드 이미지 캡처+Playwright E2E 6건 [6/8 M] | Frontend | 6 | 8 | M | html2canvas-pro+Playwright E2E 6건 |
+| 2026-06-24 | Jin | c8ddcc3 | feat(skill): dc-review-frontend --auth 인증 모드 확장 [3/8 M] | Docs | 3 | 8 | M | --auth sentinel·login·state 4모드 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -106,5 +107,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 7 | 29 | 87 | 8.1 | 6.2 |
+| Jin | 8 | 30 | 88 | 8.1 | 6.1 |
 <!-- SUMMARY:END -->

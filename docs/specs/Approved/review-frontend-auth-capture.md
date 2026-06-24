@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-24
 ---
 
 # dc-review-frontend 인증 세션 캡처 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: **Approved** (2026-06-24, dc-tech-review 승인 + 코드 드리프트 재검증)
 > 발견: `pricing-nav-auth-consistency` dc-review-frontend Info 이슈
 > 관련: [[pricing-nav-auth-consistency]], [[review-frontend-hover-capture]]
 
@@ -213,3 +213,46 @@ function loadEnvFile(path) {
 
 ### 예상 wave 수
 - **1 wave** (단일 소규모 스크립트 PR, 스킬 파일 2개 + `.gitignore` 1줄 수정)
+
+---
+
+## Tech Review 갱신 (dc-tech-review · 2026-06-24)
+
+> 6/22 Tech Review 이후 코드베이스 드리프트를 재검증한 결과. **기존 작업 카드는 유효**하되, middleware E4 변경으로 전제·제약을 보정한다. 구현은 아직 미착수(`review-capture.js` Jun 24 시점에도 `--auth` 미존재 — 현재 `pcCtx`/`mobileCtx` 2-컨텍스트 base 버전).
+
+### ⚠️ 드리프트 ① — middleware E4 변경 (전제 보정)
+
+Spec 본문 line 55의 **"`middleware.ts:28` presence-only 판정 — sentinel 쿠키로 통과"** 전제가 일부 깨졌다. 현재 `frontend/src/middleware.ts`는 보호 경로에서 JWT payload를 디코딩해 `onboarding_completed` claim을 검사한다(`middleware.ts:84-87`, E4 보안 이슈 해소 커밋).
+
+실측 검증 결과(2026-06-24):
+
+| 경로 | sentinel 쿠키 동작 | 근거 |
+|------|------------------|------|
+| `/pricing` (PUBLIC_EXACT) | ✅ **여전히 통과** | `middleware.ts:21,71` PUBLIC_EXACT → JWT 디코드 없이 next() |
+| `(public)/layout.tsx` CTA 렌더 | ✅ **여전히 작동** | `(public)/layout.tsx:15` `Boolean(cookies().get("dr_session"))` presence-only 유지 |
+| `(app)` 보호 경로 | ⚠️ 미들웨어는 통과하나 콘텐츠 미렌더 | sentinel은 유효 JWT 아님 → `decodeJwtPayload` null → `claims !== null` false → next(). 단 API 401 |
+
+→ **결론: sentinel 모드의 Spec 핵심 목적(경로 ②③ `/pricing` 네비바 CTA 시각 검증)은 영향 없음.** 본문 line 55 표현만 "presence-only" → "`/pricing`은 PUBLIC_EXACT라 무조건 통과 + `(public)/layout.tsx` presence 판정으로 CTA 렌더"로 정정 권장.
+
+### ⚠️ 드리프트 ② — login 모드 신규 제약 (카드 #2 보정)
+
+middleware E4 변경으로 **login 모드에 신규 제약**이 추가됐다: 보호 `(app)` 경로 캡처 시 JWT에 `onboarding_completed: true` claim이 없으면 `middleware.ts:85-86`이 `/signup/terms/oauth`로 리다이렉트한다.
+
+→ **카드 #2 보정**: login 모드 테스트 계정은 **온보딩을 완료한 계정**이어야 `(app)` 페이지 캡처 가능. BE `/auth/login`이 반환하는 access_token에 `onboarding_completed` claim이 포함되는지 확인 필요(BE `JwtTokenProvider.CLAIM_ONBOARDING_COMPLETED`). 미완료 계정 사용 시 캡처 대상이 온보딩 페이지로 리다이렉트되어 의도와 다른 화면이 찍힘.
+
+### ✅ 재검증된 사실 (변동 없음)
+
+- **BE 로그인 경로**: `AuthController.java:30` `@RequestMapping("/api/v1/auth")` + `:68` `@PostMapping("/login")` → `http://localhost:8080/api/v1/auth/login`. 기존 bug correction ②(`${beUrl}/auth/login`, `beUrl=…/api/v1`)와 **정확히 일치**. ✅
+- **`/api/auth/session` 계약**: `route.ts:14` `{access_token, refresh_token}` body 수신 → `dr_session`(access, path:/) + `dr_refresh`(path:/api/auth) httpOnly 쿠키 설정. Spec 권장 코드와 일치. ✅
+- **`decodeJwtPayload` 시그니처**: `frontend/src/lib/auth/jwt-utils.ts:14` `(token: string) => Record<string, unknown> | null`. sentinel 값에 대해 null 반환(위 드리프트 ① 동작 근거). ✅
+- **`.env.review` 미등록**: `.gitignore`에 아직 없음 → 카드 #4 유효. ✅
+
+### 📋 카드 #4 정밀화 — JSON 리포트 구조
+
+현재 `review-capture.js`는 뷰포트별 **개별 리포트** `{pc,mobile}-report.json`을 생성한다(구조: `{overflows, brokenImages, errors, a11y, bodyOverflow}`, line 109-112). 단일 통합 리포트가 아니므로, `authMode` 필드는 **각 뷰포트 리포트 객체에 추가**해야 한다(카드 #4 "리포트 JSON authMode 필드" 명확화).
+
+### 갱신 결론
+
+- 기존 작업 카드 #1~#5 **그대로 유효**. 추가/삭제 없음.
+- 본문 전제 2건(line 55 presence-only, 카드 #2 login 제약)을 위와 같이 보정 후 구현.
+- 여전히 **1 wave**, skill 스크립트 전용, FE/BE/DB 코드 무변경. Approved 전환 가능.

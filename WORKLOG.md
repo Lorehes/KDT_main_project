@@ -11,6 +11,25 @@ updated: 2026-06-24
 
 ---
 
+## 2026-06-24 (43차) | review-frontend-auth-capture — dc-review-frontend --auth 인증 모드 확장
+
+**산출**:
+- Skill(수정): `.claude/skills/dc-review-frontend/scripts/review-capture.js` — `loadEnvFile()`, `parseArgs(--auth)`, `loginAndGetState()`, `createAuthContext()` 추가. `none|sentinel|login:<e>:<p>|state:<path>` 4모드 지원. PC/Mobile 동일 쿠키 적용. JSON 리포트 `authMode` 필드 추가.
+- Skill(수정): `.claude/skills/dc-review-frontend/SKILL.md` — Phase 1 `--auth` 옵션 표·5예시·sentinel·login 한계 주의사항 문서화.
+- Root(신규): `.env.review.example` — `REVIEW_AUTH_EMAIL/PASSWORD/BE_URL` 템플릿 + 보안 주의사항
+- Root(수정): `.gitignore` — `!.env.review.example` 예외 추가 (`.env.*` 패턴에 `.env.review` 포함됨)
+- Spec: `docs/specs/Approved/review-frontend-auth-capture.md` (Draft→Approved, Tech Review 갱신 섹션 추가)
+
+**결정**:
+- **sentinel 모드 전제 재확인**: middleware E4 변경(2026-06-17) 이후 `/pricing`은 `PUBLIC_EXACT`로 여전히 무조건 통과. `(public)/layout.tsx:15` presence 판정도 유지. sentinel 모드 핵심 목적(네비바 CTA 검증) 영향 없음.
+- **bug correction ①②③ 적용**: BE 경로(`/api/proxy/auth/login` → `${beUrl}/auth/login`), browser 파라미터 수신(내부 launch() 금지), dotenv 직접 파싱.
+- **login 모드 신규 제약 반영**: 테스트 계정 `onboarding_completed=true` 필수. middleware E4 드리프트 카드 #2 보정.
+- **`.claude/` gitignore**: 스킬 스크립트는 로컬 전용 — git 미추적. Spec + dev-log + `.gitignore` + `.env.review.example`만 커밋 대상.
+
+**테스트**: 해당 없음 (스킬 스크립트 로컬 전용, 단위 테스트 대상 아님)
+
+---
+
 ## 2026-06-24 (42차) | frontend-share-card-image + share-card-capture-playwright-test — 공유 카드 이미지 캡처 + Playwright E2E 6건
 
 **산출**:
