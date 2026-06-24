@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-24
 updated: 2026-06-24
 ---
 
 # KRX 종가 소스 신뢰성 강화 Spec
 
-> 상태: Draft → **Approved** (2026-06-24, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-24, dc-push 1315a10)
 
 ## 배경 / 목적
 
