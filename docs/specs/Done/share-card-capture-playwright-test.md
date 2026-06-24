@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-24
 updated: 2026-06-24
 ---
 
 # 공유 카드 캡처 Playwright 테스트 Spec
 
-> 상태: **Approved** (2026-06-24, dc-tech-review 승인)
+> 상태: **Done** (2026-06-24, 구현 완료 — Playwright 5/5 GREEN)
 
 ## 배경 / 목적
 

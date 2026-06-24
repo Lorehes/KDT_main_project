@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-09
 updated: 2026-06-24
 ---
 
 # 공유 카드 이미지 생성 Spec (html2canvas · OG 이미지)
 
-> 상태: **Approved** (2026-06-24, dc-tech-review 승인)
+> 상태: **Done** (2026-06-24, 구현 완료 — html2canvas-pro PNG 캡처·다운로드·파일공유, Vitest 44/44, Playwright 5/5 GREEN)
 
 ## 배경 / 목적
 
