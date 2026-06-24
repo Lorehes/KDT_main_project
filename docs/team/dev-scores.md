@@ -94,6 +94,7 @@ updated: 2026-06-02
 | 2026-06-23 | Jin | 6227306 | refactor(stocks,user,frontend): 포트폴리오 캐시+NFE방어+FE검증+dead code 정리 [5/8 M] | Stocks/User/Frontend | 5 | 8 | M | 포트폴리오 캐시·NFE방어·FE검증 정리 |
 | 2026-06-24 | Jin | 2f9c166 | feat(notification,infra): 알림채널 dev안정화+이메일폴백+설정저장토스트 [5/8 M] | Notification/Infra/Frontend | 5 | 8 | M | 알림채널 dev안정화+이메일폴백 정합 |
 | 2026-06-24 | Jin | abc7c2e | feat(stocks,user,frontend): 평가손익PnlCard+KRX종가동기화+버그3건픽스 [8/8 L] | Stocks/User/Infra/Frontend | 8 | 8 | L | 평가손익PnlCard+KRX종가+버그3건픽스 |
+| 2026-06-24 | Jin | 1c3a8ac | fix(infra,stocks): KRX 이상치 2단 방어+리뷰 Low 수정+이슈 문서화 [6/8 M] | Infra/Stocks/Docs | 6 | 8 | M | KRX 이상치 2단 방어+리뷰 Low 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -101,5 +102,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 2 | 24 | 82 | 8.0 | 6.2 |
+| Jin | 3 | 25 | 83 | 8.0 | 6.2 |
 <!-- SUMMARY:END -->

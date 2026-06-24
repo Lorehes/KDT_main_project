@@ -34,10 +34,13 @@ import java.util.Map;
  *               파싱 실패 시 빈 Map 반환 + ERROR 로그 → SyncJob은 우아하게 무시.
  *               @Retryable(fetchAllBasicInfo)는 네트워크 오류만 재시도 — LOGOUT 응답은 즉시 폴백.
  *               GitHub cache 폴백 URL은 외부 레포 의존 — 서비스 중단·포맷 변경 시 종가 미수집(다음 배치 재시도).
+ *               이상치 필터 2단: 1단(isValidPrice — 1원 미만 절대 차단) + 2단(KrxPriceSyncJob — 전일 대비 ±50%).
+ *               externalRestClient는 HostWhitelist 밖 — URL을 컴파일 상수로만 제한하여 SSRF 방어.
  * [수정 시 고려사항] MDCSTAT01901 필드(MKT_NM·IDX_IND_NM), MDCSTAT01501 필드(ISU_SRT_CD·TDD_CLSPRC)는
  *                  KRX 페이지 변경 시 해당 record만 갱신.
  *                  Stage 5 착수 시 fetchAllClosePrices()를 stock_prices 시계열 테이블 기반으로 교체 가능
  *                  (StockPriceProvider seam이 격리하므로 이 클래스 변경 최소화).
+ *                  isValidPrice() 임계(1원)·ANOMALY_THRESHOLD(±50%) 조정은 각 위치의 상수만 변경.
  */
 @Component
 public class KrxClient {
@@ -55,7 +58,11 @@ public class KrxClient {
     private static final String GITHUB_CACHE_URL = "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/refs/heads/master/data/listing/krx/%s.csv";
 
     private final RestClient restClient;
-    /** B128.bld(HTTP) · GitHub cache CSV 폴백용 — baseUrl 없이 절대 URI 사용. 10s connect / 30s read 타임아웃. */
+    /**
+     * B128.bld(HTTP) · GitHub cache CSV 폴백용 — baseUrl 없이 절대 URI 사용. 10s connect / 30s read 타임아웃.
+     * HostWhitelist 검증 밖에 있음 — SSRF 방어는 "호출 URL을 컴파일 상수(B128_URL·GITHUB_CACHE_URL)로만 제한"으로 대체.
+     * 이 클라이언트로 사용자 입력값·환경변수 URL을 호출하는 것은 절대 금지.
+     */
     private final RestClient externalRestClient;
     private final KrxApiProperties props;
     private final ObjectMapper objectMapper;
@@ -243,16 +250,27 @@ public class KrxClient {
 
         LocalDate asof = LocalDate.parse(tradeDate, YYYYMMDD);
         Map<String, StockCloseInfo> result = new HashMap<>(outBlock.size());
+        int skipped = 0;
         for (JsonNode item : outBlock) {
             String stockCode = item.path("ISU_SRT_CD").asText("").trim();
             if (stockCode.length() != 6) continue;
             String rawPrice = item.path("TDD_CLSPRC").asText("").replace(",", "").trim();
             if (rawPrice.isEmpty()) continue;
             try {
-                result.put(stockCode, new StockCloseInfo(new BigDecimal(rawPrice), asof));
+                BigDecimal price = new BigDecimal(rawPrice);
+                if (!isValidPrice(price)) {
+                    log.warn("KRX 비정상 가격 스킵 — stockCode={}, price={}", stockCode, rawPrice);
+                    skipped++;
+                    continue;
+                }
+                result.put(stockCode, new StockCloseInfo(price, asof));
             } catch (NumberFormatException ignored) {
-                // 비정상 가격 행 스킵
+                log.warn("KRX 가격 파싱 오류 스킵 — stockCode={}, raw='{}'", stockCode, rawPrice);
+                skipped++;
             }
+        }
+        if (skipped > 0) {
+            log.warn("KRX 비정상 가격 스킵 총 {}건 (1원 미만·포맷 오류)", skipped);
         }
         return result;
     }
@@ -284,6 +302,7 @@ public class KrxClient {
         }
 
         Map<String, StockCloseInfo> result = new HashMap<>(lines.length - 1);
+        int skipped = 0;
         for (int i = 1; i < lines.length; i++) {
             String[] cols = lines[i].split(",", -1);
             if (cols.length <= Math.max(codeIdx, closeIdx)) continue;
@@ -291,12 +310,27 @@ public class KrxClient {
             String rawPrice  = cols[closeIdx].trim();
             if (stockCode.length() != 6 || rawPrice.isEmpty()) continue;
             try {
-                result.put(stockCode, new StockCloseInfo(new BigDecimal(rawPrice), date));
+                BigDecimal price = new BigDecimal(rawPrice);
+                if (!isValidPrice(price)) {
+                    log.warn("GitHub cache 비정상 가격 스킵 — stockCode={}, price={}", stockCode, rawPrice);
+                    skipped++;
+                    continue;
+                }
+                result.put(stockCode, new StockCloseInfo(price, date));
             } catch (NumberFormatException ignored) {
-                // 비정상 가격 행 스킵
+                log.warn("GitHub cache 가격 파싱 오류 스킵 — stockCode={}, raw='{}'", stockCode, rawPrice);
+                skipped++;
             }
         }
+        if (skipped > 0) {
+            log.warn("GitHub cache 비정상 가격 스킵 총 {}건 (1원 미만·포맷 오류)", skipped);
+        }
         return result;
+    }
+
+    /** 가격 이상치 1단 방어 — 1원 미만은 명백한 데이터 오류(상장 종목 최저가 1원). */
+    private boolean isValidPrice(BigDecimal price) {
+        return price != null && price.compareTo(BigDecimal.ONE) >= 0;
     }
 
     /**

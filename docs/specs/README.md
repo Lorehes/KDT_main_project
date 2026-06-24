@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-24 (krx-price-source-resilience, krx-job-test-isolation 추가)
+updated: 2026-06-24 (krx-price-source-resilience Approved)
 ---
 
 # Specs MOC
@@ -36,12 +36,12 @@ docs/specs/
 **2026-06-24 dashboard-eval-pnl 코드리뷰 후속 이슈**
 
 - [[eval-pnl-integration-tests]] — Testcontainers 통합 테스트 보강: summary 엔드포인트 6케이스 + KrxPriceSyncJobIntegrationTest 3케이스
-- [[krx-price-source-resilience]] — KRX 종가 소스 신뢰성: GitHub cache 이상치 필터 + HostWhitelist 등록 검토 + 중장기 대체 소스 조사
 - [[krx-job-test-isolation]] — KRX 배치 잡 테스트 격리: KrxPriceSyncJob @ConditionalOnProperty + B128 HTTP→HTTPS 조사
 
 ### Approved
 
 - [[dashboard-eval-pnl]] — 대시보드 평가 손익: KRX 종가 수집(MDCSTAT01501) + V23 마이그레이션 + 집계 API + FE 카드 교체 (2026-06-24 Approved)
+- [[krx-price-source-resilience]] — KRX 종가 소스 신뢰성: 이상치 필터(절대+전일비 ±50%) + HostWhitelist 주석 + 중장기 대체 소스 조사 (2026-06-24 Approved)
 
 ### Done
 - [[kakao-notification-channel]] — 알림채널 dev안정화: send() dev모드·isDevMode통일·.env.example SMTP/Kakao정합·설정저장토스트 (2026-06-24 Done)

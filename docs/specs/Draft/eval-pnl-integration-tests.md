@@ -33,14 +33,30 @@ CLAUDE.md §6-6: "BE 통합 테스트는 Mock DB 금지 → Testcontainers Postg
 - [ ] `syncPrices_emptyPriceMap_doesNotOverwrite`: 빈 Map stub → syncPrices() → 기존 close_price 유지
 - [ ] `syncPrices_evictsCache_freshPriceServedNextQuery`: syncPrices() 후 summary API 재호출 → 최신 종가 반영 확인 (캐시 evict 간접 검증)
 
+#### R2-추가: 이상치 필터 통합 케이스 (krx-price-source-resilience 코드리뷰 Low)
+- [ ] `syncPrices_anomalyPrice_skipsUpdate`: 전일 종가 10,000원인 종목에 6,000원(±40% → 허용) vs 4,999원(±50% 초과 → 스킵) 각각 stub → DB 반영 여부 검증
+- [ ] `syncPrices_nullPrevPrice_alwaysAllowed`: `close_price` NULL인 종목(최초 적재) → 어떤 가격이든 UPDATE 허용 확인
+
+### R3 — KrxClientTest.java (isValidPrice 단위 테스트 — Testcontainers 불필요)
+> 참고: `KrxClient.isValidPrice()`는 `private` — 패키지-프라이빗 또는 reflection 없이 퍼블릭 API(`fetchClosePricesFromKrx()` 반환 Map)를 통해 간접 검증.  
+> KrxClient 생성자가 HostWhitelist 검증(`HostWhitelist.verify()`)을 호출하므로 MockRestServiceServer 또는 `@SpringBootTest`(`@MockitoBean`) 환경 필요.
+
+- [ ] `isValidPrice_zeroPrice_skipped`: stub CSV `"005930,0\n"` → 반환 Map에 `005930` 키 없음 확인
+- [ ] `isValidPrice_negativePrice_skipped`: stub CSV `"005930,-100\n"` → 반환 Map에 키 없음
+- [ ] `isValidPrice_belowOne_skipped`: stub CSV `"005930,0.99\n"` → 반환 Map에 키 없음
+- [ ] `isValidPrice_exactlyOne_included`: stub CSV `"005930,1\n"` → Map에 `005930` 포함, 가격 = 1
+- [ ] `isValidPrice_normalPrice_included`: stub CSV `"005930,60000\n"` → Map에 포함
+- [ ] `isValidPrice_malformedPrice_skipped`: stub CSV `"005930,--\n"` → NFE로 스킵, Map에 키 없음 (WARN 로그 확인)
+
 ## 영향 범위 (조사 결과)
 
-- 영향 레이어: backend(user, stocks)
+- 영향 레이어: backend(user, stocks, infrastructure/krx)
 - 추가 테스트 파일:
   - `backend/src/test/java/com/dartcommons/user/PortfolioIntegrationTest.java` — 기존 클래스에 케이스 추가
   - `backend/src/test/java/com/dartcommons/stocks/KrxPriceSyncJobIntegrationTest.java` — 신규 클래스
+  - `backend/src/test/java/com/dartcommons/infrastructure/krx/KrxClientTest.java` — 신규 단위 테스트 (R3, Testcontainers 불필요)
 - DB 변경: 없음
-- 외부 계약: 없음 (KrxClient는 @MockitoBean으로 대체)
+- 외부 계약: 없음 (KrxClient는 @MockitoBean으로 대체, R3는 MockRestServiceServer)
 
 ## 관련 패턴 / 과거 사례
 

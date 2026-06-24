@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-24
 ---
 
 # 이슈 (Issues)
@@ -15,3 +15,4 @@ updated: 2026-06-23
 | 이슈 | 상태 | 발견일 | 우선순위 |
 |------|------|--------|----------|
 | [[fe-unit-test-infra]] — FE Vitest + Testing Library 미구성 | Open | 2026-06-23 | P1 |
+| [[krx-anomaly-filter-test-coverage]] — KRX 이상치 필터(isValidPrice·±50%) 테스트 미작성 | Open | 2026-06-24 | P2 |

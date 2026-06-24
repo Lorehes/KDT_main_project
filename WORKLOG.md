@@ -11,6 +11,27 @@ updated: 2026-06-24
 
 ---
 
+## 2026-06-24 (38차) | krx-price-source-resilience — KRX 종가 이상치 2단 방어
+
+**산출**:
+- BE(수정): `KrxClient.java` — `isValidPrice()` 헬퍼(1원 미만 절대 필터) + `fetchClosePricesFromKrx()`·`fetchClosePricesFromGithubCache()` 두 루프에 적용 + 스킵 카운터 + NFE per-stock WARN 추가
+- BE(수정): `KrxPriceSyncJob.java` — `ANOMALY_THRESHOLD(±50%)` 상수 + `syncPrices()` 전일 대비 상대 이상치 스킵 + anomalySkipped WARN 로그
+- BE(주석): `HostWhitelist.java` — `externalRestClient` URL 컴파일 상수 고정·동적 입력 금지 명시 (R2 Option B)
+- 문서: `krx-price-source-resilience` Spec Draft→Approved (Tech Review 포함)
+- 문서: `eval-pnl-integration-tests` Spec — R2-추가(이상치 통합 2케이스)·R3(isValidPrice 단위 6케이스) 보강
+- 문서: `docs/ideas/issues/krx-anomaly-filter-test-coverage.md` 신규 이슈 파일 생성
+
+**결정**:
+- 2단 방어 레이어 분리: `KrxClient`(infra, 절대 필터) vs `KrxPriceSyncJob`(stocks, 상대 필터). `StockRepository`가 infra에 노출되면 CLAUDE.md §3-2 import 역방향 위반 → `findAll()` 이미 실행 중인 KrxPriceSyncJob에 상대 필터 배치로 추가 DB 비용 없이 경계 준수.
+- ±50% 임계 선택: 정상 상한가/하한가(±30%) 통과 + 액면분할·합병 false positive 허용 (WARN 로그로 추적, 배치 실패 처리 안 함)
+- R2 Option B 유지: `raw.githubusercontent.com`을 HostWhitelist에 추가하지 않음. GitHub 도메인 전체 허용(광범위) 트레이드오프 > 컴파일 상수 고정으로 SSRF 방어 충분.
+
+**미완료**:
+- `eval-pnl-integration-tests` — R1(summary 6케이스)·R2(배치잡 통합)·R2-추가(이상치 통합)·R3(isValidPrice 단위) 미구현. `/dc-tech-review eval-pnl-integration-tests` 후 구현 예정.
+- `krx-job-test-isolation` — `@ConditionalOnProperty` 표준화 + B128 HTTP→HTTPS 조사 Draft 상태.
+
+---
+
 ## 2026-06-24 (37차) | dashboard-eval-pnl — 평가손익 카드+KRX 종가 동기화+버그3건 픽스
 
 **산출**:

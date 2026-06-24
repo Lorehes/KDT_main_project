@@ -11,6 +11,9 @@ import java.util.Set;
  *               테스트는 localhost(Testcontainers/MockServer 등) 허용 — TEST_ALLOWED에 명시.
  * [수정 시 고려사항] 새 외부 API 도입 시 PROD_ALLOWED에 호스트 추가. 추가 누락 시 부팅 실패로 즉시 발견.
  *                  사설망 IP(192.168.x.x, 10.x.x.x) 별도 차단 정책은 NetworkPolicy(인프라 계층)에 위임.
+ *                  KrxClient.externalRestClient(B128·GitHub cache)는 화이트리스트 검증 밖에 있음.
+ *                  단, 호출 URL은 컴파일 상수(B128_URL·GITHUB_CACHE_URL)로 고정 — 동적 입력 절대 금지.
+ *                  향후 externalRestClient 호출 URL을 환경변수로 외부화하면 verify() 등록 필요.
  */
 public final class HostWhitelist {
 
