@@ -101,7 +101,7 @@ updated: 2026-06-02
 | 2026-06-24 | Jin | 64848e7 | feat(frontend): 공유 카드 이미지 캡처+Playwright E2E 6건 [6/8 M] | Frontend | 6 | 8 | M | html2canvas-pro+Playwright E2E 6건 |
 | 2026-06-24 | Jin | 432aa37 | feat(skill): dc-review-frontend --auth 인증 모드 확장 [3/8 M] | Docs | 3 | 8 | M | --auth sentinel·login·state 4모드 |
 | 2026-06-24 | Jin | 5ee0632 | chore(spec): hover-capture Spec Approved+dev-log [2/8 S] | Docs | 2 | 8 | S | hover캡처 Spec Approved 전환 |
-| 2026-06-25 | Jin | cbfb8f7 | feat(frontend): 알림 센터 더 보기 페이지네이션 [6/8 M] | Frontend | 6 | 8 | M | 알림센터 더 보기 페이지네이션 구현 |
+| 2026-06-25 | Jin | cc8f11d | feat(frontend): 알림 센터 더 보기 페이지네이션 [6/8 M] | Frontend | 6 | 8 | M | 알림센터 더 보기 페이지네이션 구현 |
 <!-- SCORES -->
 
 ## 기간별 집계
