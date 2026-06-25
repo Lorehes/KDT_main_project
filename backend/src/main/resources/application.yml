@@ -134,13 +134,18 @@ dartcommons:
   # 이메일 발송자 주소 (notification-dispatcher Spec Wave 1 — 폴백 채널)
   mail:
     from: ${MAIL_FROM:noreply@dartcommons.com}
-  # LLM provider — analysis Stage 2 (analysis-stage2-llm Spec)
-  # provider=mock 은 통합 테스트/로컬 검증용. 운영은 ollama (wave 2 구현 후 교체).
+  # LLM provider — analysis Stage 2 (llm-production-switch Spec)
+  # provider=mock: 통합 테스트/로컬 개발용. provider=openrouter: 프로덕션(Cloud LLM).
+  # provider=ollama: 온프레미스(GPU 서버 필요). 기본값 mock — 프로덕션은 LLM_PROVIDER=openrouter 주입 필수.
+  # LLM_BASE_URL 환경변수 예시:
+  #   openrouter → LLM_BASE_URL=https://openrouter.ai/api/v1 (기본값)
+  #   ollama     → LLM_BASE_URL=http://localhost:11434
   llm:
     provider: ${LLM_PROVIDER:mock}
-    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    model: ${LLM_MODEL:qwen3:4b}
-    timeout-ms: ${LLM_TIMEOUT_MS:60000}
+    base-url: ${LLM_BASE_URL:https://openrouter.ai/api/v1}
+    api-key: ${OPENROUTER_API_KEY:}
+    model: ${LLM_MODEL:google/gemma-3-4b-it:free}
+    timeout-ms: ${LLM_TIMEOUT_MS:30000}
     max-retries: ${LLM_MAX_RETRIES:2}
     # 결정 2: 0.6 미만 → is_withheld=true (판단 보류).
     # 운영 조정은 SystemConfig 키 analysis.stage2.confidence_threshold 후속 검토.

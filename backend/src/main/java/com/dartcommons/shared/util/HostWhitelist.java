@@ -5,9 +5,10 @@ import java.util.Set;
 
 /*
  * [목적] 외부 API 클라이언트의 baseUrl 호스트를 화이트리스트로 검증해 SSRF 차단.
- * [이유] DartApiProperties/KrxApiProperties.baseUrl이 환경변수 주입이라 외부 공격자가 직접 변경할 수는 없으나,
+ * [이유] DartApiProperties/KrxApiProperties/LlmProperties.baseUrl이 환경변수 주입이라 외부 공격자가 직접 변경할 수는 없으나,
  *       설정 오류·공급망 공격으로 내부 서비스 URL이 주입되면 SSRF 위험 — 빠른 실패로 방어.
  * [사이드 임팩트] 허용 외 호스트면 부팅 시 IllegalStateException → 애플리케이션 구동 실패(의도된 빠른 실패).
+ *               openrouter.ai 추가(llm-production-switch Spec) — OpenRouterLlmClient 생성자에서 verify() 호출.
  *               테스트는 localhost(Testcontainers/MockServer 등) 허용 — TEST_ALLOWED에 명시.
  * [수정 시 고려사항] 새 외부 API 도입 시 PROD_ALLOWED에 호스트 추가. 추가 누락 시 부팅 실패로 즉시 발견.
  *                  사설망 IP(192.168.x.x, 10.x.x.x) 별도 차단 정책은 NetworkPolicy(인프라 계층)에 위임.
@@ -20,7 +21,8 @@ public final class HostWhitelist {
     private static final Set<String> PROD_ALLOWED = Set.of(
             "opendart.fss.or.kr",           // DART OpenAPI
             "data.krx.co.kr",              // KRX 정보데이터시스템
-            "alimtalk-api.kakao.com"        // 카카오 비즈메시지 알림톡
+            "alimtalk-api.kakao.com",       // 카카오 비즈메시지 알림톡
+            "openrouter.ai"                 // OpenRouter Cloud LLM API (llm-production-switch Spec)
     );
 
     private static final Set<String> TEST_ALLOWED = Set.of(

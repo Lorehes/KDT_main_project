@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-25
 updated: 2026-06-25
 ---
 
 # 프로덕션 LLM 전환 Spec (OpenRouter)
 
-> 상태: **Draft** (dc-plan 생성, 2026-06-25 OpenRouter 기준으로 업데이트)
+> 상태: **Approved** (2026-06-25, dc-tech-review 승인)
 > 선행 Spec: [[analysis-stage2-llm]] (Done) — LlmClient 인터페이스·MockLlmClient·OllamaLlmClient 구현 완료
 
 ## 배경 / 목적
@@ -181,4 +181,111 @@ OpenRouterLlmClient → POST /chat/completions     (OpenAI 호환 포맷)
 - `OpenRouterLlmClient` 자체: `RestClientException` Mock 주입 단위 테스트 신규 작성
 - 실 API 연동 검증은 수동 스모크 테스트 (공시 10건)
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-06-25)
+
+### 아키텍처 분해
+
+- **영향 레이어**: `backend/infrastructure/llm/` (신규 1파일 + 수정 3파일) + `backend/shared/util/` (수정 1파일)
+- **신규**: `OpenRouterLlmClient.java`
+- **수정**: `LlmProperties.java` (apiKey 필드), `HostWhitelist.java` (openrouter.ai 추가 — **Spec 미명시, Tech Review 발견**), `application.yml` (LLM 섹션)
+- **무변경**: `LlmClient.java` (인터페이스), `MockLlmClient.java`, `Stage2Analyzer.java`, `AnalysisOrchestrator.java`, 테스트 코드
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `HostWhitelist.java` — `PROD_ALLOWED`에 `"openrouter.ai"` 추가 | backend/shared/util | BE | 하 | - |
+| 2 | `LlmProperties.java` — `apiKey` 필드 추가 (record 컴포넌트) | backend/infrastructure/llm | BE | 하 | - |
+| 3 | `OpenRouterLlmClient.java` 신규 구현 | backend/infrastructure/llm | BE | 중 | #1 #2 |
+| 4 | `application.yml` LLM 섹션 업데이트 | backend/resources | BE | 하 | #2 |
+
+### 카드별 구현 메모
+
+**Card #1 — HostWhitelist (Spec 미명시, 필수)**
+
+`OllamaLlmClient`는 생성자에서 `HostWhitelist.verify(props.baseUrl(), "OllamaLlmClient")`를 호출한다.
+`OpenRouterLlmClient`도 동일 패턴을 답습해야 하는데, 현재 `PROD_ALLOWED = {"opendart.fss.or.kr", "data.krx.co.kr", "alimtalk-api.kakao.com"}`에 `openrouter.ai`가 없다.
+미추가 시 부팅 시점에 `IllegalStateException` 발생 → 애플리케이션 기동 실패 (P0).
+
+```java
+// HostWhitelist.PROD_ALLOWED에 추가
+"openrouter.ai"   // OpenRouter Cloud LLM API
+```
+
+**Card #2 — LlmProperties**
+
+`LlmProperties`는 `@ConfigurationProperties` record. `apiKey` 컴포넌트 추가 시 Spring이 `api-key: ${OPENROUTER_API_KEY:}` YAML 값을 자동 바인딩.
+테스트에서 `new LlmProperties(...)` 직접 생성 없음(grep 확인) → 컴파일 오류 없음.
+`OllamaLlmClient`는 `props.apiKey()` 미사용 → 기존 코드 수정 불필요.
+
+```java
+@ConfigurationProperties(prefix = "dartcommons.llm")
+public record LlmProperties(
+    String provider,
+    String baseUrl,
+    String apiKey,          // 신규 — mock/ollama 시 빈 값 무해
+    String model,
+    int timeoutMs,
+    int maxRetries,
+    double confidenceThreshold
+) {}
+```
+
+**Card #3 — OpenRouterLlmClient**
+
+`OllamaLlmClient` 패턴 답습. 차이점만 명시:
+
+| 항목 | OllamaLlmClient | OpenRouterLlmClient |
+|------|-----------------|---------------------|
+| 엔드포인트 | `POST /api/generate` | `POST /chat/completions` |
+| 인증 | 없음 | `Authorization: Bearer {apiKey}` |
+| 요청 바디 | `{model, prompt, format, stream, think, options}` | `{model, messages:[{role,content}], response_format, temperature, max_tokens}` |
+| 응답 파싱 | `res.response()` (문자열) | `res.choices()[0].message().content()` |
+| 파싱 record | `OllamaGenerateResponse` | `OpenRouterResponse(List<Choice>)` |
+
+`Stage2OutputRaw` + `toStage2Output()` 로직은 두 클라이언트 공통 — 동일 private record로 복사.
+`@ConditionalOnProperty(havingValue = "openrouter")`.
+`@Retryable(retryFor = RestClientException.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 8_000))` 동일.
+
+**Card #4 — application.yml**
+
+환경변수명 변경: `OLLAMA_BASE_URL` → `LLM_BASE_URL` (Ollama/OpenRouter 공용).
+`OLLAMA_BASE_URL`은 application.yml 외에 docker-compose.yml 미사용 확인됨 → 안전하게 교체 가능.
+
+```yaml
+dartcommons:
+  llm:
+    provider: ${LLM_PROVIDER:mock}
+    base-url: ${LLM_BASE_URL:https://openrouter.ai/api/v1}   # OLLAMA_BASE_URL → LLM_BASE_URL
+    api-key: ${OPENROUTER_API_KEY:}                           # mock/ollama 시 빈 값 무해
+    model: ${LLM_MODEL:google/gemma-3-4b-it:free}             # 기본 무료 모델
+    timeout-ms: ${LLM_TIMEOUT_MS:30000}                       # Cloud는 Ollama보다 빠름(60s→30s)
+    max-retries: ${LLM_MAX_RETRIES:2}
+    confidence-threshold: ${LLM_CONFIDENCE_THRESHOLD:0.6}
+```
+
+### DB / 마이그레이션 영향
+
+- **없음** — LLM provider 교체는 순수 코드·설정 변경. `analysis_results.model_name` 컬럼에 모델명 저장되나 스키마 변경 없음 (VARCHAR 유연).
+
+### 외부 계약 영향
+
+- **OpenRouter API**: OpenAI Chat Completions 호환 포맷(`/chat/completions`). `response_format: {type: "json_object"}` 지원 확인 완료 (OpenRouter 공식 문서 기준).
+- **PromptGuard, Stage2PromptBuilder**: 변경 없음 — 프롬프트 텍스트 동일, L2 가드 동일 적용.
+- **테스트**: `Stage2AnalyzerIntegrationTest`가 `dartcommons.llm.provider=mock`으로 강제 → 기존 테스트 변경 불필요. `OpenRouterLlmClient` 단위 테스트는 `RestClientException` Mock 주입으로 별도 작성 (통합 테스트 대상 아님 — Spec §테스트 전략).
+
+### 리스크 & 법적 검토
+
+| 리스크 | 심각도 | 대응 |
+|--------|--------|------|
+| HostWhitelist `openrouter.ai` 미추가 → 부팅 실패 | **P0** | Card #1 우선 구현 (의존성 상단) |
+| API 키 유출 → `.env.prod` git 커밋 | **P0** | `.gitignore` 등록 확인, GitHub Secrets 주입 |
+| 무료 모델 Rate Limit → 분석 병목 | P2 | 1분 폴링 + analysisExecutor 2~4 pool = 분당 수십 건 이하. 초과 시 @Retryable 자동 재시도 |
+| 무료 모델 품질 미달(confidence < 0.6 다수) | P2 | `LLM_MODEL` 교체만으로 코드 무수정 전환. 배포 후 10건 수동 채점 필수 |
+| PromptGuard L2 통과 후 투자 권유 표현 | P1 | PromptGuard 9패턴 가드 유지 — OpenRouter 모델 교체와 무관하게 동일 적용됨 (CLAUDE.md §7) |
+
+### 예상 wave 수
+
+- **1 wave** — 4개 카드 모두 `infrastructure/llm/`·`shared/util/` 집중, 도메인 간 영향 없음. 단일 커밋으로 충분.
+- 구현 후 로컬 smoke test (mock → openrouter 전환, 공시 1건 수동 확인) 권장.
+- `.env.prod` 업데이트는 배포 인프라 Spec(`deployment-infra-docker-cicd`)과 연계해 처리.

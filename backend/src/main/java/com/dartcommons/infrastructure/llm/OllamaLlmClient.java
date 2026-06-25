@@ -39,7 +39,9 @@ import java.util.Map;
 public class OllamaLlmClient implements LlmClient {
 
     private static final Logger log = LoggerFactory.getLogger(OllamaLlmClient.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    // FAIL_ON_UNKNOWN_PROPERTIES=false: Ollama가 추가 필드를 출력해도 Stage2OutputRaw 파싱 실패 방지
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private final RestClient restClient;
     private final LlmProperties props;
@@ -104,7 +106,8 @@ public class OllamaLlmClient implements LlmClient {
             Stage2OutputRaw raw = MAPPER.readValue(res.response(), Stage2OutputRaw.class);
             return raw.toStage2Output();
         } catch (Exception e) {
-            log.warn("Ollama JSON 파싱 실패 — raw={}, error={}", res.response(), e.getMessage());
+            String preview = res.response().length() > 500 ? res.response().substring(0, 500) + "…" : res.response();
+            log.warn("Ollama JSON 파싱 실패 — raw={}, error={}", preview, e.getMessage());
             // 파싱 실패는 재시도 가치 낮음(같은 LLM이 같은 프롬프트에 같은 깨진 응답) — 호출 측이 1회 재호출 결정.
             throw new RestClientException("Ollama JSON 파싱 실패: " + e.getMessage());
         }

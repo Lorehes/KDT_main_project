@@ -28,7 +28,30 @@ updated: 2026-06-25
 **테스트**: `pnpm tsc --noEmit` 통과. dc-review-frontend: 종합 등급 B, P0 블로커 없음. 이번 변경 범위 내 접근성 위반 없음.
 
 **미완료 (다음 세션)**:
-- `/dc-tech-review llm-production-switch` — OpenRouter `OpenRouterLlmClient.java` 구현
+- `/dc-tech-review deployment-infra-docker-cicd` — Docker/CI/CD 배포 인프라 (M4 크리티컬 패스, 7/3 런치)
+- layout 컴포넌트 aria-label 미설정 8개 → 별도 이슈 등록 권장
+
+---
+
+## 2026-06-25 (46차) | llm-production-switch — OpenRouter 프로덕션 LLM 전환 + dc-review-code 8항목 수정
+
+**산출**:
+- BE(신규): `backend/src/main/java/com/dartcommons/infrastructure/llm/OpenRouterLlmClient.java` — `@ConditionalOnProperty(openrouter)`, `HostWhitelist.verify()`, Bearer 인증 헤더, `POST /chat/completions`, `choices[0].message.content` 파싱, `Stage2OutputRaw` private record, `@Retryable(3회/지수백오프 최대8s)`.
+- BE(수정): `LlmProperties.java` — `apiKey` 필드 추가. `HostWhitelist.java` — `openrouter.ai` PROD_ALLOWED 추가. `OllamaLlmClient.java` — MAPPER FAIL_ON_UNKNOWN_PROPERTIES 수정. `application.yml` — LLM_BASE_URL·OPENROUTER_API_KEY·모델·타임아웃 갱신.
+- Test(신규): `OpenRouterLlmClientTest.java` — 7케이스(정상·추가필드FAIL_ON_UNKNOWN·401·500·깨진JSON·잘못된sentiment·apiKey빈값) 모두 통과.
+- Spec: `docs/specs/Approved/llm-production-switch.md` (Draft→Approved 전환 완료)
+- DevLog: `docs/dev-log/backend.jsonl` — 구현 + 리뷰 수정 2건
+
+**결정**:
+- **MAPPER FAIL_ON_UNKNOWN_PROPERTIES=false (H1)**: LLM이 `reasoning` 등 추가 필드를 출력 시 `UnrecognizedPropertyException` → `@Retryable` 3회 90s 낭비 → 분석 영구 실패. `new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false)`로 수정. OllamaLlmClient도 동일 적용.
+- **apiKey 생성자 즉시 검증 (M1)**: `provider=openrouter`에 `OPENROUTER_API_KEY` 미설정 시 재시도 3회 낭비 방지 → 생성자에서 `IllegalStateException` 던져 부팅 실패로 조기 발견.
+- **CONNECT_TIMEOUT_MS=5_000 분리 (M3)**: Cloud LLM TCP 연결(5s)과 추론 대기(30s)를 분리. 네트워크 단절 조기 감지.
+- **Stage2OutputRaw 독립 private record 유지**: OllamaLlmClient와 공유하지 않음. 두 파일만 존재하므로 DRY 비용보다 캡슐화 이득이 큼.
+- **Usage·finishReason·role 미사용 필드 제거**: FAIL_ON_UNKNOWN_PROPERTIES=false로 JSON 무시 가능. 후속 wave 토큰 영속화 시 OpenRouterResponse.usage 재추가 필요.
+
+**테스트**: `./gradlew test --tests OpenRouterLlmClientTest` → 7/7 BUILD SUCCESSFUL. Java 내장 `com.sun.net.httpserver.HttpServer`로 실제 HTTP 동작 검증(Spring AOP 없이 @Retryable 범위 밖 테스트).
+
+**미완료 (다음 세션)**:
 - `/dc-tech-review deployment-infra-docker-cicd` — Docker/CI/CD 배포 인프라 (M4 크리티컬 패스, 7/3 런치)
 - layout 컴포넌트 aria-label 미설정 8개 → 별도 이슈 등록 권장
 
