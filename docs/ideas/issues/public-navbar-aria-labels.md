@@ -1,15 +1,17 @@
 ---
 type: issue
-status: open
+status: Closed
 severity: low
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-25
+resolved: 2026-06-25
 source: dc-review-code (pricing-nav-auth-consistency)
 ---
 
 # PublicNavbar 비로그인 CTA aria-label 미적용
 
-> 상태: **open** (접근성 개선 후속 과제, WCAG AA 현행 충족)
+> 상태: **Closed** — 2026-06-25 해결.
+> "로그인" 링크에 `aria-label="로그인 페이지로 이동"`, "무료로 시작" 링크에 `aria-label="무료로 시작하기 — 회원가입 페이지로 이동"` 추가. `PublicNavbar.tsx` 2줄 prop 추가로 완료.
 > 발견: `pricing-nav-auth-consistency` 코드 리뷰 Low 이슈
 > 관련: [[pricing-nav-auth-consistency]], [[design_structure]] §접근성
 

@@ -15,6 +15,7 @@ import { useUIStore } from "@/lib/stores/uiStore";
 import { usePortfolios, usePortfolioSummary } from "@/lib/api/portfolios";
 import { useDisclosures } from "@/lib/api/disclosures";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
+import { useTodaySeoul } from "@/lib/hooks/useTodaySeoul";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard, SentimentStatCard, PnlStatCard } from "@/components/domain/StatCards";
@@ -24,8 +25,8 @@ export default function DashboardPage() {
   const { setUpsellModalOpen } = useUIStore();
   const { data: portfolios } = usePortfolios();
   const { data: summary } = usePortfolioSummary();
-  // "sv" locale → YYYY-MM-DD, Asia/Seoul 기준 오늘 날짜 — BE Free 강제와 동일 기준
-  const today = new Intl.DateTimeFormat("sv", { timeZone: "Asia/Seoul" }).format(new Date());
+  // useTodaySeoul: 자정에 자동 갱신 — 브라우저를 오래 열어두면 어제 날짜로 고착되는 문제 방지
+  const today = useTodaySeoul();
   const { data: disclosurePage, isLoading } = useDisclosures({ scope: "portfolio", size: 10, from: today, to: today });
   const showSkeleton = useDelayedLoading(isLoading);
 

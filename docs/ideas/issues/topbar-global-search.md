@@ -1,11 +1,15 @@
 ---
 type: issue
-status: open
+status: Closed
 severity: medium
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-25
+resolved: 2026-06-25
 source: 사용자 발견 (TopBar 검색 미구현)
 ---
+
+> **상태**: Closed — 2026-06-25 Spec 생성 완료.
+> `docs/specs/Draft/topbar-global-search.md` 작성됨. 다음 단계: `/dc-tech-review topbar-global-search`
 
 # TopBar 글로벌 검색 — 미구현 제거 및 후속 구현 과제
 

@@ -13,7 +13,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, User, CreditCard, Info, LogOut, ChevronRight, LayoutDashboard, FileText, Briefcase } from "lucide-react";
+import { Bell, User, CreditCard, Info, LogOut, ChevronRight } from "lucide-react";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useUnreadCount } from "@/lib/api/notifications";
@@ -21,12 +21,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { BrandMark } from "./BrandMark";
 import { cn } from "@/lib/utils";
 import { isActivePath } from "@/lib/utils/isActivePath";
-
-const TIER_LABEL: Record<string, string> = {
-  FREE: "Free 플랜",
-  PRO: "PRO 플랜 · 무제한 종목",
-  PREMIUM: "PREMIUM 플랜 · 모든 기능",
-};
+import { TIER_LABEL_LONG } from "@/lib/constants";
+import { APP_NAV_ITEMS } from "@/lib/navigation";
 
 const PROFILE_MENU_ITEMS = [
   { icon: User,       label: "마이페이지",       href: "/settings" },
@@ -35,19 +31,16 @@ const PROFILE_MENU_ITEMS = [
   { icon: Info,       label: "공지사항 · 고객센터", href: "/support" },
 ] as const;
 
-const NAV_ITEMS = [
-  { href: "/dashboard",   label: "대시보드",    icon: LayoutDashboard },
-  { href: "/disclosures", label: "공시 피드",   icon: FileText },
-  { href: "/portfolios",  label: "내 포트폴리오", icon: Briefcase },
-] as const;
-
 export function TopBar() {
   const pathname = usePathname();
-  const { user, isLoading, logout } = useAuthStore();
-  const { toggleNotifModal } = useUIStore();
+  // 셀렉터 단위 구독 — 불필요한 리렌더 방지 (authStore 전체 구독 → 필드별 분리)
+  const user             = useAuthStore(s => s.user);
+  const isLoading        = useAuthStore(s => s.isLoading);
+  const logout           = useAuthStore(s => s.logout);
+  const toggleNotifModal = useUIStore(s => s.toggleNotifModal);
   const { data: unreadCount } = useUnreadCount();
   const initials = user?.nickname?.[0] ?? "";
-  const tierLabel = user?.tier ? (TIER_LABEL[user.tier] ?? user.tier) : "Free 플랜";
+  const tierLabel = user?.tier ? (TIER_LABEL_LONG[user.tier] ?? user.tier) : "Free 플랜";
 
   // Popover controlled state — pathname 변경(클라이언트 라우팅) 시 자동 닫힘
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -65,7 +58,7 @@ export function TopBar() {
         </Link>
 
         <nav className="flex items-center gap-1" aria-label="주요 메뉴">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+          {APP_NAV_ITEMS.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

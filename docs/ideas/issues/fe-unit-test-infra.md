@@ -1,13 +1,20 @@
 ---
 type: issue
-status: open
+status: Closed
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-25
+resolved: 2026-06-25
 ---
 
 # [이슈] FE 단위 테스트 인프라 미구성 (Vitest + Testing Library)
 
-> 상태: **Open** — 기술 부채. Spec 승격 대기.
+> 상태: **Closed** — 2026-06-25 해결.
+>
+> **해결 내용**: `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, `@vitejs/plugin-react` 설치.
+> `vitest.config.ts`에 `plugins: [react()]`, `setupFiles: ["./src/test/setup.ts"]` 추가.
+> `src/test/setup.ts` 생성(`import "@testing-library/jest-dom"`).
+> `src/lib/__tests__/isActivePath.test.ts` 작성 (15개 케이스, 58개 전체 테스트 통과).
+> `pnpm test:unit`, `pnpm typecheck` 모두 통과 확인.
 
 ## 현상
 

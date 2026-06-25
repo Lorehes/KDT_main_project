@@ -6,6 +6,30 @@
 // [수정 시 고려사항] NEXT_PUBLIC_SITE_URL 미설정 시 개발 환경에서 localhost:3000 폴백.
 //   프로덕션 배포 전 NEXT_PUBLIC_SITE_URL 환경변수 반드시 주입.
 
+// [목적] 플랜 티어 레이블·가격 상수 — TopBar·Settings·TierGate 간 리터럴 파편화 방지
+// [이유] TIER_LABEL이 TopBar·settings/page.tsx·TierGate에 각각 로컬 선언되어 있어
+//   값 불일치(PRO vs Pro) 발생. 단일 소스로 통합.
+// [사이드 임팩트] TopBar의 TIER_LABEL 로컬 선언(FREE:"Free 플랜" 포함)과 settings의 선언이 병합됨.
+//   TierGate는 PRO/PREMIUM만 사용 — TIER_LABEL에서 해당 키를 읽으면 됨.
+// [수정 시 고려사항] 요금 변경 시 이 파일만 수정하면 모든 사용처에 반영됨.
+export const TIER_LABEL: Record<string, string> = {
+  FREE: "Free",
+  PRO: "Pro",
+  PREMIUM: "Premium",
+};
+
+export const TIER_LABEL_LONG: Record<string, string> = {
+  FREE: "Free 플랜",
+  PRO: "Pro 플랜 · 무제한 종목",
+  PREMIUM: "Premium 플랜 · 모든 기능",
+};
+
+export const TIER_PRICE: Record<string, string> = {
+  FREE: "무료",
+  PRO: "₩9,900/월",
+  PREMIUM: "₩29,900/월",
+};
+
 export const LOGIN_PATH = "/login" as const;
 export const SESSION_PATH = "/api/auth/session" as const;
 export const REFRESH_PATH = "/api/auth/refresh" as const;

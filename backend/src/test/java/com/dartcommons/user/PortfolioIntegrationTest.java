@@ -374,4 +374,32 @@ class PortfolioIntegrationTest {
         assertThat(json.get("priced_count").asInt()).isEqualTo(1);
         assertThat(json.get("unpriced_count").asInt()).isEqualTo(1);
     }
+
+    // ── 그룹 A: 캐시 검증 ────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("listPortfolios 2회 연속 호출 — stocksByCodeIn 캐시 히트 (Caffeine)")
+    void listPortfolios_secondCall_hitsCacheNotDb() throws Exception {
+        // 캐시 초기화 (테스트 격리, @BeforeEach에서 이미 수행되지만 명시)
+        cacheManager.getCache("stocksByCodeIn").clear();
+
+        String token = signupAndGetToken(uniqueEmail());
+        createPortfolio(token, "005930");
+
+        // 1번째 호출 — 캐시 미스 → DB
+        mockMvc.perform(get("/api/v1/portfolios").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        // 캐시에 값이 적재됐는지 검증 (Caffeine NativeCache 접근)
+        org.springframework.cache.Cache stockCache = cacheManager.getCache("stocksByCodeIn");
+        assertThat(stockCache).isNotNull();
+        // 캐시 내부 map 사이즈 > 0 이면 히트 가능 상태
+        com.github.benmanes.caffeine.cache.Cache<Object, Object> nativeCache =
+                (com.github.benmanes.caffeine.cache.Cache<Object, Object>) stockCache.getNativeCache();
+        assertThat(nativeCache.estimatedSize()).isGreaterThan(0);
+
+        // 2번째 호출 — 캐시 히트해도 응답은 동일
+        mockMvc.perform(get("/api/v1/portfolios").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
 }

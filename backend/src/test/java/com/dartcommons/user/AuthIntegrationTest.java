@@ -21,9 +21,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -53,8 +57,9 @@ class AuthIntegrationTest {
     @MockitoBean DisclosureBackfillService   backfillService;
     @MockitoBean EmailVerificationService    emailVerificationService;
 
-    @Autowired MockMvc      mockMvc;
-    @Autowired ObjectMapper objectMapper;
+    @Autowired MockMvc       mockMvc;
+    @Autowired ObjectMapper  objectMapper;
+    @Autowired JdbcTemplate  jdbc;
 
     @BeforeEach
     void bypassEmailVerification() {
@@ -192,5 +197,109 @@ class AuthIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body.toString()))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ── PATCH /api/v1/users/me (V22 UpdateMeRequest) ───────────────────────
+
+    @Test
+    @DisplayName("PATCH /users/me — nickname 없이 profile 필드만 전송 → 200 + investment_experience 반영")
+    void updateMe_profileOnly_noNickname_returns200() throws Exception {
+        JsonNode signup = doSignup(uniqueEmail());
+        String token = signup.get("access_token").asText();
+
+        ObjectNode patch = objectMapper.createObjectNode()
+                .put("investment_experience", "BEGINNER")
+                .put("preferred_time",        "REALTIME");
+
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patch.toString()))
+                .andExpect(status().isOk());
+
+        String meResp = mockMvc.perform(get("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode me = objectMapper.readTree(meResp);
+        assertThat(me.get("investment_experience").asText()).isEqualTo("BEGINNER");
+        assertThat(me.get("preferred_time").asText()).isEqualTo("REALTIME");
+    }
+
+    @Test
+    @DisplayName("PATCH /users/me — nickname + investment_experience 혼합 전송 → 200 + preferred_time은 null 유지")
+    void updateMe_mixed_updatesSpecifiedFields() throws Exception {
+        JsonNode signup = doSignup(uniqueEmail());
+        String token = signup.get("access_token").asText();
+
+        ObjectNode patch = objectMapper.createObjectNode()
+                .put("nickname",              "newName")
+                .put("investment_experience", "ADVANCED");
+
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patch.toString()))
+                .andExpect(status().isOk());
+
+        String meResp = mockMvc.perform(get("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode me = objectMapper.readTree(meResp);
+        assertThat(me.get("nickname").asText()).isEqualTo("newName");
+        assertThat(me.get("investment_experience").asText()).isEqualTo("ADVANCED");
+        // preferred_time은 미전송 — null 유지 (JSON null 또는 필드 부재)
+        assertThat(me.get("preferred_time").isNull()).isTrue();
+    }
+
+    @Test
+    @DisplayName("PATCH /users/me — 유효하지 않은 investment_experience 값 → 400")
+    void updateMe_invalidExperience_returns400() throws Exception {
+        JsonNode signup = doSignup(uniqueEmail());
+        String token = signup.get("access_token").asText();
+
+        ObjectNode patch = objectMapper.createObjectNode()
+                .put("investment_experience", "INVALID_VALUE");
+
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patch.toString()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PATCH /users/me — 빈 문자열 nickname → @Size(min=1) 위반 → 400")
+    void updateMe_emptyNickname_returns400() throws Exception {
+        JsonNode signup = doSignup(uniqueEmail());
+        String token = signup.get("access_token").asText();
+
+        ObjectNode patch = objectMapper.createObjectNode()
+                .put("nickname", "");
+
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patch.toString()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /users/me — 신규 가입 직후 investment_experience·preferred_time은 null")
+    void getMe_newUser_profileFieldsNull() throws Exception {
+        JsonNode signup = doSignup(uniqueEmail());
+        String token = signup.get("access_token").asText();
+
+        String meResp = mockMvc.perform(get("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode me = objectMapper.readTree(meResp);
+        assertThat(me.get("investment_experience").isNull()).isTrue();
+        assertThat(me.get("preferred_time").isNull()).isTrue();
     }
 }

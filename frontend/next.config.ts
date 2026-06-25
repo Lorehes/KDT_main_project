@@ -39,6 +39,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // standalone: Docker 배포 필수 — .next/standalone/ 생성. 미설정 시 Dockerfile COPY --from=builder 실패.
   output: "standalone",
+  // npm_package_version: package.json version을 빌드 시 주입 — settings/page.tsx APP_VERSION 표시용.
+  env: {
+    NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version,
+  },
 
   async headers() {
     return [

@@ -13,13 +13,7 @@ import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BrandMark } from "./BrandMark";
 import { buttonVariants } from "@/components/ui/button";
-
-const NAV_ITEMS = [
-  { href: "/#features", label: "기능" },
-  { href: "/pricing",   label: "요금제" },
-  { href: "/#cases",    label: "고객사례" },
-  { href: "/#help",     label: "도움말" },
-] as const;
+import { PUBLIC_NAV_ITEMS } from "@/lib/navigation";
 
 export function PublicMobileMenu({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -32,12 +26,13 @@ export function PublicMobileMenu({ isAuthenticated = false }: { isAuthenticated?
         className="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
         aria-label="메뉴 열기"
         aria-expanded={open}
+        aria-controls="public-mobile-nav"
       >
         <Menu className="size-5" aria-hidden />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-72 p-0">
+        <SheetContent side="right" className="w-72 p-0" id="public-mobile-nav">
           <SheetHeader className="border-b border-border px-5 py-4">
             <SheetTitle className="flex items-center gap-2.5">
               <BrandMark size={26} />
@@ -46,7 +41,7 @@ export function PublicMobileMenu({ isAuthenticated = false }: { isAuthenticated?
           </SheetHeader>
 
           <nav className="flex flex-col gap-0.5 p-3" aria-label="모바일 메뉴">
-            {NAV_ITEMS.map(({ href, label }) => (
+            {PUBLIC_NAV_ITEMS.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}

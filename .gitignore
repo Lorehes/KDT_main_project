@@ -119,4 +119,4 @@ docs/기획서/*.html
 *.zip
 *.keynote
 *발표*.*
-PORTFOLIO*.*
+/PORTFOLIO*.*

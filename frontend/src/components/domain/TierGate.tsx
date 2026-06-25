@@ -12,17 +12,13 @@
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/lib/stores/uiStore";
+import { TIER_LABEL } from "@/lib/constants";
 
 interface TierGateProps {
   requiredTier: "PRO" | "PREMIUM";
   children?: React.ReactNode;
   className?: string;
 }
-
-const TIER_LABEL: Record<"PRO" | "PREMIUM", string> = {
-  PRO: "Pro",
-  PREMIUM: "Premium",
-};
 
 export function TierGate({ requiredTier, children, className }: TierGateProps) {
   const { setUpsellModalOpen } = useUIStore();

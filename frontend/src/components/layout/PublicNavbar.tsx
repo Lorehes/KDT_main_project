@@ -12,6 +12,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { PublicMobileMenu } from "@/components/layout/PublicMobileMenu";
+import { PUBLIC_NAV_ITEMS } from "@/lib/navigation";
 
 export function PublicNavbar({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   return (
@@ -28,10 +29,9 @@ export function PublicNavbar({ isAuthenticated = false }: { isAuthenticated?: bo
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm font-semibold text-muted-foreground md:flex">
-          <Link href="/#features" className="transition-colors hover:text-foreground">기능</Link>
-          <Link href="/pricing" className="transition-colors hover:text-foreground">요금제</Link>
-          <Link href="/#cases" className="transition-colors hover:text-foreground">고객사례</Link>
-          <Link href="/#help" className="transition-colors hover:text-foreground">도움말</Link>
+          {PUBLIC_NAV_ITEMS.map(({ href, label }) => (
+            <Link key={href} href={href} className="transition-colors hover:text-foreground">{label}</Link>
+          ))}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -47,10 +47,10 @@ export function PublicNavbar({ isAuthenticated = false }: { isAuthenticated?: bo
               </Link>
             ) : (
               <>
-                <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })} aria-label="로그인 페이지로 이동">
                   로그인
                 </Link>
-                <Link href="/signup" className={buttonVariants({ size: "sm" })}>
+                <Link href="/signup" className={buttonVariants({ size: "sm" })} aria-label="무료로 시작하기 — 회원가입 페이지로 이동">
                   무료로 시작
                 </Link>
               </>

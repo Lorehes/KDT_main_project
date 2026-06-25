@@ -1,15 +1,27 @@
 ---
 type: issue
-status: Open
+status: Closed
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-25
+resolved: 2026-06-25
 source: dc-review-code (TopBar/Settings/PublicMobileMenu M2 리뷰)
 priority: P2
 ---
 
 # TopBar · Settings · PublicMobileMenu 프론트엔드 기술 부채
 
-> **상태**: Open — 즉시 수정 항목은 당일 dc-implement로 처리, 아래 항목은 후속 계획 필요.
+> **상태**: Closed — 2026-06-25 전체 처리 완료.
+>
+> - #1 TIER_LABEL 중앙화: `constants.ts`에 TIER_LABEL·TIER_LABEL_LONG·TIER_PRICE 추가, 로컬 선언 3곳 제거
+> - #2 NAV_ITEMS 중앙화: `lib/navigation.ts` 신규, APP_NAV_ITEMS·PUBLIC_NAV_ITEMS 5곳 import 교체
+> - #3 Sidebar.tsx 삭제: 참조 0건 확인 후 삭제
+> - #4 Zustand 셀렉터 최적화: TopBar 필드별 셀렉터 분리
+> - #5 임의 px 토큰 위반: 디자인 명세 확인 필요 — 이번 범위 외 skip
+> - #6 AppShell 이중 폴링: `useUnreadCount`가 refetchInterval 없음(staleTime만) → 실질 이중 폴링 없음 — skip
+> - #7 PublicMobileMenu aria-controls: `aria-controls="public-mobile-nav"` + SheetContent `id` 추가
+> - #8 Bell aria-label: 동적 미읽음 카운트 반영 — 이미 처리됨 확인
+> - #9 APP_VERSION env: `next.config.ts`에 `NEXT_PUBLIC_APP_VERSION` 추가, settings에서 사용
+> - #10 isActivePath boundary: `startsWith(href + "/")` 수정 + 테스트 작성
 
 ## 배경
 

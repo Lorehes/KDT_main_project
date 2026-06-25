@@ -1,15 +1,18 @@
 ---
 type: issue
-status: Open
+status: Closed
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-25
+resolved: 2026-06-25
 source: dc-review-code (dashboard-real-data Wave 1)
 priority: P3
 ---
 
 # 대시보드 `today` 자정 경과 시 갱신 안 됨 (자정 고착 엣지케이스)
 
-> **상태**: Open — 자정에 브라우저를 열어 둔 채 사용 시 어제 날짜로 고착. P3 UX 엣지케이스.
+> **상태**: Closed — 2026-06-25 해결.
+> `src/lib/hooks/useTodaySeoul.ts` 훅 구현 후 `dashboard/page.tsx`에 적용.
+> 자정(Asia/Seoul)까지 남은 ms를 setTimeout으로 계산해 today 상태 자동 갱신.
 
 ## 현상
 

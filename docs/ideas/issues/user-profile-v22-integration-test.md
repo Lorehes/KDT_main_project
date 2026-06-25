@@ -1,15 +1,17 @@
 ---
 type: issue
-status: Open
+status: Closed
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-25
+resolved: 2026-06-25
 source: dc-review-code (user-profile-investment-experience Wave 1+2)
 priority: P2
 ---
 
 # PATCH /users/me V22 시나리오 Testcontainers 통합 테스트 미비
 
-> **상태**: Open — V22로 확장된 `PATCH /users/me` 동작이 통합 테스트로 검증되지 않음.
+> **상태**: Closed — 2026-06-25 해결.
+> `AuthIntegrationTest.java`에 5케이스 추가 — profileOnly/mixed/invalidExperience/emptyNickname/newUserNullFields.
 > 기존 `AuthIntegrationTest`는 nickname 단일 필드만 커버.
 
 ## 배경

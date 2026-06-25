@@ -9,16 +9,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Briefcase, Bell, FileText } from "lucide-react";
+import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isActivePath } from "@/lib/utils/isActivePath";
+import { APP_NAV_ITEMS } from "@/lib/navigation";
 
+// /notifications(알림) 탭은 모바일 탭바 전용 — APP_NAV_ITEMS에는 TopBar 알림 벨로 제공되므로 미포함
 const TABS = [
-  { href: "/dashboard",    label: "대시보드", icon: LayoutDashboard },
-  { href: "/disclosures",  label: "공시",     icon: FileText },
-  { href: "/portfolios",   label: "종목",     icon: Briefcase },
-  { href: "/notifications", label: "알림",    icon: Bell },
-];
+  ...APP_NAV_ITEMS.map(({ href, labelShort: label, icon }) => ({ href, label, icon })),
+  { href: "/notifications", label: "알림", icon: Bell },
+] as const;
 
 export function BottomTabBar() {
   const pathname = usePathname();

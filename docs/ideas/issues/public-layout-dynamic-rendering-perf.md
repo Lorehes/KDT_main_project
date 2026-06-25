@@ -1,13 +1,17 @@
 ---
 type: issue
-status: open
+status: Closed
 severity: medium
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-25
+resolved: 2026-06-25
 source: dc-review-code (pricing-nav-auth-consistency)
 ---
 
 # (public) 레이아웃 동적 렌더링 전환 — TTFB 성능 이슈
+
+> **상태**: Closed — 2026-06-25 결정.
+> **결론: C안(현행 유지)** — isAuthenticated 서버 prop 기반 구조는 SSR 인증 일관성 필수. TTFB 트레이드오프 허용. 별도 성능 Spec으로 재검토.
 
 > 상태: **open** (후속 최적화 과제, 현행 머지 블로커 아님)
 > 발견: `pricing-nav-auth-consistency` 코드 리뷰 Medium 이슈

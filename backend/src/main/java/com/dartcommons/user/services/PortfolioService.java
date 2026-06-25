@@ -216,7 +216,7 @@ public class PortfolioService {
     }
 
     /** 복호화 결과 BigDecimal 파싱 — NFE 발생 시 원문을 예외 메시지에 절대 포함하지 않음(금융 PII, CLAUDE.md §7). */
-    private static BigDecimal parseSafe(String decrypted) {
+    static BigDecimal parseSafe(String decrypted) {
         if (decrypted == null) return null;
         try {
             return new BigDecimal(decrypted);

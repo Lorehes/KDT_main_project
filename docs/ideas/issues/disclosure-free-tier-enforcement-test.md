@@ -1,15 +1,17 @@
 ---
 type: issue
-status: Open
+status: Closed
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-25
+resolved: 2026-06-25
 source: dc-review-code (dashboard-real-data Wave 2)
 priority: P2
 ---
 
 # DisclosureQueryService Free 티어 강제 로직 Testcontainers 통합 테스트 누락
 
-> **상태**: Open — 기능은 동작하나 회귀 방지 테스트 없음. P2 테스트 부채.
+> **상태**: Closed — 2026-06-25 해결.
+> `DisclosureQueryServiceIntegrationTest.java` 신규 작성 — Free 날짜 강제·size 상한(3케이스) Testcontainers 검증.
 
 ## 현상
 

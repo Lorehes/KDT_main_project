@@ -16,21 +16,9 @@ import { useAuthStore } from "@/lib/stores/authStore";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
-import { SUPPORT_EMAIL } from "@/lib/constants";
+import { SUPPORT_EMAIL, TIER_LABEL, TIER_PRICE } from "@/lib/constants";
 
-const APP_VERSION = "0.1.0";
-
-const TIER_LABEL: Record<string, string> = {
-  FREE:    "Free",
-  PRO:     "Pro",
-  PREMIUM: "Premium",
-};
-
-const TIER_PRICE: Record<string, string> = {
-  FREE:    "무료",
-  PRO:     "₩9,900/월",
-  PREMIUM: "₩29,900/월",
-};
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0";
 
 export default function SettingsPage() {
   const { user, fetchMe, logout } = useAuthStore();

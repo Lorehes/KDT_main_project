@@ -12,5 +12,6 @@
 export function isActivePath(pathname: string, href: string, opts?: { exact?: boolean }): boolean {
   const exact = opts?.exact ?? href === "/dashboard";
   if (exact) return pathname === href;
-  return pathname === href || pathname.startsWith(href);
+  // pathname.startsWith(href + "/") 로 /portfolios-v2 가 /portfolios 를 활성화하는 오매칭 방지
+  return pathname === href || pathname.startsWith(href + "/");
 }
