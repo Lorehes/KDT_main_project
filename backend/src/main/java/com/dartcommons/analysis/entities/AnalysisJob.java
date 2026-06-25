@@ -2,6 +2,7 @@ package com.dartcommons.analysis.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.lang.NonNull;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -79,7 +80,7 @@ public class AnalysisJob {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public static AnalysisJob create(short stage, Long idFrom, Long idTo, int chunkSize) {
+    public static @NonNull AnalysisJob create(short stage, Long idFrom, Long idTo, int chunkSize) {
         OffsetDateTime now = OffsetDateTime.now();
         return AnalysisJob.builder()
                 .jobId(UUID.randomUUID())
