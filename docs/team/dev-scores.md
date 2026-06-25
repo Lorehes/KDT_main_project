@@ -105,6 +105,7 @@ updated: 2026-06-02
 | 2026-06-25 | Jin | 08af22b | feat(infra): OpenRouter LLM 프로덕션 전환+리뷰 8항목 수정 [8/8 M] | Infra/Shared | 8 | 8 | M | OpenRouter 전환+H1/M1/M2/M3/L1~L4 수정 |
 | 2026-06-25 | Jin | b28e4db | feat(infra): M4 배포인프라 Docker+CI/CD+리뷰9항목수정 [8/8 L] | Infra/Frontend/Docs | 8 | 8 | L | M4 배포인프라 Docker+CI/CD 완성 |
 | 2026-06-25 | Jin | 4cd8b19 | fix(user,frontend): 이슈12건·BE버그픽스·FE기술부채·테스트보강 [6/8 L] | User/Frontend/Test/Docs | 6 | 8 | L | 이슈12건·BE버그픽스·FE기술부채 |
+| 2026-06-25 | Jin | 023139a | feat(disclosure,frontend): TopBar 글로벌 검색 + 리뷰 8건 수정 [6/8 L] | Disclosure/Frontend | 6 | 8 | L | TopBar 글로벌 검색+리뷰8건수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -112,5 +113,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 4 | 32 | 92 | 8.0 | 6.0 |
+| Jin | 5 | 33 | 93 | 8.0 | 6.0 |
 <!-- SUMMARY:END -->

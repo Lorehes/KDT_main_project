@@ -11,6 +11,7 @@ import com.dartcommons.shared.security.SecurityUtils;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -30,6 +31,8 @@ import java.time.LocalDate;
  * [수정 시 고려사항] sort 파라미터는 현재 rceptDt,desc 고정 — 다양한 정렬 추가 시 Pageable Sort 파라미터 수용.
  *                  POST /disclosures (공시 등록)는 admin 전용 — DisclosureBackfillController로 분리됨.
  *                  extractTier는 SecurityUtils로 이관 완료(R3) — 신규 컨트롤러도 동일 유틸 사용.
+ *                  q @Size(max=100): @Validated + jakarta.validation 어노테이션으로 컨트롤러 레이어에서 검증.
+ *                  빈 문자열("") → null 정규화는 DisclosureQueryService 진입부에서 처리(책임 분리).
  */
 @RestController
 @RequestMapping("/api/v1/disclosures")
@@ -57,10 +60,11 @@ public class DisclosureController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "20") @Positive @Max(100) int size
+            @RequestParam(defaultValue = "20") @Positive @Max(100) int size,
+            @RequestParam(required = false) @Size(max = 100) String q
     ) {
         Tier tier = SecurityUtils.extractTier(authentication);
-        return disclosureQueryService.list(userId, scope, stockCode, sentiment, withheld, from, to, page, size, tier);
+        return disclosureQueryService.list(userId, scope, stockCode, sentiment, withheld, from, to, page, size, tier, q);
     }
 
     /** 공시 상세 — 기본 메타 + 분析 요약 포함. 인증만 필요 (DART 공개 데이터 정책). */

@@ -81,10 +81,14 @@ class DisclosureQueryServiceIntegrationTest {
     }
 
     private long insertDisclosure(String rceptNo, String stockCode, String rceptDt) {
+        return insertDisclosure(rceptNo, stockCode, rceptDt, "테스트회사", "테스트공시");
+    }
+
+    private long insertDisclosure(String rceptNo, String stockCode, String rceptDt, String corpName, String reportNm) {
         Long id = jdbc.queryForObject(
                 "INSERT INTO disclosures (rcept_no, corp_code, stock_code, corp_name, report_nm, rcept_dt, disclosure_type, collected_at) " +
-                "VALUES (?, '00000001', ?, '테스트회사', '테스트공시', ?::date, 'A001', now()) RETURNING id",
-                Long.class, rceptNo, stockCode, rceptDt);
+                "VALUES (?, '00000001', ?, ?, ?, ?::date, 'A001', now()) RETURNING id",
+                Long.class, rceptNo, stockCode, corpName, reportNm, rceptDt);
         return Objects.requireNonNull(id);
     }
 
@@ -235,5 +239,72 @@ class DisclosureQueryServiceIntegrationTest {
             }
         }
         assertThat(hasPastDisclosure).isTrue();
+    }
+
+    @Test
+    @DisplayName("q 파라미터 — corp_name 포함 키워드 일치 공시 반환, 불일치 키워드는 해당 공시 미포함")
+    void qSearch_matchesCorpName_returnsFilteredDisclosures() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        addPortfolio(token, "005930");
+
+        String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
+        // 고유 키워드를 corp_name에 포함한 공시 삽입 — 다른 테스트 데이터와 충돌 방지
+        String uniqueKeyword = "UniSrch" + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+        String matchRceptNo = uniqueRceptNo();
+        insertDisclosure(matchRceptNo, "005930", today, uniqueKeyword + "Corp", "정기공시");
+
+        // q 일치 — uniqueKeyword가 corp_name에 포함된 공시 반환됨
+        String respMatch = mockMvc.perform(get("/api/v1/disclosures")
+                        .header("Authorization", "Bearer " + token)
+                        .param("q", uniqueKeyword))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode contentMatch = objectMapper.readTree(respMatch).get("content");
+        assertThat(contentMatch.size()).isGreaterThanOrEqualTo(1);
+        boolean hasMatch = false;
+        for (JsonNode item : contentMatch) {
+            if (item.get("rcept_no").asText().equals(matchRceptNo)) hasMatch = true;
+        }
+        assertThat(hasMatch).as("q=uniqueKeyword 검색 결과에 삽입한 공시가 포함되어야 함").isTrue();
+
+        // q 불일치 — ZZZ_NO_MATCH로는 위 공시가 응답에 없어야 함
+        String respNoMatch = mockMvc.perform(get("/api/v1/disclosures")
+                        .header("Authorization", "Bearer " + token)
+                        .param("q", "ZZZ_NO_MATCH_XYZ"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode contentNoMatch = objectMapper.readTree(respNoMatch).get("content");
+        for (JsonNode item : contentNoMatch) {
+            assertThat(item.get("rcept_no").asText())
+                    .as("q=ZZZ_NO_MATCH 결과에 uniqueKeyword 공시가 포함되면 안 됨")
+                    .isNotEqualTo(matchRceptNo);
+        }
+    }
+
+    @Test
+    @DisplayName("q 빈 문자열 — null과 동일하게 처리, 기존 동작(필터 없음) 보존")
+    void qEmpty_treatedAsNull_returnsAllDisclosures() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        addPortfolio(token, "005930");
+
+        String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
+        String rceptNo = uniqueRceptNo();
+        insertDisclosure(rceptNo, "005930", today, "빈큐테스트회사", "빈큐테스트공시");
+
+        // q="" (빈 문자열) → 필터 없음 → 삽입한 공시 반환됨
+        String resp = mockMvc.perform(get("/api/v1/disclosures")
+                        .header("Authorization", "Bearer " + token)
+                        .param("q", ""))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode content = objectMapper.readTree(resp).get("content");
+        boolean found = false;
+        for (JsonNode item : content) {
+            if (item.get("rcept_no").asText().equals(rceptNo)) found = true;
+        }
+        assertThat(found).as("q='' 시 삽입한 공시가 응답에 포함되어야 함(필터 없음)").isTrue();
     }
 }

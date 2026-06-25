@@ -41,6 +41,8 @@ import java.util.stream.Collectors;
  *                  sentimentStr: Sentiment enum → name() 변환 후 native query에 전달. null → 전체 반환.
  *                  size 이중 방어: 컨트롤러 @Max(100) + 서비스 진입부 Math.min — AOP 우회(직접 호출 등) 방어선.
  *                  Free 강제 블록은 scope=all 403 분기 이후에 위치 — scope=all FREE는 이미 차단됨.
+ *                  q 빈 문자열 → null 정규화는 서비스 진입부에서 처리 — 컨트롤러 검증 레이어와 책임 분리.
+ *                  q는 Free 티어 날짜·size 강제 이후에도 그대로 전달 — 날짜 범위 내 키워드 검색.
  */
 @Service
 @RequiredArgsConstructor
@@ -61,8 +63,11 @@ public class DisclosureQueryService {
             LocalDate toDate,
             int page,
             int size,
-            Tier tier
+            Tier tier,
+            String q
     ) {
+        // 빈 문자열 → null 정규화 (R6: "" = 필터 없음). 로컬 변수로 분리 — 파라미터 재할당 금지(Google Java Style).
+        String normalizedQ = (q != null && q.isBlank()) ? null : q;
         // 컨트롤러 @Max(100) 우회 경로(테스트/직접 서비스 호출) 대비 이중 방어
         size = Math.min(size, 100);
 
@@ -103,12 +108,12 @@ public class DisclosureQueryService {
         Page<Disclosure> disclosurePage;
         if (sentimentStr != null || withheldParam != null) {
             disclosurePage = (stockCodes == null)
-                    ? disclosureRepository.findAllFilteredWithSentiment(fromDate, toDate, sentimentStr, withheldParam, pageable)
-                    : disclosureRepository.findFilteredByStocksWithSentiment(stockCodes, fromDate, toDate, sentimentStr, withheldParam, pageable);
+                    ? disclosureRepository.findAllFilteredWithSentiment(fromDate, toDate, sentimentStr, withheldParam, normalizedQ, pageable)
+                    : disclosureRepository.findFilteredByStocksWithSentiment(stockCodes, fromDate, toDate, sentimentStr, withheldParam, normalizedQ, pageable);
         } else {
             disclosurePage = (stockCodes == null)
-                    ? disclosureRepository.findAllFiltered(fromDate, toDate, pageable)
-                    : disclosureRepository.findFilteredByStocks(stockCodes, fromDate, toDate, pageable);
+                    ? disclosureRepository.findAllFiltered(fromDate, toDate, normalizedQ, pageable)
+                    : disclosureRepository.findFilteredByStocks(stockCodes, fromDate, toDate, normalizedQ, pageable);
         }
 
         // bulk 분析 결과 조회 (N+1 방지) — 빈 IN() 오류 방지를 위해 ids가 비어있으면 생략

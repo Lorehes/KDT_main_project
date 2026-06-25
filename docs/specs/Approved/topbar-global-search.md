@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-25
 updated: 2026-06-25
 ---
 
 # TopBar 글로벌 검색 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-25, dc-tech-review 승인)
 
 ## 배경 / 목적
 
@@ -123,4 +123,42 @@ useEffect(() => {
 }, [q, filter]);
 ```
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-06-25)
+
+### 아키텍처 분해
+
+- 영향 레이어: `backend/disclosure` (Controller → Service → Repository) / `frontend/TopBar` + `frontend/disclosures`
+- 신규: 없음
+- 수정: `DisclosureRepository` 4쿼리, `DisclosureQueryService.list()`, `DisclosureController`, `DisclosureListParams`, `disclosures/page.tsx`, `TopBar.tsx`
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `DisclosureRepository` JPQL 2쿼리(`findFilteredByStocks`, `findAllFiltered`)에 `(:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%',:q,'%')))` 조건 추가 | BE / Disclosure | BE | 하 | - |
+| 2 | `DisclosureRepository` native 2쿼리(`findFilteredByStocksWithSentiment`, `findAllFilteredWithSentiment`)에 `(CAST(:q AS text) IS NULL OR report_nm ILIKE '%' \|\| :q \|\| '%' OR corp_name ILIKE '%' \|\| :q \|\| '%')` 조건 추가 | BE / Disclosure | BE | 하 | - |
+| 3 | `DisclosureQueryService.list()` 시그니처에 `String q` 추가, 빈 문자열→null 정규화(`q.isBlank()`→null), 4개 repository 호출에 q 전달 | BE / Disclosure | BE | 하 | #1 #2 |
+| 4 | `DisclosureController.list()` — `@RequestParam(required=false) @Size(max=100) String q` 추가, service 전달 | BE / Disclosure | BE | 하 | #3 |
+| 5 | `disclosures.ts` — `DisclosureListParams`에 `q?: string` 추가, `useDisclosures` URLSearchParams 빌드에 q 반영 | FE | FE | 하 | - |
+| 6 | `disclosures/page.tsx` — `useSearchParams()` 추가 + **로컬 Suspense 래핑**(AppLayout에 없음, `portfolios/add/page.tsx` 패턴 참조), q→useDisclosures 전달, 안내 문구, `useEffect([q, filter])` 리셋 | FE | FE | 중 | #5 |
+| 7 | `TopBar.tsx` — `useRouter` import + `useState<string>("searchQ")`, Enter 핸들러(`router.push('/disclosures?q=...')`), `setSearchQ("")`, `aria-label="공시·종목명 검색"`, `role="search"`, `hidden md:flex` | FE | FE | 중 | - |
+
+### DB / 마이그레이션 영향
+
+- **없음** — 기존 컬럼(`report_nm`, `corp_name`) 필터 조건 추가만; DDL 변경·Flyway 마이그레이션 불필요.
+- 추후 최적화: `pg_trgm` 인덱스 (`CREATE INDEX ON disclosures USING gin(report_nm gin_trgm_ops)`) — 현재 MVP는 full scan 수용.
+
+### 외부 계약 영향
+
+- **없음** — DART/KRX API 파싱·카카오 알림톡 템플릿·LLM 프롬프트 변경 없음.
+
+### 리스크 & 법적 검토
+
+- **JPQL ILIKE 미지원 우회**: JPQL(HQL)에서 `ILIKE`는 Hibernate 6.1+ 지원이지만 ORM 버전 확인 전 안전하게 `LOWER(d.x) LIKE LOWER(CONCAT('%',:q,'%'))` 대안 사용. native 쿼리는 PostgreSQL `ILIKE` 직접 사용.
+- **Suspense 경계 누락**: `(app)/layout.tsx`에 Suspense 없음 → `disclosures/page.tsx`에서 `useSearchParams()` 사용 시 빌드 경고/런타임 오류. `<Suspense fallback={null}>` 로컬 래핑 필수(카드 #6).
+- **ILIKE full scan**: 대량 데이터 시 성능 이슈. MVP 수만 건 이하 수용, `pg_trgm` 인덱스를 별도 migration으로 후속 추가.
+- **법적 검토**: q는 키워드 필터이며 투자 권유 표현 없음 — 자본시장법 충돌 없음.
+
+### 예상 wave 수
+
+- **1 wave** — BE 4카드 + FE 3카드 단일 PR. BE/FE 작업 병렬 가능(의존 없음), merge는 단일 커밋.

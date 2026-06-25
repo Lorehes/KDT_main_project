@@ -11,6 +11,33 @@ updated: 2026-06-25
 
 ---
 
+## 2026-06-25 (48차) | topbar-global-search — TopBar 글로벌 검색 (종목명·공시 키워드)
+
+**산출**:
+- BE(수정): `backend/src/main/java/com/dartcommons/disclosure/controllers/DisclosureController.java` — `@RequestParam(required=false) @Size(max=100) String q` 파라미터 추가, 서비스 계층 전달
+- BE(수정): `backend/src/main/java/com/dartcommons/disclosure/services/DisclosureQueryService.java` — `q` 파라미터 수신, `normalizedQ` 로컬 변수로 blank→null 정규화(Google Java Style 파라미터 재할당 금지), 4개 리포지토리 호출에 전달
+- BE(수정): `backend/src/main/java/com/dartcommons/disclosure/repositories/DisclosureRepository.java` — 4개 쿼리에 q 조건 추가. JPQL: `:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%',:q,'%'))`. native: `CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%'` 패턴
+- Test(수정): `backend/src/test/java/com/dartcommons/disclosure/DisclosureQueryServiceIntegrationTest.java` — `insertDisclosure` 5인자 오버로드 + q 키워드 일치/불일치/빈문자열 3케이스 추가
+- FE(수정): `frontend/src/components/layout/TopBar.tsx` — 글로벌 검색창(form[role=search], Search 아이콘, Input) 추가. `useCallback` handleSearch, `onSubmit={e => e.preventDefault()}` 폼 기본 제출 차단, `encodeURIComponent` 안전 라우팅
+- FE(수정): `frontend/src/lib/api/disclosures.ts` — `DisclosureListParams.q` 필드 추가, URLSearchParams 빌드 시 빈 문자열 q 생략
+- FE(수정): `frontend/src/app/(app)/disclosures/page.tsx` — `DisclosuresFeedContent` 내부 컴포넌트 분리 + Suspense 경계 추가, `useSearchParams()` q 파라미터 구독, q 변경 시 page·allItems 리셋, 검색 결과 배너/빈 상태 메시지, Skeleton 폴백
+- Spec: `docs/specs/Draft/topbar-global-search.md` → `docs/specs/Approved/topbar-global-search.md`
+- DevLog: `docs/dev-log/backend.jsonl` + `frontend.jsonl`
+
+**결정**:
+- **JPQL vs native q null 처리 분기**: JPQL String 파라미터는 PostgreSQL OID 타입 추론 문제 없으므로 `:q IS NULL` 직접 사용. native 쿼리는 extended protocol parse 단계 OID 미지정 방지를 위해 `CAST(:q AS text) IS NULL` 패턴 필수 — 기존 `:fromDate`, `:sentiment` CAST 패턴과 동일한 이유.
+- **Suspense 경계 위치**: `(app)/layout.tsx`에 Suspense 미존재 → `DisclosuresFeedContent` 내부 컴포넌트 분리 후 `DisclosuresFeedPage` default export에 Skeleton 폴백 Suspense 래핑. `portfolios/add/page.tsx` 선례 동일.
+- **blank→null 정규화 위치**: Controller(입력 레이어) 대신 Service 계층에서 처리. `normalizedQ` 로컬 변수 사용 (Google Java Style: 파라미터 재할당 금지, Checkstyle ParameterAssignment 규칙).
+- **LIKE 메타 문자 MVP 수용**: `%`, `_` 이스케이프 미처리. 이스케이프 레시피(`q.replace("\\","\\\\").replace("%","\\%").replace("_","\\_") + ESCAPE '\\'`)는 `DisclosureRepository` 헤더 주석에 기록.
+- **form onSubmit 차단**: `onSubmit={e => e.preventDefault()}` 필수 — `onKeyDown`의 `e.preventDefault()` + `e.stopPropagation()`만으로는 `<form>` Enter 기본 제출(페이지 리로드) 차단 불가.
+
+**테스트**: Testcontainers PostgreSQL 통합 테스트 2케이스 추가 (q 키워드 일치/불일치, q 빈문자열). `dc-review-code` 8건(H1·M1~M4·L1~L3) 수정 후 Green 판정.
+
+**미완료 (다음 세션)**:
+- `/dc-implement portfolio-csv-bulk-import` — `docs/specs/Approved/portfolio-csv-bulk-import.md` 대기 중
+
+---
+
 ## 2026-06-25 (47차) | deployment-infra-docker-cicd — M4 배포 인프라 Docker+CI/CD
 
 **산출**:

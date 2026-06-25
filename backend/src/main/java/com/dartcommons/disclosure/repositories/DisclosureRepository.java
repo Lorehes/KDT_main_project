@@ -28,6 +28,11 @@ import java.util.Optional;
  *                  `:param IS NULL` 패턴의 null 파라미터는 OID 미지정 시 "could not determine data type" 오류 발생.
  *                  JPQL: COALESCE(:fromDate, d.rceptDt) 사용 → null 시 d.rceptDt와 비교(항상 true, 필터 없음).
  *                  native: CAST(:fromDate AS date) IS NULL 사용 → PostgreSQL이 CAST에서 타입 결정.
+ *                  q 파라미터: JPQL에서는 `:q IS NULL` 패턴이 OID 문제 없이 동작(String 타입 추론). LOWER+LIKE 사용.
+ *                  native에서는 CAST(:q AS text) IS NULL 패턴 필수 — ILIKE '%' || :q || '%' 로 대소문자 무시.
+ *                  성능: q 검색은 full table scan — MVP 수용. 추후 pg_trgm GIN 인덱스로 최적화(별도 Flyway 마이그레이션).
+ *                  알려진 한계: LIKE 메타 문자('%', '_') 포함 q 입력 시 예상 외 결과 반환 가능 — MVP 수용.
+ *                  이스케이프 필요 시 서비스 계층에서 `q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")` 추가 후 ESCAPE '\\' 절 사용.
  */
 public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
 
@@ -50,6 +55,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             WHERE d.stockCode IN :stockCodes
               AND d.rceptDt >= coalesce(:fromDate, d.rceptDt)
               AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
+              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
             ORDER BY d.rceptDt DESC, d.id DESC
             """,
             countQuery = """
@@ -57,11 +63,13 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             WHERE d.stockCode IN :stockCodes
               AND d.rceptDt >= coalesce(:fromDate, d.rceptDt)
               AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
+              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
             """)
     Page<Disclosure> findFilteredByStocks(
             @Param("stockCodes") List<String> stockCodes,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
+            @Param("q") String q,
             Pageable pageable
     );
 
@@ -73,16 +81,19 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             SELECT d FROM Disclosure d
             WHERE d.rceptDt >= coalesce(:fromDate, d.rceptDt)
               AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
+              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
             ORDER BY d.rceptDt DESC, d.id DESC
             """,
             countQuery = """
             SELECT COUNT(d) FROM Disclosure d
             WHERE d.rceptDt >= coalesce(:fromDate, d.rceptDt)
               AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
+              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
             """)
     Page<Disclosure> findAllFiltered(
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
+            @Param("q") String q,
             Pageable pageable
     );
 
@@ -101,6 +112,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
               AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
               AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
               AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
             ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
@@ -111,6 +123,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
               AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
               AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
               AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
             """,
             nativeQuery = true)
     Page<Disclosure> findFilteredByStocksWithSentiment(
@@ -119,6 +132,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             @Param("toDate") LocalDate toDate,
             @Param("sentiment") String sentiment,
             @Param("withheld") Boolean withheld,
+            @Param("q") String q,
             Pageable pageable
     );
 
@@ -133,6 +147,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
               AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
               AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
               AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
             ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
@@ -142,6 +157,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
               AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
               AND (CAST(:sentiment AS text) IS NULL OR ar.sentiment = :sentiment)
               AND (CAST(:withheld AS boolean) IS NULL OR ar.is_withheld = :withheld)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
             """,
             nativeQuery = true)
     Page<Disclosure> findAllFilteredWithSentiment(
@@ -149,6 +165,7 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
             @Param("toDate") LocalDate toDate,
             @Param("sentiment") String sentiment,
             @Param("withheld") Boolean withheld,
+            @Param("q") String q,
             Pageable pageable
     );
 }

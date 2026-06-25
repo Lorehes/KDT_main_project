@@ -6,8 +6,12 @@
 // [수정 시 고려사항] 날짜 그룹(오늘·어제·이번주)은 클라이언트에서 rcept_dt 파싱.
 //   R4 hasMore 가드: content.length < SIZE → 서버 데이터 고갈 → "더 보기" 숨김. R3(BE JOIN) 완료 후에도 유지 가능.
 //   필터 상태는 URL searchParams로 관리 권장(현재 로컬 state).
+//   useSearchParams()는 Next.js App Router에서 Suspense 경계 필요 — 상위 (app)/layout에 없어 로컬 Suspense 래핑.
+//   q와 filter 리셋은 별도 ref+effect — 동시 변경 시 각 ref가 독립적으로 변화를 감지해 불필요한 이중 리셋 방지.
+//   DisclosuresFeedContent 내부 컴포넌트 분리 이유: useSearchParams()가 Suspense 경계 안쪽 컴포넌트에 있어야 함.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDisclosures, type Sentiment, type Disclosure } from "@/lib/api/disclosures";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
@@ -40,13 +44,17 @@ function groupByDate(disclosures: Disclosure[]) {
 
 const PAGE_SIZE = 30;
 
-export default function DisclosuresFeedPage() {
+function DisclosuresFeedContent() {
+  const searchParams = useSearchParams();
+  const q = searchParams.get("q") ?? undefined;
+
   const [filter, setFilter] = useState<FilterType>("ALL");
 
-  // R4: 페이지 누적 상태 — 필터 변경 시 리셋
+  // R4: 페이지 누적 상태 — 필터/검색어 변경 시 리셋
   const [page, setPage] = useState(0);
   const [allItems, setAllItems] = useState<Disclosure[]>([]);
   const filterRef = useRef(filter);
+  const qRef = useRef(q);
 
   const { data, isLoading, isError, isFetching } = useDisclosures({
     scope: "portfolio",
@@ -55,6 +63,7 @@ export default function DisclosuresFeedPage() {
     withheld: filter === "WITHHELD" ? true : undefined,
     size: PAGE_SIZE,
     page,
+    q,
   });
 
   // 필터 변경 시 페이지·누적 데이터 리셋
@@ -65,6 +74,15 @@ export default function DisclosuresFeedPage() {
       setAllItems([]);
     }
   }, [filter]);
+
+  // 검색어 변경 시 페이지·누적 데이터 리셋
+  useEffect(() => {
+    if (qRef.current !== q) {
+      qRef.current = q;
+      setPage(0);
+      setAllItems([]);
+    }
+  }, [q]);
 
   // 새 페이지 데이터 누적 — data + page를 모두 의존성으로 선언해 stale closure 방지
   // (filter 변경 시 setPage(0) 큐가 커밋되기 전에 data effect가 실행되는 race condition 차단)
@@ -87,7 +105,13 @@ export default function DisclosuresFeedPage() {
       {/* 헤더 */}
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground">공시 피드</h1>
-        <p className="mt-1 text-sm text-muted-foreground">보유 종목의 공시를 날짜별로 확인하세요.</p>
+        {q ? (
+          <p className="mt-1 text-sm text-muted-foreground">
+            <span className="font-bold text-foreground">'{q}'</span> 검색 결과
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">보유 종목의 공시를 날짜별로 확인하세요.</p>
+        )}
       </div>
 
       {/* 필터 칩 — overflow-x-auto가 세로도 클리핑하므로 선택 링(ring-offset)이 잘리지 않게 py 여백 확보.
@@ -155,7 +179,9 @@ export default function DisclosuresFeedPage() {
 
           {!isLoading && !isError && disclosures.length === 0 && (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              {filter === "ALL" ? "아직 공시가 없습니다." : `${FILTERS.find((f) => f.value === filter)?.label} 공시가 없습니다.`}
+              {filter === "ALL"
+                ? (q ? `'${q}' 검색 결과가 없습니다.` : "아직 공시가 없습니다.")
+                : `${FILTERS.find((f) => f.value === filter)?.label} 공시가 없습니다.`}
             </div>
           )}
 
@@ -203,5 +229,20 @@ export default function DisclosuresFeedPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function DisclosuresFeedPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col gap-6">
+        <div>
+          <div className="h-8 w-24 rounded-lg bg-muted animate-pulse" />
+          <div className="mt-1 h-4 w-48 rounded bg-muted animate-pulse" />
+        </div>
+      </div>
+    }>
+      <DisclosuresFeedContent />
+    </Suspense>
   );
 }

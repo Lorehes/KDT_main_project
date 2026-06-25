@@ -4,9 +4,11 @@
 //   useDisclosureAnalysis: opts.enabled(R7) + 404 retry 차단 추가 — 분析 미완료 공시에 즉시 "분析 대기 중" 표시.
 //   useDisclosure/useDisclosureAnalysis: refetchOnWindowFocus=false — 공시 상세는 거의 불변, 포커스 복귀 시 불필요 refetch 차단.
 //   useDisclosures: staleTime 60s — 피드 목록은 60초 내 신규 공시 추가 허용 범위로 판단.
+//   DisclosureListParams.q 추가: queryKey에 params 객체 전체가 포함되므로 q 변경 시 자동으로 다른 캐시 키 생성.
 // [수정 시 고려사항] 티어 미달 필드는 API에서 제외되어 반환됨(undefined). TierGate 컴포넌트가 처리.
 //   useDisclosureAnalysis의 404 retry=false: 분析 미완료(정상)는 재시도 않음. 5xx 등 실 오류는 3회 재시도.
 //   providers.tsx의 전역 staleTime이 제거됨 — 각 훅의 명시적 staleTime 필수.
+//   q 빈 문자열은 URLSearchParams에 "q=" 로 전송 — BE에서 isBlank() 처리로 필터 없음 보장.
 
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiClient, ApiException } from "./client";
@@ -72,6 +74,8 @@ export interface DisclosureListParams {
   page?: number;
   size?: number;
   sort?: string;
+  /** 공시 제목·회사명 키워드 검색 (R1). 빈 문자열은 서버에서 null 처리. */
+  q?: string;
 }
 
 // ─── 설정 ────────────────────────────────────────────────────────────────────
@@ -90,7 +94,12 @@ export const EXPECTED_REACTION_CONFIG: Record<ExpectedReaction, { label: string;
 
 export function useDisclosures(params: DisclosureListParams = {}) {
   const query = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => v !== undefined && query.set(k, String(v)));
+  Object.entries(params).forEach(([k, v]) => {
+    if (v === undefined) return;
+    // 빈 문자열 q는 전송 생략 — BE에서도 isBlank() 처리하나 불필요한 param 제거
+    if (k === "q" && String(v).trim() === "") return;
+    query.set(k, String(v));
+  });
 
   return useQuery({
     queryKey: ["disclosures", params],
