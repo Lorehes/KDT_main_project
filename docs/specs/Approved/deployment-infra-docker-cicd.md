@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-25
 updated: 2026-06-25
 ---
 
 # 배포 인프라 Spec (Docker·클라우드·CI/CD)
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-06-25, dc-tech-review 승인)
 > 선행 Spec: [[llm-production-switch]] — Ollama 컨테이너 구성과 연계
 > 관련 마일스톤: M4 (6/25~6/29) — 크리티컬 패스
 
@@ -142,4 +142,65 @@ updated: 2026-06-25
 - Ollama 포함 시 → **t3.large(8GB, ~$60/월)** 이상
 - Cloud LLM 전환 시 → t3.medium(4GB, ~$30/월) 가능
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-06-25)
+
+### 아키텍처 분해
+
+- **영향 레이어**: infra(신규 파일), backend(Dockerfile), frontend(Dockerfile + next.config.ts), CI(.github/workflows/)
+- **수정 대상**:
+  - `frontend/next.config.ts` — `output: 'standalone'` 추가 (P0, 미설정 시 Dockerfile 빌드 실패)
+  - `.gitignore` — `!.env.prod.example` 예외 추가
+- **신규 파일**: `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.prod.yml`, `.env.prod.example`, `.github/workflows/deploy.yml`, `nginx/dartcommons.conf`, `docs/운영가이드.md`
+- **DB 변경**: 없음 (Flyway V23 유지)
+- **외부 계약**: AWS EC2, 도메인/SSL, Docker Hub/GHCR — 수동 ops (운영가이드 체크리스트)
+
+### 발견된 Spec 불일치 (구현 전 수정 사항)
+
+| 항목 | Spec 현재 | 올바른 값 | 근거 |
+|------|-----------|-----------|------|
+| R4 환경변수 `OLLAMA_BASE_URL` | `.env.prod.template`에 명시 | `LLM_BASE_URL` | `llm-production-switch` 커밋 `08af22b` — `OLLAMA_BASE_URL` → `LLM_BASE_URL` 변경 완료 |
+| R4 환경변수 `LLM_PROVIDER` | 명시됨 (올바름) | + `OPENROUTER_API_KEY` 추가 필요 | OpenRouter 전환 시 필수 |
+| R4 `NEXT_PUBLIC_API_BASE_URL` | `.env.prod.template`에 명시 | `NEXT_PUBLIC_API_URL` | `next.config.ts:21` `process.env.NEXT_PUBLIC_API_URL`이 코드 SSOT — CSP connect-src에 직접 사용 |
+| R4 `.env.prod.template` 파일명 | `.env.prod.template` | `.env.prod.example` | `.gitignore`의 `.env.*` 패턴에 차단됨. `!.env.example` 예외 패턴에 맞게 `.env.prod.example`로 통일 |
+| R5 서버 사양 | t3.large(8GB) 추천 (Ollama 전제) | **t3.medium(4GB, ~$30/월) 가능** | OpenRouter Cloud LLM 전환 완료(커밋 `08af22b`) — EC2에 Ollama 불필요. 비용 ~$30 절감. Ollama 필요 시에만 t3.large 선택 |
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `backend/Dockerfile` 멀티스테이지 빌드 (builder=JDK21/gradle, runtime=JRE21-alpine, appuser) | backend | BE | 중 | - |
+| 2 | `frontend/Dockerfile` + `next.config.ts` `output: 'standalone'` 추가 (node:22-alpine, pnpm, 비루트 유저) | frontend | FE | 중 | - |
+| 3 | `docker-compose.prod.yml` + `.env.prod.example` + `.gitignore` 업데이트 (서비스: postgres/backend/frontend, bind mount, dartcommons-net) | infra | 운영 | 중 | #1, #2 |
+| 4 | `nginx/dartcommons.conf` — `/api/` → BE:8080, `/` → FE:3000, HTTPS redirect placeholder | infra | 운영 | 중 | #3 |
+| 5 | `.github/workflows/deploy.yml` — test → build-push(GHCR) → SSH deploy → actuator/health 폴링 | CI | 운영 | 상 | #1, #2 |
+| 6 | `docs/운영가이드.md` 신규 — EC2 프로비저닝 체크리스트·Docker 설치·도메인/SSL·Secrets 등록·첫 배포·DB 백업 절차 | docs | 문서 | 하 | #3, #4, #5 |
+
+### DB / 마이그레이션 영향
+
+- 변경 없음. Flyway V23이 최신이며 BE 기동 시 자동 적용.
+- `ddl-auto: validate` 유지 — 스키마 불일치 시 부팅 실패로 즉시 감지.
+- 프로덕션 첫 기동 전 **Flyway V1~V23 순차 적용**됨 (빈 DB 기준). 운영가이드에 "첫 배포 전 수동 백업 불필요 확인(신규 서버)" 명시.
+
+### 외부 계약 영향
+
+- DART/KRX/카카오/LLM API 계약 변경 없음.
+- 환경변수는 모두 `.env.prod`(서버 직접 생성, git 미포함)로 주입. GitHub Secrets는 CI/CD용만.
+- `NEXT_PUBLIC_API_URL`은 빌드 시 번들에 포함됨 — `docker-compose.prod.yml`에서 `build.args`로 전달하거나 런타임 주입 방식 선택 필요 (Card #3에서 결정).
+
+### 리스크 & 법적 검토
+
+| 리스크 | 심각도 | 대응 |
+|--------|--------|------|
+| `output: 'standalone'` 미추가 시 FE 빌드 실패 | P0 | Card #2 최우선 처리. 로컬 `docker build` 선검증. |
+| `.env.prod` git 커밋 시 시크릿 유출 | P0 | `.gitignore` `.env.*` 패턴 + `.env.prod.example`만 커밋. CLAUDE.md §7 절대 금지. |
+| `NEXT_PUBLIC_API_URL` 빌드 시 번들 인코딩 | 중 | Next.js `NEXT_PUBLIC_*` 변수는 빌드 타임에 번들에 하드코딩됨. EC2 IP/도메인 확정 후 빌드 또는 런타임 env 방식 검토. |
+| 매수가·보유량 평문 로깅 (배포 후) | P0 | 배포 전 로그 패턴 점검 + 로그 레벨 INFO 확인. AES-256 암호화 이미 적용됨 (user-auth Spec). |
+| GitHub Actions에 EC2 SSH 키 노출 | 중 | GitHub Secrets에만 보관 (`EC2_SSH_KEY`). 키 로테이션 주기 설정. |
+| Flyway 첫 프로덕션 마이그레이션 실패 | 저 | 신규 서버 빈 DB → V1~V23 순차 적용. 실패 시 로그 확인 후 수동 복구. 스테이징 사전 검증 권장. |
+
+### 예상 wave 수
+
+- **1 wave** — 6개 카드 모두 코드/문서 작성(실제 EC2 기동은 ops 수동 단계). 의존 관계상 #1+#2 병렬 → #3 → #4+#5 병렬 → #6 순서.
+- EC2 프로비저닝·도메인·SSL·GitHub Secrets 등록은 **ops 수동 체크리스트**(운영가이드 Card #6)로 분리. 코드 구현과 별도 타임라인.
+
+> **핵심 Gate**: Card #2 (`output: 'standalone'`) + Card #3 (`docker-compose.prod.yml`) 로컬 검증 통과 후 EC2 작업 진입할 것.

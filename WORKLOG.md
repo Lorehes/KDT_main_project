@@ -11,6 +11,40 @@ updated: 2026-06-25
 
 ---
 
+## 2026-06-25 (47차) | deployment-infra-docker-cicd — M4 배포 인프라 Docker+CI/CD
+
+**산출**:
+- Infra(신규): `backend/Dockerfile` — JDK21 빌더→JRE21-alpine 런타임 멀티스테이지. `appuser` 비루트.
+- Infra(신규): `frontend/Dockerfile` — node:22-alpine base→deps→builder→runtime 4스테이지. pnpm@9.15.9 base 스테이지 공용(중복 제거). `NEXT_PUBLIC_API_URL` ARG 빌드타임 주입.
+- Infra(신규): `docker-compose.prod.yml` — postgres/backend/frontend 3서비스. bind mount `/home/ubuntu/data/dartcommons-pg`. 127.0.0.1 포트 바인딩. 메모리 제한(BE 1g, FE 512m). `dartcommons-net` 내부 네트워크. Ollama 주석 처리(Cloud LLM 사용 중).
+- Infra(신규): `.env.prod.example` — `LLM_BASE_URL`·`OPENROUTER_API_KEY`·`NEXT_PUBLIC_API_URL` 등 실제 코드 SSOT 기준 키 일체. `CHANGE_ME_` 프리픽스.
+- Infra(수정): `.gitignore` — `!.env.prod.example` 예외 추가.
+- Infra(신규): `nginx/dartcommons.conf` — 80→443 redirect, `/api/`→BE:8080, `/`→FE:3000. HSTS(1년). TLS 1.2/1.3 + ECDHE. `ssl_session_tickets off`. Let's Encrypt ACME 위치.
+- CI(신규): `.github/workflows/deploy.yml` — test(20m)→build-push GHCR(30m)→SSH deploy+헬스체크(15m). SHA 핀닝(`appleboy/ssh-action@0ff4204`). GITHUB_TOKEN EC2 주입 제거. 미사용 postgres service 제거. H1 롤백 로직→진단 로그+`exit 1`.
+- Docs(신규): `docs/운영가이드.md` — EC2 프로비저닝·Docker설치·GHCR PAT 영구 로그인·SSL/HSTS·GitHub Secrets·수동배포·Flyway확인·DB백업·Ollama 옵션·장애대응.
+- Spec: `docs/specs/Draft/deployment-infra-docker-cicd.md` → `docs/specs/Approved/` (git mv)
+- DevLog: `docs/dev-log/backend.jsonl` + `frontend.jsonl`
+
+**결정**:
+- **`.env.prod.example` 파일명**: `.gitignore`의 `.env.*` 패턴이 `.env.prod.template`을 차단 — `.example`로 통일. `!.env.prod.example` 예외 추가.
+- **Ollama 주석 처리**: `llm-production-switch`에서 OpenRouter Cloud LLM 전환 완료(커밋 08af22b) — EC2에 Ollama 불필요. t3.medium(4GB, ~$30/월) 가능. Ollama 필요 시 docker-compose.prod.yml 주석 해제 + t3.large 업그레이드.
+- **H1 롤백 제거**: `compose down → up --no-recreate`는 같은 `:latest` 이미지 재시작으로 진정한 롤백 불가. 진단 로그 출력 + `exit 1`으로 GitHub 알림 트리거가 더 실용적. 진정한 롤백은 SHA 태그 추적 필요(후속 과제).
+- **GITHUB_TOKEN EC2 주입 제거**: 워크플로 script body에 토큰 인라인 삽입 → EC2 프로세스 목록 일시 노출. 대신 EC2에 `read:packages` PAT를 `~/.docker/config.json`에 영구 저장(운영가이드 §2-5).
+- **메모리 제한**: t3.medium(4GB)에서 BE 1g + FE 512m + postgres ~256m = 총 ~1.75g. 여유 ~2.25g. OOM 방지.
+- **NEXT_PUBLIC_API_URL 빌드타임 고정**: Next.js `NEXT_PUBLIC_*` 변수는 빌드 타임 번들 삽입 — 런타임 env 주입 불가. CI `build-args`에서 GitHub Secrets `NEXT_PUBLIC_API_URL`로 주입. 도메인 변경 시 이미지 재빌드 필수.
+
+**테스트**: `dc-review-code` 9항목 전체 수정(H1·M1~M4·L1~L4). Dockerfiles는 `docker build` 로컬 검증 미실시 — EC2 첫 배포 전 `docker build -t test ./backend` 권장(운영가이드 §3).
+
+**미완료 (다음 세션)**:
+- EC2 프로비저닝 + Docker 설치 (ops 수동 — 운영가이드 §2 체크리스트)
+- GitHub Secrets 등록 (EC2_HOST, EC2_USER, EC2_SSH_KEY, NEXT_PUBLIC_API_URL)
+- 도메인·SSL 설정 (CloudFlare 또는 certbot)
+- EC2에서 `docker compose -f docker-compose.prod.yml up -d` 첫 수동 배포 + Flyway V1~V23 확인
+- layout 컴포넌트 aria-label 미설정 8개 → 별도 이슈 등록 권장
+- `Stage 3 RAG Chroma` — `docs/specs/Draft/analysis-stage3-rag-chroma.md` 대기 중
+
+---
+
 ## 2026-06-25 (45차) | notification-pagination-fe — 알림 센터 더 보기 페이지네이션
 
 **산출**:

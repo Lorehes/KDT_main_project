@@ -37,6 +37,8 @@ const cspDirectives = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // standalone: Docker 배포 필수 — .next/standalone/ 생성. 미설정 시 Dockerfile COPY --from=builder 실패.
+  output: "standalone",
 
   async headers() {
     return [

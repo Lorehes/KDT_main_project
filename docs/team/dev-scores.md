@@ -103,6 +103,7 @@ updated: 2026-06-02
 | 2026-06-24 | Jin | 5ee0632 | chore(spec): hover-capture Spec Approved+dev-log [2/8 S] | Docs | 2 | 8 | S | hover캡처 Spec Approved 전환 |
 | 2026-06-25 | Jin | cc8f11d | feat(frontend): 알림 센터 더 보기 페이지네이션 [6/8 M] | Frontend | 6 | 8 | M | 알림센터 더 보기 페이지네이션 구현 |
 | 2026-06-25 | Jin | 08af22b | feat(infra): OpenRouter LLM 프로덕션 전환+리뷰 8항목 수정 [8/8 M] | Infra/Shared | 8 | 8 | M | OpenRouter 전환+H1/M1/M2/M3/L1~L4 수정 |
+| 2026-06-25 | Jin | b28e4db | feat(infra): M4 배포인프라 Docker+CI/CD+리뷰9항목수정 [8/8 L] | Infra/Frontend/Docs | 8 | 8 | L | M4 배포인프라 Docker+CI/CD 완성 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -110,5 +111,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 2 | 30 | 90 | 8.0 | 6.0 |
+| Jin | 3 | 31 | 91 | 8.0 | 6.0 |
 <!-- SUMMARY:END -->
