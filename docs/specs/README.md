@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-24 (portfolio-csv-upload + csv-euckr-binary-test Done)
+updated: 2026-06-25 (deployment-infra-docker-cicd + llm-production-switch + notification-pagination-fe Done)
 ---
 
 # Specs MOC
@@ -35,6 +35,9 @@ docs/specs/
 ### Approved
 
 ### Done
+- [[deployment-infra-docker-cicd]] — M4 배포 인프라: Dockerfile(BE/FE) + docker-compose.prod + nginx + GitHub Actions CI/CD + 운영가이드 (2026-06-25 Done)
+- [[llm-production-switch]] — 프로덕션 LLM 전환: OpenRouterLlmClient 신규 구현 + 리뷰 8항목 수정 (2026-06-25 Done)
+- [[notification-pagination-fe]] — 알림 센터 더 보기 페이지네이션 FE: cursor 기반 무한스크롤 (2026-06-25 Done)
 - [[portfolio-csv-upload]] — 증권사 CSV 업로드 일괄 등록: 드래그앤드롭 + FE 파싱 + Free 한도 처리 · 방향 A(FE 단독) 확정, Vitest 44/44 (2026-06-24 Done)
 - [[csv-euckr-binary-test]] — parsePortfolioCsv EUC-KR 실인코딩 바이너리 테스트 보강: 성공 경로(0xA1A1) + 폴백 경로(0xFF) + ICU skipIf 가드 (2026-06-24 Done)
 - [[krx-job-test-isolation]] — KRX 배치 잡 테스트 격리: @ConditionalOnProperty + 전역 test disable + B128 HTTPS 전환 (2026-06-24 Done)

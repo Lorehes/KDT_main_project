@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-25
 updated: 2026-06-25
 ---
 
 # 알림 목록 페이지네이션 FE Spec
 
-> 상태: **Approved** (2026-06-25, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-06-25, 구현 완료 cc8f11d)
 > 선행 Spec: [[be-api-alignment-mvp-r1]] (Done) — BE PageResponse 반환 구현 완료
 > 관련 마일스톤: M3 잔여 / MVP 수용 가능(size=20 첫 페이지 제한)
 

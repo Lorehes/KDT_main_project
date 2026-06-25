@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-25
 updated: 2026-06-25
 ---
 
 # 배포 인프라 Spec (Docker·클라우드·CI/CD)
 
-> 상태: Draft → **Approved** (2026-06-25, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-25, 구현 완료 f97f02f)
 > 선행 Spec: [[llm-production-switch]] — Ollama 컨테이너 구성과 연계
 > 관련 마일스톤: M4 (6/25~6/29) — 크리티컬 패스
 

@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-25
 updated: 2026-06-25
 ---
 
 # 프로덕션 LLM 전환 Spec (OpenRouter)
 
-> 상태: **Approved** (2026-06-25, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-06-25, 구현 완료 08af22b)
 > 선행 Spec: [[analysis-stage2-llm]] (Done) — LlmClient 인터페이스·MockLlmClient·OllamaLlmClient 구현 완료
 
 ## 배경 / 목적
