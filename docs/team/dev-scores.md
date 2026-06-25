@@ -102,7 +102,7 @@ updated: 2026-06-02
 | 2026-06-24 | Jin | 432aa37 | feat(skill): dc-review-frontend --auth 인증 모드 확장 [3/8 M] | Docs | 3 | 8 | M | --auth sentinel·login·state 4모드 |
 | 2026-06-24 | Jin | 5ee0632 | chore(spec): hover-capture Spec Approved+dev-log [2/8 S] | Docs | 2 | 8 | S | hover캡처 Spec Approved 전환 |
 | 2026-06-25 | Jin | cc8f11d | feat(frontend): 알림 센터 더 보기 페이지네이션 [6/8 M] | Frontend | 6 | 8 | M | 알림센터 더 보기 페이지네이션 구현 |
-| 2026-06-25 | Jin | 019c08e | feat(infra): OpenRouter LLM 프로덕션 전환+리뷰 8항목 수정 [8/8 M] | Infra/Shared | 8 | 8 | M | OpenRouter 전환+H1/M1/M2/M3/L1~L4 수정 |
+| 2026-06-25 | Jin | 08af22b | feat(infra): OpenRouter LLM 프로덕션 전환+리뷰 8항목 수정 [8/8 M] | Infra/Shared | 8 | 8 | M | OpenRouter 전환+H1/M1/M2/M3/L1~L4 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
