@@ -1,14 +1,17 @@
-// [목적] 알림 이력·설정 API 타입 + TanStack Query 훅 (읽음 처리 포함)
-// [이유] 알림 센터·설정 페이지에서 서버 상태 관리. page/sort 파라미터 추가(spec §1.4 페이지네이션)
-//   V18: is_read 컬럼 + PATCH API 추가 → 로컬 Set 임시 처리를 서버 영속화로 교체
-// [사이드 임팩트] useMarkAsRead/useMarkAllAsRead mutation 성공 시 ["notifications", "unread-count"] 쿼리 invalidate.
+// [목적] 알림 이력·설정 API 타입 + TanStack Query 훅 (읽음 처리·페이지네이션 포함)
+// [이유] 알림 센터·설정 페이지에서 서버 상태 관리. page/size 파라미터로 BE PageResponse 페이지네이션 지원.
+//   V18: is_read 컬럼 + PATCH API 추가 → 로컬 Set 임시 처리를 서버 영속화로 교체.
+//   notification-pagination-fe Spec: NotificationPage 타입 추가, useNotifications 반환 타입을
+//   apiClient<NotificationPage>로 전환 — total_pages(snake_case)로 hasNext 판별 지원.
+// [사이드 임팩트] useNotifications 반환 타입이 { content } → NotificationPage로 확장됨.
+//   호출 측(notifications/page.tsx)은 data?.page.total_pages로 hasNext 판별 가능.
+//   BE sort는 createdAt DESC 고정(NotificationController 주석 참조) — sort 파라미터 전달 불필요.
+//   useMarkAsRead/useMarkAllAsRead mutation 성공 시 ["notifications", "unread-count"] 쿼리 invalidate.
 //   useUnreadCount: staleTime 30초 — TopBar 벨 뱃지 실데이터. WebSocket 도입 시 대체 가능.
-//   useNotifications: staleTime 30초 + refetchOnWindowFocus:true — 알림 목록은 즉시성 우선.
-//   useNotificationSettings: staleTime 5분 — 설정은 자주 변경되지 않음. refetchOnWindowFocus:true 유지.
-//   useUpdateNotificationSettings: onSuccess → 쿼리 무효화 + Sonner toast.success("저장됐습니다") / onError → toast.error.
-//   useTestNotification onError → Sonner toast.error 발화.
-// [수정 시 고려사항] useTestNotification은 설정 검증용 — 실제 알림 발송 트리거.
-//   WebSocket 연결 시 useUnreadCount 폴링 → 서버 푸시 이벤트 구독으로 교체.
+//   useNotificationSettings: staleTime 5분 — 설정은 자주 변경되지 않음.
+//   useUpdateNotificationSettings: onSuccess → 쿼리 무효화 + Sonner toast.success / onError → toast.error.
+// [수정 시 고려사항] WebSocket 연결 시 useUnreadCount 폴링 → 서버 푸시 이벤트 구독으로 교체.
+//   size 기본값(20)은 BE NotificationController @RequestParam defaultValue와 일치 — 변경 시 동기 필요.
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -42,19 +45,25 @@ export interface NotificationSettings {
 export interface NotificationListParams {
   size?: number;
   page?: number;
-  sort?: string;
+}
+
+/** BE PageResponse<NotificationDto> 응답 구조.
+ *  page 메타는 snake_case — PageResponse.PageMeta @JsonProperty 직렬화와 1:1 대응.
+ *  disclosures.ts DisclosurePage와 동일 패턴. */
+export interface NotificationPage {
+  content: Notification[];
+  page: { number: number; size: number; total_elements: number; total_pages: number };
 }
 
 export function useNotifications(params?: NotificationListParams) {
   const query = new URLSearchParams();
-  if (params?.size !== undefined)  query.set("size",  String(params.size));
-  if (params?.page !== undefined)  query.set("page",  String(params.page));
-  if (params?.sort !== undefined)  query.set("sort",  params.sort);
+  if (params?.size !== undefined) query.set("size", String(params.size));
+  if (params?.page !== undefined) query.set("page", String(params.page));
   const qs = query.toString() ? `?${query}` : "";
 
   return useQuery({
     queryKey: ["notifications", params],
-    queryFn: () => apiClient<{ content: Notification[] }>(`/notifications${qs}`),
+    queryFn: () => apiClient<NotificationPage>(`/notifications${qs}`),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });

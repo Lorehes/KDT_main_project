@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-25
 updated: 2026-06-25
 ---
 
 # 알림 목록 페이지네이션 FE Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: **Approved** (2026-06-25, dc-tech-review 승인)
 > 선행 Spec: [[be-api-alignment-mvp-r1]] (Done) — BE PageResponse 반환 구현 완료
 > 관련 마일스톤: M3 잔여 / MVP 수용 가능(size=20 첫 페이지 제한)
 
@@ -118,5 +118,70 @@ useEffect(() => {
 
 const hasNext = data?.page ? data.page.number + 1 < data.page.totalPages : false;
 ```
+
+## Tech Review (dc-tech-review · 2026-06-25)
+
+### ⚠️ Spec 정정 사항 (BE 코드 직접 확인 결과)
+
+BE `PageResponse.PageMeta`(`shared/dto/PageResponse.java`)와 `NotificationController`(`user/controllers/`)를 직접 읽고 확인한 결과, Spec 본문의 가정 2건이 실제와 다름:
+
+1. **[필드명 오류 — 중요]** Spec R1/R3은 `totalPages`·`totalElements`(camelCase)로 가정했으나, **실제 BE 응답은 snake_case** — `total_pages`·`total_elements`. `PageResponse.PageMeta`가 `@JsonProperty("total_pages")`/`@JsonProperty("total_elements")`로 직렬화. 이미 `disclosures.ts`의 `DisclosurePage`가 동일하게 snake_case로 정의돼 있음.
+   - 올바른 타입:
+     ```typescript
+     export interface NotificationPage {
+       content: Notification[];
+       page: { number: number; size: number; total_elements: number; total_pages: number };
+     }
+     ```
+   - 올바른 hasNext 판별:
+     ```typescript
+     const meta = data?.page;
+     const hasNext = meta ? meta.number + 1 < meta.total_pages : false;  // total_pages (snake)
+     ```
+
+2. **[sort 파라미터 미지원]** `NotificationController.list()`는 `page`·`size`만 받고 **`sort`는 바인딩하지 않음** — `createdAt DESC` 고정(sort 필드 인젝션 방지, L26 주석). FE `NotificationListParams.sort`를 보내도 BE가 무시하므로 무해하나, **R5에서 sort 전달은 불필요**. 혼선 방지 위해 `useNotifications` 호출 시 sort 미전달 권장.
+
+### 아키텍처 분해
+
+- **영향 레이어**: frontend 단독 (`lib/api/notifications.ts` + `app/(app)/notifications/page.tsx`). BE·DB 변경 없음.
+- **신규**: `NotificationPage` 타입 (disclosures.ts `DisclosurePage` 패턴 복제)
+- **수정**: `useNotifications` 반환 타입, `notifications/page.tsx` 누적 state + 더 보기 버튼
+- **재사용 자산**:
+  - `disclosures.ts:59-62` `DisclosurePage` — 타입 구조 1:1 복제 대상 (snake_case 확정 SSOT)
+  - `notifications/page.tsx`의 `groupByDate`·필터·`useDelayedLoading` — 그대로 유지
+  - `PageResponse<NotificationResponse>` (BE) — FE 타입의 SSOT
+
+### 작업 카드
+
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `NotificationPage` 타입 추가 (snake_case) + `useNotifications` 반환 타입 `apiClient<NotificationPage>`로 변경 | frontend/lib | FE | 하 | - |
+| 2 | `notifications/page.tsx` 누적 state(`allItems`) + `page` state + append useEffect | frontend/app | FE | 중 | #1 |
+| 3 | "더 보기" 버튼 UI (hasNext 판별 + disabled/스피너 + aria-label/aria-busy) | frontend/app | FE | 하 | #2 |
+| 4 | 클라이언트 필터(ALL/UNREAD/POSITIVE/NEGATIVE)를 누적 `allItems`에 적용 확인 + markAsRead 무효화 시 page=0 리셋 동작 검증 | frontend/app | FE | 중 | #2 |
+
+### DB / 마이그레이션 영향
+
+- **없음**. BE PageResponse 이미 반환 중. Flyway 마이그레이션 불필요.
+
+### 외부 계약 영향
+
+- **없음**. DART/KRX/카카오/LLM 무관. 자체 REST `GET /api/v1/notifications` 계약 변경 없음 (이미 page/size 지원).
+
+### 리스크 & 법적 검토
+
+- **[상태 동기화 — 중]** `markAsRead`/`markAllAsRead` mutation이 `["notifications"]` 쿼리를 invalidate하면 page=0부터 재조회 → 누적 `allItems` 리셋됨. MVP 수용 가능(읽음 처리 후 첫 페이지 복귀는 자연스러운 UX). 단 사용자가 여러 페이지 로드 후 읽음 처리 시 스크롤 위치 손실 — 정밀 해결(optimistic update)은 후속 분리.
+- **[필터 정합성 — 중]** UNREAD 필터가 누적되지 않은 페이지의 안읽음을 놓칠 수 있음(서버 페이지네이션 + 클라이언트 필터의 구조적 한계). MVP는 "로드된 범위 내 필터"로 한정, 안내 문구 불필요(기존 동작과 동일 수준).
+- **[자본시장법/개인정보]** 해당 없음 — 알림 메타(corp_name·report_nm·sentiment)만 표시, 매수가·보유량 등 금융 개인정보 미노출. 투자 권유 표현 없음.
+- **[접근성]** R7 더 보기 버튼 `aria-label`·`aria-busy` 필수 (CLAUDE.md §6-5). 키보드 포커스 경로 유지.
+
+### 예상 wave 수
+
+- **1 wave** (단일 PR). 카드 #1→#2→#3→#4 순차, FE 단독 변경. `/dc-review-frontend` Playwright 검증 권장(더 보기 버튼 동작 + 접근성).
+
+### 구현 진입 전 결정 사항
+
+1. **markAsRead 후 리셋 수용 여부** — MVP는 page=0 리셋 수용(권장). 정밀 동기화는 후속.
+2. **size 값** — `useNotifications({ page, size: 20 })` 명시 전달. BE default도 20이라 일치.
 
 <!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->

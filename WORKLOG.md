@@ -2,12 +2,35 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-24
+updated: 2026-06-25
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-25 (45차) | notification-pagination-fe — 알림 센터 더 보기 페이지네이션
+
+**산출**:
+- FE(수정): `frontend/src/lib/api/notifications.ts` — `NotificationPage` 인터페이스 추가(total_pages/total_elements snake_case, BE PageResponse @JsonProperty 정합). `useNotifications` 반환 타입 `apiClient<NotificationPage>`로 전환. `sort` 파라미터 제거(BE NotificationController가 createdAt DESC 고정, sort 바인딩 미지원).
+- FE(수정): `frontend/src/app/(app)/notifications/page.tsx` — `allItems`/`currentPage` state 추가. `useEffect`로 페이지 누적(page=0이면 교체, 이후 append). 더 보기 버튼(`hasNext`, `isLoadingMore`, `Loader2` 스피너, `aria-busy`). 필터·읽음처리 모두 `allItems` 기준. 머리 주석 4종 완성.
+- Spec: `docs/specs/Approved/notification-pagination-fe.md` (Draft→Approved 전환 완료)
+- DevLog: `docs/dev-log/frontend.jsonl` — 페이지네이션 구현 기록
+
+**결정**:
+- **더 보기 버튼 방식 선택(무한스크롤 대신)**: 시니어 페르소나(C) 친화, IntersectionObserver 불필요, MVP 복잡도 최소화. 후속 전환 시 `setCurrentPage` 트리거만 교체.
+- **읽음 처리 후 page=0 리셋**: optimistic update 미적용(MVP 수용). markAsRead/markAllAsRead 성공 시 첫 페이지로 복귀. 정밀 동기화는 후속 분리.
+- **UNREAD 필터 범위 제한**: 서버 페이지네이션 + 클라이언트 필터 구조적 한계. 로드된 페이지 범위 내에서만 동작(MVP 수용). 서버 사이드 필터링은 후속.
+- **total_pages snake_case**: Tech Review에서 api_spec.md(camelCase totalPages)와 BE 실제 코드(@JsonProperty "total_pages") 불일치 발견. BE 코드가 항상 SSOT — BE Read 우선 원칙 재확인.
+
+**테스트**: `pnpm tsc --noEmit` 통과. dc-review-frontend: 종합 등급 B, P0 블로커 없음. 이번 변경 범위 내 접근성 위반 없음.
+
+**미완료 (다음 세션)**:
+- `/dc-tech-review llm-production-switch` — OpenRouter `OpenRouterLlmClient.java` 구현
+- `/dc-tech-review deployment-infra-docker-cicd` — Docker/CI/CD 배포 인프라 (M4 크리티컬 패스, 7/3 런치)
+- layout 컴포넌트 aria-label 미설정 8개 → 별도 이슈 등록 권장
 
 ---
 
