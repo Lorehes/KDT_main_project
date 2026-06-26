@@ -11,6 +11,29 @@ updated: 2026-06-25
 
 ---
 
+## 2026-06-26 (49차) | portfolio-csv-bulk-import — CSV 종목코드 일괄 등록 API + FE 단일 호출
+
+**산출**:
+- BE(신규): `backend/src/main/java/com/dartcommons/user/dto/BulkImportRequest.java` — `@JsonProperty("stock_codes")` + `@NotEmpty` + `@Size(max=50)` record
+- BE(신규): `backend/src/main/java/com/dartcommons/user/dto/BulkImportResult.java` — `added/skippedDuplicate/skippedUnsupported/skippedLimit` 4분류 응답 record
+- BE(수정): `backend/src/main/java/com/dartcommons/user/services/PortfolioService.java` — `bulkImport()` 추가: LinkedHashSet dedup → findByStockCodeIn 배치 조회(N+1 방지) → existing HashSet(O(1) lookup) → Free 슬롯 계산 → 분류 → saveAll() 단일 트랜잭션, `@CacheEvict(portfolioStockCodes)`
+- BE(수정): `backend/src/main/java/com/dartcommons/user/controllers/PortfolioController.java` — `POST /api/v1/portfolios/import` 엔드포인트 추가
+- Test(수정): `backend/src/test/java/com/dartcommons/user/PortfolioIntegrationTest.java` — bulkImport 4케이스 추가 (혼합/중복/Free한도/빈목록), ObjectNode.putArray() 반환 타입 버그 수정
+- FE(수정): `frontend/src/lib/api/portfolios.ts` — `ImportPortfoliosResult` 인터페이스 + `importPortfolios()` async 함수 추가
+- FE(수정): `frontend/src/app/(app)/portfolios/new/page.tsx` — `handleBulkRegister` N-loop(64줄) → 단일 `importPortfolios()` 호출(15줄)로 교체, `apiClient`/`ApiException` import 제거
+- DevLog: `docs/dev-log/backend.jsonl` + `frontend.jsonl`
+
+**결정**:
+- **단일 API vs N-loop**: `POST /portfolios/import` 단일 호출 채택 — N-loop 대비 `skippedFailed` 범주 소거, 단일 트랜잭션, invalidateQueries 1회. FE `catch`에서 5xx 통합 처리.
+- **dedup 방식**: `LinkedHashSet` — 삽입 순서 보존 + 중복 제거 동시 달성. `HashSet` 사용 시 순서 비결정적이므로 분류 결과 순서도 비결정적.
+- **avg_buy_price/quantity 미전송**: CSV에서 금융 PII 절대 미추출 (CLAUDE.md §7). `BulkImportRequest`에 해당 필드 추가 금지.
+- **@CacheEvict 항상 발화**: `toAdd.isEmpty()`여도 `portfolioStockCodes` 캐시 무효화됨. Spring `@CacheEvict`는 조건부 SpEL 미지원(리턴값 기준 `condition` 불가). MVP 범위 내 허용.
+- **ObjectNode.putArray() 타입 오류**: `ArrayNode`를 `ObjectNode`에 직접 할당 불가. `createObjectNode()` 후 별도 `putArray().add(...)` 2-statement 패턴으로 수정.
+
+**테스트**: Testcontainers PostgreSQL 통합 테스트 4케이스. `dc-review-code` Green (Critical/High/Medium 0, Low 5). TypeScript `pnpm tsc --noEmit` 통과. Java 컴파일 통과.
+
+---
+
 ## 2026-06-25 (48차) | topbar-global-search — TopBar 글로벌 검색 (종목명·공시 키워드)
 
 **산출**:

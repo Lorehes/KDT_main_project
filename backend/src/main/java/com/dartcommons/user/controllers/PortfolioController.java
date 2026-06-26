@@ -2,6 +2,8 @@ package com.dartcommons.user.controllers;
 
 import com.dartcommons.shared.enums.Tier;
 import com.dartcommons.shared.security.SecurityUtils;
+import com.dartcommons.user.dto.BulkImportRequest;
+import com.dartcommons.user.dto.BulkImportResult;
 import com.dartcommons.user.dto.PortfolioRequest;
 import com.dartcommons.user.dto.PortfolioResponse;
 import com.dartcommons.user.dto.PortfolioSummaryResponse;
@@ -22,6 +24,8 @@ import java.util.List;
  *               GET/{id}/PUT/{id}/DELETE/{id}: IDOR 방지(403) — userId 스코프 쿼리.
  * [수정 시 고려사항] 대량 포트폴리오 목록이 필요하면 GET /portfolios에 페이지네이션 추가.
  *                  tier 기반 제한을 DB 레벨로 내리려면 TRIGGER 또는 CHECK 제약 추가 필요.
+ *                  POST import 엔드포인트는 literal "import" 경로 — Spring이 Long 타입 /{id}와 분리 처리하므로 충돌 없음.
+ *                  2026-06-26 Lorehes: POST /import(일괄 등록) 추가 — BulkImportRequest/BulkImportResult 신규.
  */
 @RestController
 @RequestMapping("/api/v1/portfolios")
@@ -47,6 +51,15 @@ public class PortfolioController {
     @GetMapping("/{id}")
     public PortfolioResponse get(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
         return portfolioService.getPortfolio(userId, id);
+    }
+
+    /** CSV 종목코드 일괄 등록 — literal "import"로 /{id}(Long 타입)와 충돌 없음. */
+    @PostMapping("import")
+    public BulkImportResult importBulk(@AuthenticationPrincipal Long userId,
+                                       Authentication authentication,
+                                       @Valid @RequestBody BulkImportRequest request) {
+        Tier tier = SecurityUtils.extractTier(authentication);
+        return portfolioService.bulkImport(userId, request.stockCodes(), tier);
     }
 
     @PostMapping

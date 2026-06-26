@@ -5,13 +5,14 @@
 // [사이드 임팩트] usePortfolios·useDeletePortfolio 쿼리. 삭제 후 ["portfolios"] 자동 무효화.
 //   activeIndex state로 ArrowDown/Up/Enter 키보드 네비. id="stock-option-${i}" (Combobox의 sc-option과 충돌 없음).
 //   searchResults 변경 시 activeIndex 리셋(useEffect). 활성 옵션 scrollIntoView(nearest).
-//   CSV 업로드: parsePortfolioCsv → 종목코드 추출 → 확인 UI → apiClient 순차 POST → invalidateQueries 1회.
+//   CSV 업로드: parsePortfolioCsv → 종목코드 추출 → 확인 UI → importPortfolios() 단일 호출 → invalidateQueries 1회.
 //   CSV 개인정보 보호: 종목코드만 추출해 POST — 매수가·수량은 절대 추출·전송·로그 금지(CLAUDE.md §7).
 // [수정 시 고려사항] Free 3종목 초과 시 422 BUSINESS_RULE_VIOLATION — atLimit에 isLoading 포함.
 //   매수가·수량 console.log 절대 금지(금융 개인정보). 종목 선택 후 /portfolios/add?code=...&name=... 라우팅.
 //   Enter 선택 시 atLimit 체크 필수(disabled 상태와 동일 처리). stock-option prefix는 StockSearchCombobox와 맞출 것.
-//   CSV 일괄 등록 후 invalidateQueries 1회 — useCreatePortfolio 루프 시 N회 리페치 발생(portfolios.ts 주석 참고).
-//   방향 B(POST /portfolios/bulk) 전환 시 handleBulkRegister를 단일 API 호출로 교체하면 됨.
+//   importPortfolios 5xx 완전 실패 시 toast.error 전체 오류 처리 — skippedFailed 범주 消滅(단일 호출로 대체).
+//   ImportPortfoliosResult 카테고리 추가 시 handleBulkRegister parts 배열 분기도 동기화.
+//   2026-06-26 Lorehes: handleBulkRegister N-loop 제거 → importPortfolios() 단일 호출로 교체, apiClient/ApiException import 제거.
 
 import { useCallback, useState, useRef, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,12 +20,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Search, Upload, X, CircleHelp } from "lucide-react";
-import { usePortfolios, useDeletePortfolio } from "@/lib/api/portfolios";
+import { usePortfolios, useDeletePortfolio, importPortfolios } from "@/lib/api/portfolios";
 import { useStockSearch } from "@/lib/api/stocks";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { useDebounce } from "@/lib/hooks/useDebounce";
-import { apiClient, ApiException } from "@/lib/api/client";
 import { parsePortfolioCsv } from "@/lib/csv/parsePortfolioCsv";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -171,64 +171,23 @@ export default function PortfoliosNewPage() {
 
   const handleBulkRegister = useCallback(async () => {
     const toRegister = csvItems.filter(i => !i.isDuplicate && i.checked).map(i => i.code);
-    if (!toRegister.length) {
-      resetCsvState();
-      return;
-    }
+    if (!toRegister.length) { resetCsvState(); return; }
     setCsvPhase("registering");
-
-    const added: string[] = [];
-    const skippedDuplicate: string[] = csvItems.filter(i => i.isDuplicate).map(i => i.code);
-    const skippedUnsupported: string[] = [];
-    const skippedFailed: string[] = []; // 네트워크 오류 등 비-ApiException 실패
-    // Codes user did not select (Free tier over-quota)
-    const skippedLimit: string[] = csvItems.filter(i => !i.isDuplicate && !i.checked).map(i => i.code);
-
-    for (let idx = 0; idx < toRegister.length; idx++) {
-      const code = toRegister[idx];
-      try {
-        await apiClient<unknown>("/portfolios", {
-          method: "POST",
-          // stock_code only — avg_buy_price/quantity NOT sent (CSV financial PII protection)
-          body: JSON.stringify({ stock_code: code }),
-        });
-        added.push(code);
-      } catch (e) {
-        if (e instanceof ApiException) {
-          if (e.body.status === 409) {
-            // Duplicate detected by BE (concurrent registration edge case)
-            skippedDuplicate.push(code);
-          } else if (e.body.status === 422 || e.body.code === "BUSINESS_RULE_VIOLATION") {
-            // Free limit reached unexpectedly (e.g. concurrent manual registration)
-            skippedLimit.push(...toRegister.slice(idx));
-            break;
-          } else {
-            // 400 = unsupported stock (not in stocks master: 코스피200+코스닥150)
-            skippedUnsupported.push(code);
-          }
-        } else {
-          // 네트워크 타임아웃·DNS 오류 등 — 침묵 실패 방지를 위해 집계 후 토스트에 포함
-          skippedFailed.push(code);
-        }
-      }
+    try {
+      // stock_codes only — avg_buy_price/quantity NOT sent (CSV financial PII protection, CLAUDE.md §7)
+      const result = await importPortfolios(toRegister);
+      await qc.invalidateQueries({ queryKey: ["portfolios"] });
+      const parts: string[] = [];
+      if (result.added.length)               parts.push(`${result.added.length}종목 등록됨`);
+      if (result.skipped_duplicate.length)   parts.push(`${result.skipped_duplicate.length} 중복`);
+      if (result.skipped_unsupported.length) parts.push(`${result.skipped_unsupported.length} 미지원`);
+      if (result.skipped_limit.length)       parts.push(`${result.skipped_limit.length} 한도 초과`);
+      result.added.length > 0
+        ? toast.success(parts.join(" · "))
+        : toast.info(parts.join(" · ") || "등록된 종목이 없습니다.");
+    } catch {
+      toast.error("일괄 등록에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
-
-    // 1 invalidateQueries after loop — avoids N re-fetches from per-call invalidation
-    await qc.invalidateQueries({ queryKey: ["portfolios"] });
-
-    const parts: string[] = [];
-    if (added.length) parts.push(`${added.length}종목 등록됨`);
-    if (skippedDuplicate.length) parts.push(`${skippedDuplicate.length} 중복`);
-    if (skippedUnsupported.length) parts.push(`${skippedUnsupported.length} 미지원`);
-    if (skippedLimit.length) parts.push(`${skippedLimit.length} 한도 초과`);
-    if (skippedFailed.length) parts.push(`${skippedFailed.length} 오류`);
-
-    if (added.length > 0) {
-      toast.success(parts.join(" · "));
-    } else {
-      toast.info(parts.length ? parts.join(" · ") : "등록된 종목이 없습니다.");
-    }
-
     resetCsvState();
   }, [csvItems, qc, resetCsvState]);
 

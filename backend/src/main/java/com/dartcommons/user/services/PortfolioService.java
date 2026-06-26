@@ -5,6 +5,7 @@ import com.dartcommons.shared.enums.Tier;
 import com.dartcommons.stocks.entities.Stock;
 import com.dartcommons.stocks.services.StockMasterService;
 import com.dartcommons.stocks.services.StockPriceProvider;
+import com.dartcommons.user.dto.BulkImportResult;
 import com.dartcommons.user.dto.PortfolioRequest;
 import com.dartcommons.user.dto.PortfolioResponse;
 import com.dartcommons.user.dto.PortfolioSummaryResponse;
@@ -19,6 +20,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,12 +40,15 @@ import java.util.stream.Collectors;
  *               portfolios.stock_code는 stocks.stock_code FK(DB RESTRICT) — 미등록 종목 저장 시 DB 에러.
  *               애플리케이션 계층에서 stockMasterService.findByStockCode()로 사전 검증해 DB 에러 대신 400 반환.
  *               avgBuyPrice/quantity가 null이면 암호화 없이 null byte[] 저장 — avg_buy_price_enc/quantity_enc는 nullable(V3).
- *               @CacheEvict 위치: create/delete만(stock_code 변경). update는 avg_buy_price·quantity·memo만 변경 — evict 불필요.
+ *               @CacheEvict 위치: create/delete/bulkImport(stock_code 변경). update는 avg_buy_price·quantity·memo만 변경 — evict 불필요.
+ *               bulkImport()는 saveAll() 단일 트랜잭션 — 분류(toAdd/dup/unsupported/limit)는 캐시 기반이므로 트랜잭션 실패 시 분류 결과와 DB 불일치 없음.
  * [수정 시 고려사항] Free→Pro 업그레이드 시 countByUserId() 재검사 불필요(이미 등록된 종목 유지).
  *                  동시 요청 경쟁 조건: @Transactional + DB UNIQUE(user_id, stock_code) 이중 방어.
  *                  avg_buy_price·quantity는 DB 정렬/집계 불가 — 손익계산은 복호화 후 앱 계층에서만.
  *                  listPortfolios() bulk IN 절은 portfolios 행이 수천 건 이상이면 페이지네이션 도입 검토.
  *                  summarize()는 복호화 후 즉시 계산 — 중간 값 절대 로그 출력 금지.
+ *                  bulkImport() Free 슬롯 계산은 existing.size() 기준 — 동시 요청 시 DB UNIQUE 제약이 2차 방어선.
+ *                  2026-06-26 Lorehes: bulkImport() 추가 — CSV 종목코드 일괄 등록(N+1 방지·dedup·tier 슬롯 분류).
  */
 @Service
 @Transactional
@@ -144,6 +151,52 @@ public class PortfolioService {
         String corpName = stockMasterService.findByStockCode(e.getStockCode())
                 .map(Stock::getCorpName).orElse(null);
         return toResponse(e, corpName);
+    }
+
+    /**
+     * CSV 종목코드 일괄 등록 — 마스터 일괄 조회(N+1 방지) → 중복·미지원·한도 분류 → saveAll() 단일 트랜잭션.
+     * avg_buy_price_enc/quantity_enc는 null 고정 — CSV에서 금융 PII 미추출(CLAUDE.md §7).
+     */
+    @CacheEvict(value = "portfolioStockCodes", key = "#userId")
+    public BulkImportResult bulkImport(Long userId, List<String> stockCodes, Tier tier) {
+        // 입력 dedup — FE가 중복 코드를 보낼 경우 saveAll() 시 DB UNIQUE 위반 방지
+        List<String> deduped = new ArrayList<>(new LinkedHashSet<>(stockCodes));
+
+        // 1. 마스터 일괄 조회 (findByStockCodeIn 캐시 TTL 4h, N+1 방지)
+        Map<String, String> masterMap = stockMasterService.findByStockCodeIn(deduped).stream()
+                .collect(Collectors.toMap(Stock::getStockCode, Stock::getCorpName, (a, b) -> a));
+
+        // 2. 기존 포트폴리오 코드 Set — 스칼라 프로젝션으로 암호화 컬럼 로드 없음
+        Set<String> existing = new HashSet<>(portfolioRepository.findStockCodesByUserId(userId));
+
+        // 3. Free 슬롯 계산 — existing.size()는 현재 등록된 종목 수(트랜잭션 내 원자적 재검사)
+        int remainingSlots = (tier == Tier.FREE)
+                ? Math.max(0, FREE_TIER_LIMIT - existing.size())
+                : Integer.MAX_VALUE;
+
+        // 4. 코드별 분류
+        List<String> toAdd       = new ArrayList<>();
+        List<String> dupList     = new ArrayList<>();
+        List<String> unsupported = new ArrayList<>();
+        List<String> limitList   = new ArrayList<>();
+        int addedCount = 0;
+        for (String code : deduped) {
+            if (!masterMap.containsKey(code)) { unsupported.add(code); continue; }
+            if (existing.contains(code))      { dupList.add(code);     continue; }
+            if (addedCount >= remainingSlots) { limitList.add(code);   continue; }
+            toAdd.add(code);
+            addedCount++;
+        }
+
+        // 5. 유효 코드 일괄 저장 — avg_buy_price_enc/quantity_enc null(금융 PII 미수집)
+        if (!toAdd.isEmpty()) {
+            List<PortfolioEntity> entities = toAdd.stream()
+                    .map(code -> PortfolioEntity.builder().userId(userId).stockCode(code).build())
+                    .toList();
+            portfolioRepository.saveAll(entities);
+        }
+
+        return new BulkImportResult(toAdd, dupList, unsupported, limitList);
     }
 
     @CacheEvict(value = "portfolioStockCodes", key = "#userId")

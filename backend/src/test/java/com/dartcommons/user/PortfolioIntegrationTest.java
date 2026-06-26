@@ -377,6 +377,92 @@ class PortfolioIntegrationTest {
 
     // ── 그룹 A: 캐시 검증 ────────────────────────────────────────────────────
 
+    // ── 벌크 임포트 ────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("bulkImport — 2개 유효 + 1개 미지원 → added 2·skipped_unsupported 1·나머지 0")
+    void bulkImport_mixedCodes_classifiesCorrectly() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        // 005930(삼성전자), 000660(SK하이닉스) — V10 seed_stocks에 존재
+        // INVALID000 — 마스터에 없음 → skipped_unsupported
+        ObjectNode body = objectMapper.createObjectNode();
+        body.putArray("stock_codes").add("005930").add("000660").add("INVALID000");
+
+        String resp = mockMvc.perform(post("/api/v1/portfolios/import")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.toString()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("added").size()).isEqualTo(2);
+        assertThat(json.get("skipped_unsupported").size()).isEqualTo(1);
+        assertThat(json.get("skipped_duplicate").size()).isZero();
+        assertThat(json.get("skipped_limit").size()).isZero();
+    }
+
+    @Test
+    @DisplayName("bulkImport — 이미 등록된 코드 포함 → skipped_duplicate에 분류")
+    void bulkImport_duplicateCode_classifiedAsSkippedDuplicate() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        createPortfolio(token, "005930");  // 사전 등록
+
+        ObjectNode body = objectMapper.createObjectNode();
+        body.putArray("stock_codes").add("005930").add("000660");
+
+        String resp = mockMvc.perform(post("/api/v1/portfolios/import")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.toString()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("added").size()).isEqualTo(1);
+        assertThat(json.get("skipped_duplicate").size()).isEqualTo(1);
+        assertThat(json.get("skipped_duplicate").get(0).asText()).isEqualTo("005930");
+    }
+
+    @Test
+    @DisplayName("bulkImport — Free 티어 2종목 등록 후 3번째+만 추가 시 한도 초과 분류")
+    void bulkImport_freeTierLimit_skipsOverQuota() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        createPortfolio(token, "005930");
+        createPortfolio(token, "000660");
+        // 402340(삼성SDS)·005380(현대차) — 3번째 슬롯 1개만, 나머지 1개는 skipped_limit
+
+        ObjectNode body = objectMapper.createObjectNode();
+        body.putArray("stock_codes").add("402340").add("005380");
+
+        String resp = mockMvc.perform(post("/api/v1/portfolios/import")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.toString()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode json = objectMapper.readTree(resp);
+
+        assertThat(json.get("added").size()).isEqualTo(1);
+        assertThat(json.get("skipped_limit").size()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("bulkImport — 빈 배열 → 400 Bad Request")
+    void bulkImport_emptyList_returns400() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        ObjectNode body = objectMapper.createObjectNode();
+        body.putArray("stock_codes"); // 빈 배열 → @NotEmpty 위반 → 400
+
+        mockMvc.perform(post("/api/v1/portfolios/import")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.toString()))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ── 그룹 A: 캐시 검증 ────────────────────────────────────────────────────
+
     @Test
     @DisplayName("listPortfolios 2회 연속 호출 — stocksByCodeIn 캐시 히트 (Caffeine)")
     void listPortfolios_secondCall_hitsCacheNotDb() throws Exception {
