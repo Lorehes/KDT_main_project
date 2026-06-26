@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-26
 ---
 
 # 포트폴리오 CSV 일괄 등록 Spec
 
-> 상태: Draft → **Approved** (2026-06-25, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-25) → **Done** (2026-06-26, dc-push f6510f2)
 
 ## 배경 / 목적
 

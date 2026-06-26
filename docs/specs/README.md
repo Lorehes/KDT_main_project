@@ -34,9 +34,9 @@ docs/specs/
 
 ### Approved
 - [[topbar-global-search]] — TopBar 글로벌 검색: Enter → /disclosures?q= 라우팅, BE ILIKE 4쿼리 추가 (2026-06-25 Approved)
-- [[portfolio-csv-bulk-import]] — 포트폴리오 CSV 일괄 등록: POST /portfolios/import 벌크 엔드포인트, FE N루프 → 단일 호출 (2026-06-25 Approved)
 
 ### Done
+- [[portfolio-csv-bulk-import]] — 포트폴리오 CSV 일괄 등록: POST /portfolios/import 벌크 엔드포인트, FE N루프 → 단일 호출 (2026-06-26 Done)
 - [[deployment-infra-docker-cicd]] — M4 배포 인프라: Dockerfile(BE/FE) + docker-compose.prod + nginx + GitHub Actions CI/CD + 운영가이드 (2026-06-25 Done)
 - [[llm-production-switch]] — 프로덕션 LLM 전환: OpenRouterLlmClient 신규 구현 + 리뷰 8항목 수정 (2026-06-25 Done)
 - [[notification-pagination-fe]] — 알림 센터 더 보기 페이지네이션 FE: cursor 기반 무한스크롤 (2026-06-25 Done)
