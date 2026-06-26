@@ -29,7 +29,7 @@ updated: 2026-06-22
 ## Specs (`docs/specs/`)
 
 - [[docs/specs/README|Specs MOC]] — Draft / Approved / Done 현황
-- [[docs/specs/Approved/topbar-global-search|TopBar 글로벌 검색]] — Approved · TopBar Enter → /disclosures?q= 라우팅, BE ILIKE 추가
+- [[docs/specs/Done/topbar-global-search|TopBar 글로벌 검색]] — Done · TopBar Enter → /disclosures?q= 라우팅, BE ILIKE 추가 (2026-06-26)
 - [[docs/specs/Done/portfolio-csv-bulk-import|포트폴리오 CSV 일괄 등록]] — Done · POST /portfolios/import 벌크 엔드포인트, FE N루프 → 단일 호출 (2026-06-26)
 
 ## 프로젝트 일정

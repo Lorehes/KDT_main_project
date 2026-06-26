@@ -33,9 +33,9 @@ docs/specs/
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 페이지네이션(P0) + rcept_dt 형식 수정(P1) + Stage 3/5 null 문서화 (2개 버그, DB 변경 없음)
 
 ### Approved
-- [[topbar-global-search]] — TopBar 글로벌 검색: Enter → /disclosures?q= 라우팅, BE ILIKE 4쿼리 추가 (2026-06-25 Approved)
 
 ### Done
+- [[topbar-global-search]] — TopBar 글로벌 검색: Enter → /disclosures?q= 라우팅, BE ILIKE 4쿼리 추가 (2026-06-26 Done)
 - [[portfolio-csv-bulk-import]] — 포트폴리오 CSV 일괄 등록: POST /portfolios/import 벌크 엔드포인트, FE N루프 → 단일 호출 (2026-06-26 Done)
 - [[deployment-infra-docker-cicd]] — M4 배포 인프라: Dockerfile(BE/FE) + docker-compose.prod + nginx + GitHub Actions CI/CD + 운영가이드 (2026-06-25 Done)
 - [[llm-production-switch]] — 프로덕션 LLM 전환: OpenRouterLlmClient 신규 구현 + 리뷰 8항목 수정 (2026-06-25 Done)

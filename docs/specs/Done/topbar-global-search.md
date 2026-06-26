@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-26
 ---
 
 # TopBar 글로벌 검색 Spec
 
-> 상태: Draft → **Approved** (2026-06-25, dc-tech-review 승인)
+> 상태: Draft → Approved (2026-06-25) → **Done** (2026-06-26, dc-push b1494b5)
 
 ## 배경 / 목적
 
