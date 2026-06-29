@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-06-24
-updated: 2026-06-24
+updated: 2026-06-29
 ---
 
 # Stage 3 RAG — Chroma 벡터 DB 도입 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: **Approved** (2026-06-29, dc-tech-review 승인)
 > 선행 Spec: [[analysis-stage2-llm]] (Done) — Stage 2 LLM 1차 분류 완료, Stage 3는 명시적 범위 외였음.
 
 ## 배경 / 목적
@@ -100,3 +100,76 @@ updated: 2026-06-24
 5. 임베딩 대상 — 공시 본문 전체 vs 청크(`content_text` 길이 분포 확인 필요).
 
 <!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+
+## Tech Review (dc-tech-review · 2026-06-29)
+
+> 검토 방식: Spec의 코드 참조 주장을 실제 소스로 전수 대조(추정 배제). 아래 모두 코드 확인 완료.
+
+### 검증된 Spec 주장 (코드 대조 결과)
+- ✅ `build.gradle`에 LangChain4j/Chroma/embedding 의존성 **전무** → 접근법 A 타당성 확정.
+- ✅ `infrastructure/llm/`에 `LlmClient`(IF) + `OllamaLlmClient`(@Retryable maxAttempts=3, JdkClient 타임아웃, HostWhitelist) + `MockLlmClient` + `OpenRouterLlmClient`(Cloud 선례) 존재 → 클라이언트 격리·재시도 패턴 **그대로 복제 가능**.
+- ✅ `AnalysisOrchestrator` L25/L41 — Stage 2를 `@TransactionalEventListener(AFTER_COMMIT)` + `@Async("analysisExecutor")`로 트리거, "Stage3Analyzer 위임" 확장 지점 명시. Stage 3 연결은 L46 `ifPresent` 이후 체이닝.
+- ✅ `SimilarDisclosureItem` record는 `rceptNo/corpName/rceptDt/priceReaction5dPct`만 보유 — `disclosure_id`·`similarity_score` 부재(Spec과 일치). record 불변 → 신규 정의 필요.
+- ✅ `AnalysisResponse` L92 — `similar_disclosures`는 `null` 하드코딩 + `proPlus ? ... : null` 활성화 TODO **이미 배선됨**. 직렬화 키 `similar_disclosures`(snake_case) 확정. 활성화는 1줄 교체.
+- ✅ `db_schema §4` — 컬렉션 `disclosure_embeddings`, distance=cosine, metadata 8필드, 이중 쿼리 패턴(동일회사+유형 / 동일유형 타사) 명문화. **Flyway 불필요**(Chroma 외부 저장, FK 없음 — §2).
+- ✅ KRX `stock_prices` 테이블 부재 → `price_reaction_5d_pct` 충족 불가(Spec 범위 분리 판단 타당).
+
+### 🔴 신규 발견 (Spec 미포착 — 선결 결정 필요)
+- **[BLOCKER] 임베딩 원천 `content_text`가 항상 null.** `Disclosure.java` L18/L58 주석·필드 확인: 본문(`content_text`)·`attachment_url`은 **Stage 1 범위 밖이라 null 저장(후속 Spec)**. 수집 코드 어디에도 `setContentText`/population 경로 없음. 현재 DB에 채워진 텍스트는 `report_nm`(공시 제목) + `disclosure_type`(룰 분류)뿐.
+  - → Spec R3(본문 임베딩)·R5(적재)·범위경계 "확인필요 5(본문 vs 청크)"가 모두 **존재하지 않는 본문**을 전제. 본문 확보 없이는 Stage 3가 의미 임베딩을 만들 수 없음.
+  - → **결정 옵션**:
+    - **(A1) 제목 임베딩 MVP**: `report_nm`(+`corp_name`+`disclosure_type`) 조합 텍스트를 임베딩. 본문 fetch 불요, 즉시 진행 가능. 유사도 품질 저하(제목 단문) 감수 — 시범 1k 정확도 검증으로 판단.
+    - **(A2) 본문 fetch 선행**: DART 문서원문 API(`document.xml`/뷰어 파싱) → `content_text` 채우는 수집 확장을 **별도 선행 Spec**으로 분리 후 Stage 3 착수.
+  - **권장: A1로 1차 범위 진입**(범위 최소·선례 일관), A2(본문 파이프라인)는 후속 Spec. 단 Tech Review 종료 전 사용자 확정 필요.
+  - **✅ 결정(2026-06-29): A2 — 본문 fetch 선행.** `content_text`를 채우는 **수집 확장(DART 문서원문 API)을 선행 Spec으로 분리**한 뒤 Stage 3 임베딩 착수. 품질 우선·범위 증가 수용. → 본 Spec은 **인프라/격리(Wave 1)는 선행 Spec과 병렬 진행 가능**하나, 임베딩 적재·검색(#7·#11)은 본문 파이프라인 완료에 **블로킹**됨.
+
+### ✅ 결정 사항 (2026-06-29 Tech Review 확정)
+1. **임베딩 원천 = A2(본문 fetch 선행)**: 선행 Spec `disclosure-content-text-fetch`(가칭) 필요 — DART 문서원문 API → `content_text` 채움. **Stage 3 임베딩(#7·#11)의 선결 의존성**. (`content_text` 컬럼은 이미 존재 → DDL 불요, 수집 로직 확장만.)
+2. **Chroma 연동 = 접근법 B(LangChain4j)**: `langchain4j` + `langchain4j-chroma` + 임베딩 모델 모듈 도입. CLAUDE.md §2·통합기획서 "LangChain4j Chroma" 문구와 **일치** → SSOT 완화 불요. 단 아래 주의:
+   - **코드 스타일 이원화**: Stage 2는 RestClient 직접 호출(`OllamaLlmClient`) 유지, Stage 3만 LangChain4j 사용 → 혼재. `infrastructure/chroma`·`infrastructure/llm` 인터페이스(`ChromaClient`/`EmbeddingClient`)로 **LangChain4j를 감싸 도메인 격리**(CLAUDE.md §3-2)는 그대로 유지.
+   - **버전·전이 의존성 관리**: `build.gradle`에 langchain4j BOM/버전 고정 + Spring Boot 3.x 호환 확인 필요(신규 검증 항목).
+   - LangChain4j `EmbeddingModel`(Ollama) + `EmbeddingStore<TextSegment>`(Chroma) 조합으로 #4·#5·#7 구현.
+
+### 아키텍처 분해
+- **영향 레이어**: infra(docker-compose) · backend(infrastructure/chroma·infrastructure/llm·analysis) · backend/test · scripts(data_collection — 시범 백필) · frontend(별도 FE Spec 분리).
+- **신규**: `infrastructure/chroma/{ChromaClient(IF), Chroma 실구현, MockChromaClient, ChromaProperties}` · `infrastructure/llm/{EmbeddingClient(IF), Ollama 임베딩 실구현, Mock}` · `analysis/services/Stage3RagService` · `analysis/dto/SimilarDisclosureItem` v2(또는 신규 record).
+- **수정**: `AnalysisOrchestrator`(Stage 3 위임) · `AnalysisResponse`(L92 매핑 활성화 + stage_reached=3) · `application.yml`(chroma/embedding 블록) · `docker-compose.yml` · `build.gradle`(**접근법 B: langchain4j BOM + langchain4j-chroma + 임베딩 모델 모듈 추가**).
+
+### 작업 카드
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 0 | **선행 Spec `disclosure-content-text-fetch`**(DART 문서원문 API → content_text 채움) — 별도 Spec 분리 | 선행 | BE | 상 | 선결(A2) |
+| 1 | `build.gradle` LangChain4j BOM/버전 고정 + `langchain4j-chroma` + 임베딩 모델 모듈, Spring Boot 3.x 호환 검증 | backend/build | BE | 중 | - |
+| 2 | Chroma 컨테이너 docker-compose 추가(**bind mount** ~/data/dartcommons-chroma, named volume 금지) | infra | BE | 하 | - |
+| 3 | `ChromaProperties` + `application.yml dartcommons.chroma.* / llm.embedding.*`(url/timeout/retries/collection/model/dim) | backend/infra | BE | 하 | #2 |
+| 4 | `ChromaClient`(IF) + LangChain4j `EmbeddingStore<TextSegment>` 래핑 실구현 + `MockChromaClient` (도메인 격리 §3-2) | backend/infra | BE | 중 | #1,#3 |
+| 5 | `EmbeddingClient`(IF) + LangChain4j `EmbeddingModel`(Ollama) 래핑 실구현 + Mock(타임아웃·재시도 가드 R11) | backend/infra | BE(LLM) | 중 | #1,#3 |
+| 6 | `disclosure_embeddings` 컬렉션 부트스트랩(생성/검증, cosine, metadata 스키마 R4) | backend/infra | BE | 중 | #4 |
+| 7 | `SimilarDisclosureItem` v2 record(disclosure_id·similarity_score 추가, price 필드는 KRX 부재로 분리/제외) | backend/analysis/dto | BE | 하 | - |
+| 8 | `Stage3RagService` — 본문 임베딩 upsert(rcept_no **멱등** R5) + 이중 쿼리 검색(R6) + 유사도 임계치 가드(R8) | backend/analysis | BE | 상 | #0,#4,#5,#6,#7 |
+| 9 | `AnalysisOrchestrator` Stage 3 위임 연결(Stage 2 완료 후 체이닝, @Async 풀 영향 검토) | backend/analysis | BE | 중 | #8 |
+| 10 | `AnalysisResponse.similarDisclosures` 매핑 활성화(L92 `proPlus ? ... : null`) + stage_reached=3 기록 | backend/analysis | BE | 하 | #8 |
+| 11 | Mock 단위 테스트(Chroma/Embedding/Stage3RagService — 실 Chroma 통합 제외 R10) | backend/test | BE | 중 | #4,#5,#8 |
+| 12 | 시범 1,000건 백필 스크립트(본문 확보 + 모델·차원 확정 후, 정확도 검증) | scripts/data_collection | BE/PY | 중 | #0,모델확정 |
+
+### DB / 마이그레이션 영향
+- **PostgreSQL Flyway 불필요** — 벡터는 Chroma 외부 저장, FK 없음(db_schema §2/§4 확인). `analysis_results.stage_details(JSONB)`·`stage_reached(short)` 기존 컬럼 재사용으로 RAG 산출 기록 가능 → **스키마 변경 0**.
+- 단 A2(본문 fetch) 채택 시 `content_text` 채움은 컬럼만 이미 존재 → DDL 불요, 수집 로직 변경만. KRX 주가 결합은 본 범위 제외(`stock_prices` 후속).
+
+### 외부 계약 영향
+- 신규: Ollama `/api/embeddings`(임베딩) + Chroma REST(`/api/v1/...` collection CRUD·query). DART/KRX/카카오/LLM 분류 계약 **변경 없음**.
+- 임베딩 **모델·차원 미확정** → 컬렉션 생성 차원 종속. 차원 변경 = 컬렉션 재생성이므로 **확정 전 대량 백필 금지**(시범 1k만).
+
+### 리스크 & 법적 검토
+- **[BLOCKER] content_text 부재**(상단) — 선결 결정 #0 없이는 #6·#7·#11 착수 불가.
+- **[SSOT 정합 — 해소]** 접근법 B 확정으로 CLAUDE.md §2·통합기획서 "LangChain4j Chroma" 문구와 **일치** → 문서 완화 불요. 대신 **build.gradle 버전 고정 + Spring Boot 3.x 호환·전이 의존성 충돌**을 신규 검증 항목으로 추가(#1).
+- **[코드 스타일 이원화]** Stage 2 RestClient 직접 호출 vs Stage 3 LangChain4j 혼재 → `ChromaClient`/`EmbeddingClient` 인터페이스로 LangChain4j를 감싸 도메인 격리는 유지하되, 신규 기여자 혼란 방지를 위해 클라이언트 머리주석에 "Stage 3는 LangChain4j 경유" 명시 필요.
+- **[데이터 보호]** Chroma도 bind mount + 백업(named volume 금지 — [[feedback_data_protection]] 2026-06-04 91k 손실 교훈).
+- **[자본시장법]** "주가 반응" 노출은 본 범위 제외(KRX 부재)이나, 후속 FE에서 "과거 사례·미래 보장 아님" 면책 강제(CLAUDE.md §7).
+- **[환각]** R8 유사도 임계치 가드 필수 — cutoff 기준값(#7) 시범 데이터로 보정.
+
+### 예상 wave 수
+- **선행 (별도 Spec)**: #0 `disclosure-content-text-fetch` — DART 문서원문 → `content_text`. **본 Spec 임베딩의 선결**(A2 결정).
+- **Wave 1 (인프라·격리, 선행과 병렬 가능)**: #1~#7 — LangChain4j 의존성·Chroma 컨테이너·`ChromaClient`/`EmbeddingClient`(LangChain4j 래핑)·컬렉션 부트스트랩·SimilarDisclosureItem v2. 본문 없이도 독립 머지 가능.
+- **Wave 2 (검색·노출)**: #8~#11 — Stage3RagService(본문 임베딩 upsert·이중쿼리·임계치) + Orchestrator 연결 + Response 활성화 + Mock 테스트. **선행 Spec(#0) 완료 후 착수**.
+- **Wave 3 (백필·검증, 선택)**: #12 시범 1k 백필 + 정확도 측정 → 모델/차원/임계치 확정.

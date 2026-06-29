@@ -42,12 +42,20 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
     boolean existsByRceptNo(String rceptNo);
 
     /**
-     * 본문 미fetch 공시 ID 목록 — content_fetched_at IS NULL 인 행.
-     * 최신 공시 우선(rcept_dt DESC). DisclosureContentBackfillService 백필 타겟 조회.
-     * List<Long> 반환으로 엔티티 로드 없이 ID만 수집(93k 규모도 메모리 여유).
+     * 본문 미fetch 공시 ID 청크 — 커서 기반 페이지네이션(content-fetch-backfill-pagination Spec).
+     * lastId=null이면 전체 처음부터, lastId 지정 시 해당 id 이후(id > lastId) 조회.
+     * ORDER BY id ASC + PK 인덱스 range scan — 부분 인덱스(V24 idx_disclosures_content_pending)가 필터 보조.
+     * DisclosureContentBackfillService 커서 루프의 유일한 조회 지점.
      */
-    @Query("SELECT d.id FROM Disclosure d WHERE d.contentFetchedAt IS NULL ORDER BY d.rceptDt DESC")
-    List<Long> findPendingContentFetchIds();
+    @Query("SELECT d.id FROM Disclosure d WHERE d.contentFetchedAt IS NULL AND (:lastId IS NULL OR d.id > :lastId) ORDER BY d.id ASC")
+    List<Long> findPendingContentFetchIds(@Param("lastId") Long lastId, Pageable pageable);
+
+    /**
+     * content_fetched_at IS NULL인 공시 총 건수 — 백필 시작 시 estimated total 산출.
+     * safety cap 계산용이므로 정밀도보다 빠른 스캔이 중요. 부분 인덱스(V24) 활용.
+     */
+    @Query("SELECT COUNT(d.id) FROM Disclosure d WHERE d.contentFetchedAt IS NULL")
+    long countPendingContentFetch();
 
     /**
      * content_text + content_fetched_at을 원자적으로 갱신 — CAS 조건: content_fetched_at IS NULL.

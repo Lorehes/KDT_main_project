@@ -22,6 +22,8 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -156,7 +158,7 @@ class DisclosureContentServiceIT {
         fetched.applyContentFetch("본문", OffsetDateTime.now());
         disclosureRepository.save(fetched);
 
-        List<Long> pendingIds = disclosureRepository.findPendingContentFetchIds();
+        List<Long> pendingIds = disclosureRepository.findPendingContentFetchIds(null, PageRequest.of(0, 100));
 
         assertThat(pendingIds).containsExactly(testDisclosure.getId());
     }

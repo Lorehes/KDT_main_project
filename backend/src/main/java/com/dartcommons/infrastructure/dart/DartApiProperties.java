@@ -13,9 +13,11 @@ import org.springframework.validation.annotation.Validated;
  *               apiKey가 공백이면 DART status=020 반환. @Validated + @NotBlank로 빠른 실패.
  *               documentTimeoutMs 는 document.xml zip(대용량) 전용 — list.json timeoutMs보다 크게 설정.
  *               contentMaxChars 초과 시 DisclosureContentService 계층에서 truncate(원문은 attachment_url 참조).
+ *               contentBackfillChunkSize: DisclosureContentBackfillService 커서 루프 청크 크기.
  * [수정 시 고려사항] base-url 변경 없이 api-key만 교체하면 운영 키 롤링 가능.
  *                  contentBackfillThrottleMs — 93k 백필 시 DART 일일 한도 내 속도 조절.
  *                  DART 일일 호출 한도 실측 전 contentBackfillThrottleMs=1000 이상 권장.
+ *                  contentBackfillChunkSize 조정 시 safety cap(estimated/chunkSize × 2)에 영향 — 너무 크면 단일 청크 DART 부하 증가.
  */
 @ConfigurationProperties("dartcommons.dart")
 @Validated
@@ -29,6 +31,8 @@ public record DartApiProperties(
         /** content_text 최대 글자 수. 초과 시 truncate (임베딩 비용 상한). */
         @DefaultValue("50000") int contentMaxChars,
         /** 백필 요청 간 스로틀 대기(ms). DART 일일 한도 보호. */
-        @DefaultValue("500") long contentBackfillThrottleMs
+        @DefaultValue("500") long contentBackfillThrottleMs,
+        /** 백필 커서 청크 크기. 청크당 DART 호출 건수 상한 — DART 일일 한도·Ollama RPS 맞춤. */
+        @DefaultValue("100") int contentBackfillChunkSize
 ) {
 }

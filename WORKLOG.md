@@ -11,6 +11,30 @@ updated: 2026-06-29
 
 ---
 
+## 2026-06-29 (53차) | content-fetch-backfill-pagination — 커서 워터마크 페이지네이션 + 리뷰 이슈 수정
+
+**산출**:
+- Disclosure(수정): `DisclosureRepository.java` — `findPendingContentFetchIds(Long lastId, Pageable)` 커서 JPQL + `countPendingContentFetch()`
+- Disclosure(수정): `DisclosureContentBackfillService.java` — 전체 ID in-memory 로드 제거 → 워터마크 커서 루프, `ids.getLast()` Java 21, `initialEstimated` 변수명 명확화
+- Infra(수정): `DartApiProperties.java` — `contentBackfillChunkSize` 필드 추가
+- Config(수정): `application.yml` — `content-backfill-chunk-size: ${CONTENT_BACKFILL_CHUNK_SIZE:100}`
+- Test(신규): `DisclosureContentBackfillServiceTest.java` — Mockito 3 시나리오: 2청크 커서 전진, estimated=0 즉시 break, AtomicBoolean CAS 중복 차단
+- Test(수정): `DisclosureContentServiceIT.java` — `findPendingContentFetchIds()` → 신규 (null, PageRequest) 시그니처 정합
+- Spec(전환): `content-fetch-backfill-pagination.md` Draft → Approved
+- Spec(Tech Review 추가): `analysis-stage3-rag-chroma.md` — dc-tech-review 완료
+
+**결정**:
+- **ORDER BY 변경 (rcept_dt DESC → id ASC)**: 커서 기반 범위 스캔은 PK 순 정렬 필수. 최신 우선보다 처리 완결성이 우선 — Tech Review 합의.
+- **safety cap = (initialEstimated / chunkSize + 2) × 2**: estimated=0 시 cap=4 방어, in-flight 추가 공시 수용. 실제 청크 수와 오차 허용(정상).
+- **initialEstimated 변수명**: 백필 진행 중 신규 공시 유입 시 denominator 혼란 방지. 로그에서 "시작 시점 추정치"임을 명확히.
+
+**미완료**:
+- `content-fetch-backfill-resilience` (Draft): 진행률 DB 영속화(재시작 복구) + TaskRejectedException 처리 + 분산 락(Kubernetes). pagination 구현 완료로 last_processed_id 의존 해소됨 — `/dc-tech-review content-fetch-backfill-resilience` 다음 가능.
+- **93k 백필 실행**: `POST /admin/disclosures/content-backfill` — Stage 3 RAG 진입 전 필수. chunkSize=100, throttle=500ms 기본값으로 약 12.7시간 예상. 야간 실행 권장.
+- **Stage 3 RAG**: `analysis-stage3-rag-chroma` Approved — 93k content_text 백필 완료 후 `/dc-implement analysis-stage3-rag-chroma`.
+
+---
+
 ## 2026-06-29 (52차) | disclosure-content-text-fetch — 공시 본문 fetch 파이프라인 + 리뷰 이슈 전량 수정
 
 **산출**:

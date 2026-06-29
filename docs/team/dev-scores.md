@@ -110,6 +110,7 @@ updated: 2026-06-02
 | 2026-06-29 | Jin | 1af21fd | feat(user): 포트폴리오 요약 응답 DTO [5/9 S] | User | 5 | 9 | S | 포트폴리오 요약 응답 DTO |
 | 2026-06-29 | Jin | 9e22ab0 | chore(infra): PostgreSQL15 스키마 권한 init 스크립트 [6/8 S] | Infra | 6 | 8 | S | PostgreSQL15 스키마 권한 init 스크립트 |
 | 2026-06-29 | Jin | 320a6c2 | feat(disclosure): disclosure-content-text-fetch 구현 + 리뷰 이슈 전량 수정 [8/9 L] | Disclosure/Infra/Shared | 8 | 9 | L | 공시 본문 fetch 파이프라인 + 보안 HIGH 6건 |
+| 2026-06-29 | Jin | 1463ed3 | feat(disclosure): 백필 커서 페이지네이션 + 리뷰 수정 [7/9 M] | Disclosure/Infra | 7 | 9 | M | 백필 커서 페이지네이션+단위테스트 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -117,5 +118,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 3 | 35 | 97 | 8.1 | 6.2 |
+| Jin | 4 | 37 | 98 | 8.1 | 6.0 |
 <!-- SUMMARY:END -->
