@@ -111,7 +111,7 @@ updated: 2026-06-02
 | 2026-06-29 | Jin | 9e22ab0 | chore(infra): PostgreSQL15 스키마 권한 init 스크립트 [6/8 S] | Infra | 6 | 8 | S | PostgreSQL15 스키마 권한 init 스크립트 |
 | 2026-06-29 | Jin | 320a6c2 | feat(disclosure): disclosure-content-text-fetch 구현 + 리뷰 이슈 전량 수정 [8/9 L] | Disclosure/Infra/Shared | 8 | 9 | L | 공시 본문 fetch 파이프라인 + 보안 HIGH 6건 |
 | 2026-06-29 | Jin | 1463ed3 | feat(disclosure): 백필 커서 페이지네이션 + 리뷰 수정 [7/9 M] | Disclosure/Infra | 7 | 9 | M | 백필 커서 페이지네이션+단위테스트 |
-| 2026-06-29 | Jin | 8137da6 | feat(disclosure): 백필 잡 추적·탄력성 강화 + 리뷰 7건 수정 [7/9 L] | Disclosure/Infra/Shared | 7 | 9 | L | 백필 잡 추적+탄력성 강화 |
+| 2026-06-29 | Jin | ef03d2d | feat(disclosure): 백필 잡 추적·탄력성 강화 + 리뷰 7건 수정 [7/9 L] | Disclosure/Infra/Shared | 7 | 9 | L | 백필 잡 추적+탄력성 강화 |
 <!-- SCORES -->
 
 ## 기간별 집계
