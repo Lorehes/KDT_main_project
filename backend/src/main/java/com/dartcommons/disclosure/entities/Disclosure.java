@@ -14,9 +14,11 @@ import java.time.OffsetDateTime;
  * [사이드 임팩트] analysis_results(V5)·notifications(V6)가 disclosures.id FK 참조 — 삭제 불가.
  *               stock_code는 stocks(V2)의 FK이나 JPA 관계 없이 String으로 관리(stocks 엔티티 미생성).
  *               비상장 공시(stock_code=null)는 커버 종목 필터에서 skip되므로 실제 null 저장은 없음.
+ *               contentFetchedAt(V24): null → 미시도/일시오류, non-null → fetch 완료(본문없음 포함).
+ *               applyContentFetch() 호출 후 JPA 더티 체킹으로 자동 UPDATE 가능 — 명시적 save() 권장.
  * [수정 시 고려사항] corp_name·report_nm은 DART 원본 그대로 — 서비스 계층이 절대 변형 금지(CLAUDE.md §4).
- *                  content_text(본문)·attachment_url은 Stage 1 범위 밖이라 null 저장(후속 Spec).
  *                  disclosureType은 DisclosureTypeClassifier 룰 결과 — 분류 실패 시 "OTHER".
+ *                  applyContentFetch()는 단순 필드 설정자 — 비즈니스 로직은 DisclosureContentService에 있음.
  */
 @Entity
 @Table(name = "disclosures")
@@ -55,11 +57,11 @@ public class Disclosure {
     @Column(name = "disclosure_type", nullable = false, length = 50)
     private String disclosureType;
 
-    /** 본문 추출 텍스트 — Stage 1 범위 밖, 후속 Spec에서 채움 */
+    /** 공시 본문 평문 — DartDocumentParser 추출. null = 아직 미fetch 또는 fetch 실패. */
     @Column(name = "content_text")
     private String contentText;
 
-    /** 대용량 원문 참조 URL — 후속 Spec */
+    /** 대용량 원문 참조 URL — attachment_url로 사용자에게 제공(전문 직접 노출 금지, api_spec §2.3). */
     @Column(name = "attachment_url", length = 500)
     private String attachmentUrl;
 
@@ -69,10 +71,27 @@ public class Disclosure {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    /**
+     * DART 본문 fetch 완료 시각(V24). null = 미시도 or 일시 오류(재시도 대상).
+     * non-null + contentText=null → fetch 시도했으나 본문 없음(무한 재시도 방지).
+     */
+    @Column(name = "content_fetched_at")
+    private OffsetDateTime contentFetchedAt;
+
     @PrePersist
     private void prePersist() {
         OffsetDateTime now = OffsetDateTime.now();
         if (collectedAt == null) collectedAt = now;
         if (createdAt == null) createdAt = now;
+    }
+
+    /**
+     * DART 원문 본문 fetch 결과를 엔티티에 반영한다.
+     * text=null이면 "fetch 시도했으나 본문 없음" — contentFetchedAt은 기록해 재시도 방지.
+     * 호출 후 repository.save() 또는 JPA 더티 체킹으로 DB 반영.
+     */
+    public void applyContentFetch(String text, OffsetDateTime fetchedAt) {
+        this.contentText = text;
+        this.contentFetchedAt = fetchedAt;
     }
 }

@@ -4,8 +4,10 @@ import com.dartcommons.disclosure.entities.Disclosure;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -38,6 +40,25 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
 
     /** rcept_no가 이미 존재하는지 확인. 중복 발송 방어 1차 게이트(CLAUDE.md §4). */
     boolean existsByRceptNo(String rceptNo);
+
+    /**
+     * 본문 미fetch 공시 ID 목록 — content_fetched_at IS NULL 인 행.
+     * 최신 공시 우선(rcept_dt DESC). DisclosureContentBackfillService 백필 타겟 조회.
+     * List<Long> 반환으로 엔티티 로드 없이 ID만 수집(93k 규모도 메모리 여유).
+     */
+    @Query("SELECT d.id FROM Disclosure d WHERE d.contentFetchedAt IS NULL ORDER BY d.rceptDt DESC")
+    List<Long> findPendingContentFetchIds();
+
+    /**
+     * content_text + content_fetched_at을 원자적으로 갱신 — CAS 조건: content_fetched_at IS NULL.
+     * HIGH-3(TOCTOU) 수정: @Transactional 없는 외부 메서드에서 동시 호출 시 DB 수준 원자성 보장.
+     * 반환값 1 = 갱신 성공, 0 = 다른 스레드가 선점(정상 — no-op).
+     * 영구 실패(DartApiException) 시에도 text=null + fetchedAt=now로 호출해 재시도 방지.
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Disclosure d SET d.contentText = :text, d.contentFetchedAt = :fetchedAt WHERE d.id = :id AND d.contentFetchedAt IS NULL")
+    int casUpdateContent(@Param("id") Long id, @Param("text") String text, @Param("fetchedAt") java.time.OffsetDateTime fetchedAt);
 
     /**
      * 공시 id → stock_code 단일 컬럼 조회. 포트폴리오 소유권 검증에서 전체 엔티티 로드를 피하기 위해 사용.

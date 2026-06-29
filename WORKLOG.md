@@ -2,12 +2,44 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-25
+updated: 2026-06-29
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-29 (52차) | disclosure-content-text-fetch — 공시 본문 fetch 파이프라인 + 리뷰 이슈 전량 수정
+
+**산출**:
+- Infra(신규): `DartDocumentClient.java` — document.xml ZIP fetch, @Retryable(noRetryFor=DartApiException), ZIP 폭탄 2중 방어(10MB cap), ZipEntry 이름 로그 주입 방지, SecretMasker
+- Infra(신규): `DartDocumentParser.java` — EUC-KR 자동 감지, 7단계 markup→text 파이프라인, MAX_RAW_BYTES=5MB, BLOCK_REMOVE `</\\1>` 백레퍼런스 수정, isValidCodePoint() Unicode 검증
+- Infra(수정): `DartApiProperties.java` — documentTimeoutMs/contentMaxChars/contentBackfillThrottleMs 3필드 추가
+- Disclosure(신규): `DisclosureContentService.java` — @Transactional 제거(HTTP 중 커넥션 미점유), casUpdateContent CAS(TOCTOU 방지), 서로게이트 페어 절단 보호
+- Disclosure(신규): `DisclosureContentFetchListener.java` — @TransactionalEventListener(AFTER_COMMIT) + @Async("contentFetchExecutor")
+- Disclosure(신규): `DisclosureContentBackfillService.java` — AtomicBoolean CAS 중복 실행 방지, isRunning()
+- Disclosure(신규): `DisclosureContentBackfillController.java` — POST/GET /admin/disclosures/content-backfill
+- Disclosure(수정): `Disclosure.java` — contentFetchedAt 필드(V24), applyContentFetch()
+- Disclosure(수정): `DisclosureRepository.java` — findPendingContentFetchIds() + casUpdateContent() CAS 메서드
+- DB(신규): `V24__add_content_fetched_at_to_disclosures.sql` — content_fetched_at TIMESTAMPTZ + 조건부 인덱스
+- Shared(수정): `ExecutorConfig.java` — contentFetchExecutor 빈 추가(core=1, max=2, queue=300, awaitTermination=60s)
+- Test(신규): `DartDocumentParserTest.java` — 7 단위 테스트 + 백레퍼런스 정확성 + ZIP 픽스처 테스트
+- Spec(신규): `content-fetch-backfill-pagination.md` (Draft) — 93k in-memory 로드 → 워터마크 커서 청크 전환 계획
+- Spec(신규): `content-fetch-backfill-resilience.md` (Draft) — 진행률 DB 영속화, TaskRejected 처리, 분산 락 계획
+- Spec(전환): `analysis-stage3-rag-chroma.md` Draft → Approved (content_text 백필 선행 조건 충족됨)
+
+**결정**:
+- **CAS UPDATE 패턴**: `WHERE content_fetched_at IS NULL` 원자 UPDATE로 TOCTOU 제거. 동시 호출 시 1건만 성공, 나머지 0 rows — DB 수준 멱등.
+- **@Transactional 제거 (HTTP 호출 경로)**: HTTP 응답 대기 중 DB 커넥션 점유 = 커넥션 풀 고갈 위험. findById()와 casUpdateContent() 각각 Spring Data JPA 개별 단기 트랜잭션.
+- **content_fetched_at 시맨틱**: null = 미시도/일시오류(재시도 허용), non-null+text=null = 영구실패(DART 문서 없음), non-null+text있음 = 성공.
+- **BLOCK_REMOVE 백레퍼런스 `</\\1>`**: `<script>...</style>` 형태의 혼재 태그를 잘못 제거하지 않도록 그룹 참조 강제. HIGH-1 보안 수정.
+
+**미완료**:
+- `content-fetch-backfill-pagination` (Draft): 93k ID 전량 in-memory 로드 → AnalysisBackfillService 패턴 워터마크 커서로 교체 필요 (MEDIUM-1)
+- `content-fetch-backfill-resilience` (Draft): 진행률 DB 영속화(DB 지속) + TaskRejectedException graceful 처리 필요 (MEDIUM-6/P6). **pagination Spec 선행 구현 필요** (last_processed_id 의존).
+- Stage 3 RAG: `analysis-stage3-rag-chroma` Approved 전환 완료 — content_text 93k 백필 실행 후 진입 가능. `/dc-implement analysis-stage3-rag-chroma`
 
 ---
 
