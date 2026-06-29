@@ -11,6 +11,17 @@ updated: 2026-06-25
 
 ---
 
+## 2026-06-29 (51차) | pg15-schema-init — PostgreSQL 15+ 스키마 권한 init 스크립트
+
+**산출**:
+- Infra(신규): `scripts/db-init/01_grant_schema.sql` — `GRANT ALL ON SCHEMA public TO dartcommons;` (PG 15+ 신규 설치 시 Flyway 마이그레이션 실패 방지)
+- Infra(수정): `docker-compose.yml` — `./scripts/db-init:/docker-entrypoint-initdb.d:ro` 마운트 추가
+
+**결정**:
+- **`docker-entrypoint-initdb.d` 관례 채택**: 초기화 완료된 디렉터리에는 재실행 안 되므로 기존 데이터 안전. `:ro` 플래그로 컨테이너 내 스크립트 수정 방지.
+
+---
+
 ## 2026-06-29 (50차) | portfolio-summary-dto — 포트폴리오 요약 응답 DTO
 
 **산출**:

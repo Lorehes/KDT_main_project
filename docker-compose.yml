@@ -25,6 +25,8 @@ services:
       # bind mount — Docker Desktop reset/clean의 영향을 받지 않는 호스트 디렉토리.
       # PG_DATA_DIR 환경변수로 위치 변경 가능. 기본: ~/data/dartcommons-pg
       - ${PG_DATA_DIR:-${HOME}/data/dartcommons-pg}:/var/lib/postgresql/data
+      # DB 최초 생성 시 실행되는 init 스크립트 (이미 초기화된 데이터 디렉토리에는 재실행 안 됨)
+      - ./scripts/db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dartcommons -d dartcommons"]
       interval: 5s

@@ -108,6 +108,7 @@ updated: 2026-06-02
 | 2026-06-25 | Jin | b1494b5 | feat(disclosure,frontend): TopBar 글로벌 검색 + 리뷰 8건 수정 [6/8 L] | Disclosure/Frontend | 6 | 8 | L | TopBar 글로벌 검색+리뷰8건수정 |
 | 2026-06-26 | Jin | f6510f2 | feat(user,frontend): CSV 종목 일괄등록 API+FE단일호출 [6/8 M] | User/Frontend | 6 | 8 | M | CSV 종목 일괄등록 API+FE단일호출 |
 | 2026-06-29 | Jin | 1af21fd | feat(user): 포트폴리오 요약 응답 DTO [5/9 S] | User | 5 | 9 | S | 포트폴리오 요약 응답 DTO |
+| 2026-06-29 | Jin | 97ecd28 | chore(infra): PostgreSQL15 스키마 권한 init 스크립트 [6/8 S] | Infra | 6 | 8 | S | PostgreSQL15 스키마 권한 init 스크립트 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -115,5 +116,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 1 | 33 | 95 | 8.0 | 6.1 |
+| Jin | 2 | 34 | 96 | 8.0 | 6.1 |
 <!-- SUMMARY:END -->
