@@ -107,7 +107,7 @@ updated: 2026-06-02
 | 2026-06-25 | Jin | 4cd8b19 | fix(user,frontend): 이슈12건·BE버그픽스·FE기술부채·테스트보강 [6/8 L] | User/Frontend/Test/Docs | 6 | 8 | L | 이슈12건·BE버그픽스·FE기술부채 |
 | 2026-06-25 | Jin | b1494b5 | feat(disclosure,frontend): TopBar 글로벌 검색 + 리뷰 8건 수정 [6/8 L] | Disclosure/Frontend | 6 | 8 | L | TopBar 글로벌 검색+리뷰8건수정 |
 | 2026-06-26 | Jin | f6510f2 | feat(user,frontend): CSV 종목 일괄등록 API+FE단일호출 [6/8 M] | User/Frontend | 6 | 8 | M | CSV 종목 일괄등록 API+FE단일호출 |
-| 2026-06-29 | Jin | 99eaf0c | feat(user): 포트폴리오 요약 응답 DTO [5/9 S] | User | 5 | 9 | S | 포트폴리오 요약 응답 DTO |
+| 2026-06-29 | Jin | 1af21fd | feat(user): 포트폴리오 요약 응답 DTO [5/9 S] | User | 5 | 9 | S | 포트폴리오 요약 응답 DTO |
 <!-- SCORES -->
 
 ## 기간별 집계
