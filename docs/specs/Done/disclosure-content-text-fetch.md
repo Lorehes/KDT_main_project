@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-29
 updated: 2026-06-29
 ---
 
 # 공시 본문(content_text) 수집 — DART 문서원문 API Spec
 
-> 상태: **Approved** (2026-06-29, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-06-29, 구현 완료 — SHA 1187ddf)
 > 후행 Spec: [[analysis-stage3-rag-chroma]] — 본 Spec이 채우는 `content_text`가 Stage 3 임베딩의 **원천**. Stage 3 임베딩 적재·검색(#8·#12)은 본 Spec 완료에 블로킹됨(A2 결정, 2026-06-29).
 
 ## 배경 / 목적

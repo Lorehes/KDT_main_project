@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-29
 updated: 2026-06-29
 ---
 
 # content-fetch-backfill-pagination Spec
 
-> 상태: Draft → **Approved** (2026-06-29, dc-tech-review 승인)
+> 상태: Draft → Approved → **Done** (2026-06-29, 구현 완료 — SHA fb82e31)
 > 원출처: dc-review-code MEDIUM-1 이슈 — disclosure-content-text-fetch Spec 구현 리뷰
 
 ## 배경 / 목적
