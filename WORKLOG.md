@@ -11,6 +11,18 @@ updated: 2026-06-25
 
 ---
 
+## 2026-06-29 (50차) | portfolio-summary-dto — 포트폴리오 요약 응답 DTO
+
+**산출**:
+- BE(신규): `backend/src/main/java/com/dartcommons/user/dto/PortfolioSummaryResponse.java` — `GET /api/v1/portfolios/summary` 응답 record. `totalCostBasis/totalEvalAmount/totalPnl/pnlRate/pricedCount/unpricedCount/asOf` 7필드. `@JsonProperty` snake_case 직렬화.
+
+**결정**:
+- **pnlRate null 허용**: `totalCostBasis == 0`일 때 null 반환 — 0 나눗셈 방지. FE는 null 시 "—" 표시.
+- **avgBuyPrice·quantity 미노출**: 합산값(totalCostBasis)만 반환 — 금융 PII 최소 노출 원칙(CLAUDE.md §7).
+- **asOf 기준**: priced 종목 중 가장 최근 거래일 — 종목 간 기준일 불일치 시 최신값 채택.
+
+---
+
 ## 2026-06-26 (49차) | portfolio-csv-bulk-import — CSV 종목코드 일괄 등록 API + FE 단일 호출
 
 **산출**:
