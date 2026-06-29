@@ -11,6 +11,35 @@ updated: 2026-06-29
 
 ---
 
+## 2026-06-29 (54차) | content-fetch-backfill-resilience — 백필 잡 추적·탄력성 강화 + 리뷰 7건 수정
+
+**산출**:
+- DB(신규): `V25__create_content_backfill_jobs.sql` — content_backfill_jobs 테이블(BIGSERIAL PK, UUID job_id UNIQUE, status CHECK 4종, last_processed_id, idx status+created_at)
+- Disclosure(신규): `ContentBackfillJob.java` — JPA 엔티티, Status enum, create/start/recordChunkProgress/succeed/fail 상태 전이 메서드
+- Disclosure(신규): `ContentBackfillJobRepository.java` — findByJobId(UUID), findFirstByStatusOrderByCreatedAtDesc(Status)
+- Disclosure(신규): `ContentBackfillJobStateService.java` — REQUIRES_NEW 별도 빈(self-invocation 해소), startJob/recordProgress/succeedJob/failJob
+- Disclosure(전면 재작성): `DisclosureContentBackfillService.java` — createAndStartAsync(원자 CAS+createJob+executor.execute), runAsync(@Async 직접 호출용), doBackfill(공유 루프), resolveResumePoint(stale RUNNING 재개), 위임 메서드(stateService 경유)
+- Disclosure(신규): `ContentBackfillJobResponse.java` — @JsonInclude(NON_NULL) 진행률 응답 record
+- Disclosure(신규): `ContentBackfillJobStartResponse.java` — 202 응답 타입 안전 record(LOW-1 수정)
+- Disclosure(수정): `DisclosureContentBackfillController.java` — POST(createAndStartAsync TOCTOU 해소, ContentBackfillJobStartResponse 타입 안전), GET /jobs/{jobId}
+- Shared(수정): `ExecutorConfig.java` — contentFetchExecutor 큐 300→500, RejectedExecutionHandler warn+discard
+- Test(신규): `ContentBackfillJobIT.java` — Testcontainers 4시나리오: createJob PENDING, 청크 진행률 누적, stale RUNNING 탐지, failJob FAILED+errorMessage
+- Test(수정): `DisclosureContentBackfillServiceTest.java` — stateService/contentFetchExecutor Mock 추가, 시나리오 5개(createAndStartAsync CAS 성공/실패 2개 추가)
+
+**결정**:
+- **ContentBackfillJobStateService 별도 빈 분리**: Spring @Transactional(REQUIRES_NEW) self-invocation 불가 — 기존 this.startJob() 패턴이 REQUIRES_NEW 무시. 별도 빈 분리로 프록시 경유 강제. 위임 메서드로 IT 테스트 인터페이스 유지.
+- **createAndStartAsync() 원자 메서드**: isRunning()+createJob 사이 TOCTOU 해소. CAS 확보 후 executor.execute(doBackfill) 제출 — @Async self-invocation 없이 같은 contentFetchExecutor 풀에 직접 submit. createJob 실패 시 CAS 복원(running.set(false)).
+- **stale RUNNING 단일 인스턴스 불변식 유지**: running=false(JVM재시작) ∧ DB status=RUNNING = 크래시 판정. 다중 인스턴스 환경에서는 content-backfill-distributed-lock Spec 후속 필요.
+- **runAsync()는 @Async 직접 호출용 유지**: 단위 테스트가 Spring 컨텍스트 없이 동기 실행 가능. 컨트롤러는 createAndStartAsync() 사용 권장.
+
+**미완료**:
+- **93k 백필 실행**: `POST /admin/disclosures/content-backfill` — 이제 jobId 반환(202), GET /jobs/{jobId}로 진행률 확인. chunkSize=100, throttle=500ms 기본값. 야간 실행 권장.
+- **content-backfill-distributed-lock Spec**: 수평 확장(Kubernetes) 대응. 현재는 단일 인스턴스 불변식 유지.
+- **Stage 3 RAG**: `analysis-stage3-rag-chroma` Approved — 93k content_text 백필 완료 후 `/dc-implement analysis-stage3-rag-chroma`.
+- **LOW-4 미적용**: findByJobId+save → ID 기반 UPDATE 쿼리 최적화. 현재 규모에서 불필요, 향후 성능 병목 시 처리.
+
+---
+
 ## 2026-06-29 (53차) | content-fetch-backfill-pagination — 커서 워터마크 페이지네이션 + 리뷰 이슈 수정
 
 **산출**:

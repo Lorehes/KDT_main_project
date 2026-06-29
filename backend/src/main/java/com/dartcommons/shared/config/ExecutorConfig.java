@@ -68,18 +68,25 @@ public class ExecutorConfig {
 
     /**
      * DART 본문 fetch 풀 — DisclosureContentFetchListener(실시간) + DisclosureContentBackfillService(백필) 공용.
-     * max=2: DART 일일 호출 한도 보호(한도 실측 전 보수적 제한). 큐=300: 백필 시 순서 보장.
+     * max=2: DART 일일 호출 한도 보호(한도 실측 전 보수적 제한). 큐=500: 실시간 이벤트 유실 최소화(300→500).
      * awaitTerminationSeconds=60: 진행 중 fetch가 완료될 시간 확보 후 종료.
+     * RejectedExecutionHandler: 기본 AbortPolicy(TaskRejectedException) → warn+discard.
+     *   이유: @Async 제출 거절은 AOP 프록시 계층에서 발생 — 리스너 try-catch로 미포착.
+     *         warn 로그로 가시성 확보 후 조용히 버림(실시간 fetch 손실 허용 — 다음 폴링 또는 백필이 보완).
      */
     @Bean(name = "contentFetchExecutor")
     public TaskExecutor contentFetchExecutor() {
         ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
         exec.setCorePoolSize(1);
         exec.setMaxPoolSize(2);
-        exec.setQueueCapacity(300);
+        exec.setQueueCapacity(500);
         exec.setThreadNamePrefix("content-fetch-");
         exec.setWaitForTasksToCompleteOnShutdown(true);
         exec.setAwaitTerminationSeconds(60);
+        exec.setRejectedExecutionHandler((runnable, executor) ->
+                org.slf4j.LoggerFactory.getLogger(ExecutorConfig.class)
+                        .warn("contentFetchExecutor: task rejected — queue full (size={}), dropping task",
+                                executor.getQueue().size()));
         exec.initialize();
         return exec;
     }
