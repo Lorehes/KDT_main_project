@@ -113,7 +113,7 @@ updated: 2026-06-02
 | 2026-06-29 | Jin | 1463ed3 | feat(disclosure): 백필 커서 페이지네이션 + 리뷰 수정 [7/9 M] | Disclosure/Infra | 7 | 9 | M | 백필 커서 페이지네이션+단위테스트 |
 | 2026-06-29 | Jin | ef03d2d | feat(disclosure): 백필 잡 추적·탄력성 강화 + 리뷰 7건 수정 [7/9 L] | Disclosure/Infra/Shared | 7 | 9 | L | 백필 잡 추적+탄력성 강화 |
 | 2026-06-30 | Jin | 8e5f19c | feat(analysis,infra): Stage 3 RAG Chroma+임베딩 구현 + 리뷰 5건 수정 [9/8 L] | Analysis/Infra | 9 | 8 | L | Stage3 RAG Chroma+임베딩 구현 |
-| 2026-06-30 | Jin | 34c180a | fix(disclosure,analysis,frontend): 공시 q검색 lower(bytea) 버그+경고 정리 [7/8 M] | Disclosure/Analysis/Frontend | 7 | 8 | M | 공시 q검색 lower(bytea) 버그+경고 정리 |
+| 2026-06-30 | Jin | 3b3b0df | fix(disclosure,analysis,frontend): 공시 q검색 lower(bytea) 버그+경고 정리 [7/8 M] | Disclosure/Analysis/Frontend | 7 | 8 | M | 공시 q검색 lower(bytea) 버그+경고 정리 |
 <!-- SCORES -->
 
 ## 기간별 집계
