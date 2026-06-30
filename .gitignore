@@ -107,8 +107,8 @@ data/
 *.csv
 *.parquet
 *.sqlite
-# 로컬 Chroma 영속 디렉터리
-chroma/
+# 로컬 Chroma 영속 디렉터리 (루트 레벨 data 디렉토리만 — /infrastructure/chroma/ 소스 제외)
+/chroma/
 
 # =============================================================
 # 발표/기획 산출물 (대용량·민감 → 커밋 금지)

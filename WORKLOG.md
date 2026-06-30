@@ -11,6 +11,38 @@ updated: 2026-06-29
 
 ---
 
+## 2026-06-30 (55차) | analysis-stage3-rag-chroma — Stage 3 RAG 인프라 구현 + 리뷰 5건 수정
+
+**산출**:
+- Infra(신규): `ChromaClient.java` — Chroma 접근 인터페이스 (upsert/query, SimilarResult record)
+- Infra(신규): `LangChain4jChromaClient.java` — ChromaEmbeddingStore 래핑, timeout 적용 (CLAUDE.md §4)
+- Infra(신규): `MockChromaClient.java` — 인메모리 폴백, @ConditionalOnProperty(enabled=false/missing)
+- Infra(신규): `ChromaCollectionBootstrapper.java` — 기동 시 cosine 컬렉션 초기화 (RestClient+timeout, ParameterizedTypeReference)
+- Infra(신규): `ChromaProperties.java` / `EmbeddingClient.java` / `EmbeddingProperties.java`
+- Infra(신규): `OllamaEmbeddingClient.java` / `MockEmbeddingClient.java` — provider 기반 활성화
+- Analysis(신규): `Stage3RagService.java` — upsert + 이중 쿼리(sameCorp max5/otherCorp max5/자신 제외/임계치 0.7)
+- Analysis(수정): `AnalysisOrchestrator.java` — Stage3 upsert 체이닝(실패 무시, publishCompleted 계속)
+- Analysis(수정): `AnalysisQueryService.java` — Pro+ 실시간 findSimilar 조회
+- Analysis(수정): `AnalysisResponse.java` — from(ar, tier, similar) 오버로드 추가
+- Analysis(수정): `SimilarDisclosureItem.java` — v2(priceReaction5dPct 제거, disclosureId/corpCode/disclosureType/similarityScore 추가)
+- Test(신규): `Stage3RagServiceTest.java` — 8 단위 테스트 (Mockito LENIENT)
+- Config(수정): `application.yml` + `docker-compose.yml` + `build.gradle` + `.gitignore` (/chroma/ 루트 앵커링)
+- 리뷰 수정(5건): P1 Long.parseLong 보호, P1 ChromaEmbeddingStore timeout, P2 한자 오타, P2 RestClient timeout, P2 ParameterizedTypeReference
+
+**결정**:
+- **LangChain4j BOM 1.0.0 → beta5 해소**: `add(String,Embedding,TextSegment)` 없음 → `addAll()` 사용. `EmbeddingSearchRequestBuilder` 타입명 주의.
+- **@ConditionalOnMissingBean → @ConditionalOnProperty**: `@Component`에 `@ConditionalOnMissingBean` 불안정(빈 등록 순서 비결정) → `@ConditionalOnProperty(matchIfMissing=true)`로 확정적 활성화.
+- **Stage3 결과 실시간 쿼리**: AnalysisResult 엔티티 미저장, 조회 시 Chroma 실시간 쿼리 — Chroma가 SSOT.
+- **이중 쿼리 Java 포스트 필터**: Chroma 부정 조건(not equals) 버전 불안정 → max10 조회 후 Java에서 sameCorp/otherCorp 파티셔닝.
+
+**미완료**:
+- **Chroma/Ollama 운영 활성화**: CHROMA_ENABLED=true + EMBEDDING_PROVIDER=ollama + CHROMA_DATA_DIR 환경변수 설정. 현재 Mock 폴백 동작.
+- **93k 전체 백필 임베딩**: 기존 공시 전체 upsert 배치 스크립트 필요 (`scripts/data_collection/`). 신규 공시만 자동 upsert.
+- **FE 유사 공시 UI**: `SimilarDisclosureItem[]` 표시 컴포넌트 — 별도 FE Spec 필요.
+- **Stage3 Testcontainers 통합 테스트**: 실제 Chroma + Ollama E2E 검증 (Stage3IT — 향후).
+
+---
+
 ## 2026-06-29 (54차) | content-fetch-backfill-resilience — 백필 잡 추적·탄력성 강화 + 리뷰 7건 수정
 
 **산출**:

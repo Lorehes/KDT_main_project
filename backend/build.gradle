@@ -32,6 +32,11 @@ dependencies {
 	// 재시도 — DartClient/KrxClient 외부 호출 백오프(@Retryable, 비차단)
 	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework:spring-aspects'
+	// LangChain4j BOM — Stage 3 RAG: Chroma 벡터 스토어 + Ollama 임베딩 모델
+	// BOM이 개별 모듈 버전을 통합 관리 (CLAUDE.md §2 "LangChain4j 1.x")
+	implementation platform('dev.langchain4j:langchain4j-bom:1.0.0')
+	implementation 'dev.langchain4j:langchain4j-chroma'
+	implementation 'dev.langchain4j:langchain4j-ollama'
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
 	// 캐시 구현체 — 버전은 Spring Boot BOM이 관리 (CLAUDE.md 기술스택)

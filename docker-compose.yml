@@ -32,3 +32,24 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # Chroma 벡터 DB — Stage 3 RAG 임베딩 스토어 (analysis-stage3-rag-chroma Spec)
+  # bind mount: ${CHROMA_DATA_DIR:-~/data/dartcommons-chroma}
+  # named volume 금지(2026-06-04 91k건 소실 사고 — CLAUDE.md §7)
+  # IS_PERSISTENT=TRUE: 컨테이너 재시작 후에도 임베딩 유지
+  # ANONYMIZED_TELEMETRY=FALSE: 사용 현황 익명 전송 차단
+  chroma:
+    image: chromadb/chroma:0.5.23
+    container_name: dartcommons-chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    ports:
+      - "8001:8000"
+    volumes:
+      - ${CHROMA_DATA_DIR:-${HOME}/data/dartcommons-chroma}:/chroma/chroma
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/v1/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

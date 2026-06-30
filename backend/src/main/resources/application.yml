@@ -155,6 +155,24 @@ dartcommons:
     # 결정 2: 0.6 미만 → is_withheld=true (판단 보류).
     # 운영 조정은 SystemConfig 키 analysis.stage2.confidence_threshold 후속 검토.
     confidence-threshold: ${LLM_CONFIDENCE_THRESHOLD:0.6}
+    # 임베딩 모델 — Stage 3 RAG (analysis-stage3-rag-chroma Spec)
+    # provider=mock: 테스트/로컬(임베딩 불필요). provider=ollama: nomic-embed-text 모델 사용.
+    # EMBEDDING_BASE_URL: Ollama 서버 주소 (기본 http://localhost:11434)
+    embedding:
+      provider: ${EMBEDDING_PROVIDER:mock}
+      base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
+      model-name: ${EMBEDDING_MODEL:nomic-embed-text}
+      timeout-ms: ${EMBEDDING_TIMEOUT_MS:30000}
+      max-retries: ${EMBEDDING_MAX_RETRIES:2}
+  # Chroma 벡터 DB — Stage 3 RAG 임베딩 스토어 (analysis-stage3-rag-chroma Spec)
+  # enabled=false: mock/개발 환경. enabled=true: Chroma 컨테이너 필요 (docker-compose.yml chroma 서비스).
+  # similarity-threshold: 0.7 미만 결과 제외 — 강제 매칭 방지(환각 가드, R8).
+  chroma:
+    enabled: ${CHROMA_ENABLED:false}
+    base-url: ${CHROMA_BASE_URL:http://localhost:8001}
+    collection-name: ${CHROMA_COLLECTION:disclosure_embeddings}
+    similarity-threshold: ${CHROMA_SIMILARITY_THRESHOLD:0.7}
+    timeout-ms: ${CHROMA_TIMEOUT_MS:10000}
 
 # 요금제 플랜 정보 (PricingProperties — 통합기획서 §8.1 BM 데이터 기반)
 # 가격 변경 시 코드 수정 없이 이 값만 조정 후 재기동. 투자 권유 표현 금지(CLAUDE.md §7).
