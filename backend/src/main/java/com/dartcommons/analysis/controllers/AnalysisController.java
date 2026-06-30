@@ -3,6 +3,7 @@ package com.dartcommons.analysis.controllers;
 import com.dartcommons.analysis.dto.FeedbackRequest;
 import com.dartcommons.analysis.services.FeedbackService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -17,13 +18,10 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1/analyses")
+@RequiredArgsConstructor
 public class AnalysisController {
 
     private final FeedbackService feedbackService;
-
-    public AnalysisController(FeedbackService feedbackService) {
-        this.feedbackService = feedbackService;
-    }
 
     @PostMapping("/{id}/feedback")
     @ResponseStatus(HttpStatus.NO_CONTENT)

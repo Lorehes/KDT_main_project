@@ -80,20 +80,21 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
      * stockCodes 리스트가 비어있으면 호출하지 말 것 — 서비스 계층에서 사전 가드.
      */
     @Query(value = """
-            SELECT d FROM Disclosure d
-            WHERE d.stockCode IN :stockCodes
-              AND d.rceptDt >= coalesce(:fromDate, d.rceptDt)
-              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
-              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
-            ORDER BY d.rceptDt DESC, d.id DESC
+            SELECT d.* FROM disclosures d
+            WHERE d.stock_code IN :stockCodes
+              AND (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
+            ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
-            SELECT COUNT(d) FROM Disclosure d
-            WHERE d.stockCode IN :stockCodes
-              AND d.rceptDt >= coalesce(:fromDate, d.rceptDt)
-              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
-              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
-            """)
+            SELECT COUNT(d.id) FROM disclosures d
+            WHERE d.stock_code IN :stockCodes
+              AND (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
+            """,
+            nativeQuery = true)
     Page<Disclosure> findFilteredByStocks(
             @Param("stockCodes") List<String> stockCodes,
             @Param("fromDate") LocalDate fromDate,
@@ -107,18 +108,19 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
      * 종목코드 필터 없이 날짜 범위만 적용.
      */
     @Query(value = """
-            SELECT d FROM Disclosure d
-            WHERE d.rceptDt >= coalesce(:fromDate, d.rceptDt)
-              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
-              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
-            ORDER BY d.rceptDt DESC, d.id DESC
+            SELECT d.* FROM disclosures d
+            WHERE (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
+            ORDER BY d.rcept_dt DESC, d.id DESC
             """,
             countQuery = """
-            SELECT COUNT(d) FROM Disclosure d
-            WHERE d.rceptDt >= coalesce(:fromDate, d.rceptDt)
-              AND d.rceptDt <= coalesce(:toDate, d.rceptDt)
-              AND (:q IS NULL OR LOWER(d.reportNm) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(d.corpName) LIKE LOWER(CONCAT('%', :q, '%')))
-            """)
+            SELECT COUNT(d.id) FROM disclosures d
+            WHERE (CAST(:fromDate AS date) IS NULL OR d.rcept_dt >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR d.rcept_dt <= :toDate)
+              AND (CAST(:q AS text) IS NULL OR d.report_nm ILIKE '%' || :q || '%' OR d.corp_name ILIKE '%' || :q || '%')
+            """,
+            nativeQuery = true)
     Page<Disclosure> findAllFiltered(
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,

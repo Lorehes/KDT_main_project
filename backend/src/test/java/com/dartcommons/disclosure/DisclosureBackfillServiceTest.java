@@ -86,7 +86,7 @@ class DisclosureBackfillServiceTest {
                 item("20240101000001", "005930", "삼성전자", "유상증자결정"),
                 item("20240101000002", "999999", "미커버", "합병")
         );
-        when(dartClient.fetchList(any(), any())).thenReturn(items, List.of());
+        when(dartClient.fetchList(any(), any())).thenReturn(items).thenReturn(List.of());
 
         BackfillResult result = backfillService.backfill(
                 LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 30), false);
@@ -104,7 +104,7 @@ class DisclosureBackfillServiceTest {
         for (int i = 0; i < 600; i++) {
             items.add(item(String.format("2024010100%04d", i), "005930", "삼성전자", "유상증자결정"));
         }
-        when(dartClient.fetchList(any(), any())).thenReturn(items, List.of());
+        when(dartClient.fetchList(any(), any())).thenReturn(items).thenReturn(List.of());
 
         BackfillResult result = backfillService.backfill(
                 LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 30), false);
@@ -119,7 +119,7 @@ class DisclosureBackfillServiceTest {
         List<RawDisclosureItem> items = List.of(
                 item("20240101000010", "005930", "삼성전자", "유상증자결정")
         );
-        when(dartClient.fetchList(any(), any())).thenReturn(items, List.of());
+        when(dartClient.fetchList(any(), any())).thenReturn(items).thenReturn(List.of());
 
         BackfillResult first = backfillService.backfill(
                 LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 30), false);

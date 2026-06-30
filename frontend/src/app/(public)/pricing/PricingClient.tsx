@@ -12,12 +12,7 @@ import { useRouter } from "next/navigation";
 import { PlanCard, type PlanCardProps } from "@/components/domain/PlanCard";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { usePricingPlans, type PricingPlan } from "@/lib/api/pricing";
-
-const TIER_MAP: Record<string, string> = {
-  FREE: "Free",
-  PRO: "Pro",
-  PREMIUM: "Premium",
-};
+import { TIER_LABEL } from "@/lib/constants";
 
 const CTA_LABEL: Record<string, string> = {
   FREE: "무료로 시작하기",
@@ -26,7 +21,7 @@ const CTA_LABEL: Record<string, string> = {
 };
 
 function planToCardProps(plan: PricingPlan): Omit<PlanCardProps, "isCurrent" | "onCta"> {
-  const displayName = TIER_MAP[plan.tier] ?? plan.tier;
+  const displayName = TIER_LABEL[plan.tier] ?? plan.tier;
   const priceNote   = plan.price === 0 ? "원" : "원/월";
   const priceStr    = plan.price.toLocaleString("ko-KR");
   return {
@@ -45,7 +40,7 @@ export function PricingClient() {
   const { user } = useAuthStore();
   const { data: plans, isLoading, isError } = usePricingPlans();
 
-  const currentPlanName = user ? (TIER_MAP[user.tier] ?? null) : null;
+  const currentPlanName = user ? (TIER_LABEL[user.tier] ?? null) : null;
 
   const handleCta = (planName: string) => {
     if (!user) { router.push("/signup"); return; }

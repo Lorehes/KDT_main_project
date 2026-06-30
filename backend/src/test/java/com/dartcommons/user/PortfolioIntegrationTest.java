@@ -480,6 +480,7 @@ class PortfolioIntegrationTest {
         org.springframework.cache.Cache stockCache = cacheManager.getCache("stocksByCodeIn");
         assertThat(stockCache).isNotNull();
         // 캐시 내부 map 사이즈 > 0 이면 히트 가능 상태
+        @SuppressWarnings("unchecked")
         com.github.benmanes.caffeine.cache.Cache<Object, Object> nativeCache =
                 (com.github.benmanes.caffeine.cache.Cache<Object, Object>) stockCache.getNativeCache();
         assertThat(nativeCache.estimatedSize()).isGreaterThan(0);

@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-06-24
-updated: 2026-06-29
+updated: 2026-06-30
 ---
 
 # Stage 3 RAG — Chroma 벡터 DB 도입 Spec
 
-> 상태: **Approved** (2026-06-29, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-06-30, dc-push 완료)
 > 선행 Spec: [[analysis-stage2-llm]] (Done) — Stage 2 LLM 1차 분류 완료, Stage 3는 명시적 범위 외였음.
 
 ## 배경 / 목적

@@ -7,7 +7,7 @@
 //   off_hours_allowed는 거래시간외(22시~8시) 알림 허용 여부. 미리보기는 정적 mockup
 
 import { useEffect, useState } from "react";
-import { Bell, MessageSquare, Mail, Smartphone, Clock } from "lucide-react";
+import { MessageSquare, Mail, Smartphone, Clock } from "lucide-react";
 import {
   useNotificationSettings,
   useUpdateNotificationSettings,
@@ -59,7 +59,7 @@ export default function NotificationSettingsPage() {
   }, [settings]);
 
   const handleSave = () => {
-    updateSettings({ channel, frequency: frequency, type_filter: typeFilter, off_hours_allowed: offHours });
+    updateSettings({ channel, frequency, type_filter: typeFilter, off_hours_allowed: offHours });
   };
 
   if (isLoading) {

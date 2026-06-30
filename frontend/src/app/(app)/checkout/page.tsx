@@ -9,7 +9,6 @@
 import Link from "next/link";
 import { Shield, ArrowLeft, CreditCard } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { useAuthStore } from "@/lib/stores/authStore";
 
 const PRO_BENEFITS = [
   "무제한 종목 등록",
@@ -20,8 +19,6 @@ const PRO_BENEFITS = [
 ];
 
 export default function CheckoutPage() {
-  const { user } = useAuthStore();
-
   return (
     <div className="mx-auto max-w-lg">
       <Link href="/pricing" className="mb-6 inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">

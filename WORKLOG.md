@@ -2,12 +2,33 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-29
+updated: 2026-06-30
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-06-30 | BE 컴파일 경고 정리 + 공시 q검색 lower(bytea) 버그 수정
+
+**산출**:
+- `DisclosureRepository` — `findFilteredByStocks` / `findAllFiltered` JPQL → native 전환: Hibernate 6이 null String 파라미터를 `LOWER(CONCAT('%', ?, '%'))` 컨텍스트에서 OID 미지정으로 바인딩 → PostgreSQL이 bytea 추론 → `lower(bytea) does not exist` 런타임 오류. `CAST(:q AS text) IS NULL + ILIKE` 패턴(기존 sentiment 쿼리에서 검증됨)으로 수정. **8 failing test 해소**.
+- `build.gradle` — `-Xlint:unchecked` 활성화: 컴파일 단계에서 unchecked 경고 즉시 노출.
+- `DisclosureBackfillServiceTest` — Mockito `thenReturn(items, List.of())` varargs unchecked 경고 3건 → `.thenReturn(items).thenReturn(List.of())` 체이닝으로 제거.
+- `PortfolioIntegrationTest` — Caffeine native cache cast에 `@SuppressWarnings("unchecked")` 추가.
+- `AnalysisController` — 수동 생성자 → `@RequiredArgsConstructor` (모듈 내 패턴 통일, 3줄 삭제).
+- FE: unused import 3건 제거(`useAuthStore`, `Bell`), `frequency: frequency` → `frequency` 단축, 하드코딩 이메일 → `SUPPORT_EMAIL` 상수, 로컬 `TIER_MAP` → 공유 `TIER_LABEL` 교체.
+- `analysis-stage3-rag-chroma` Spec → Done 전환.
+
+### 결정 (코드에 드러나지 않는 사항)
+- **JPQL vs native 선택**: Hibernate 6에서 JPQL LOWER+CONCAT 조합 + null String 파라미터 → PostgreSQL OID 미결정 → bytea 추론 버그. COALESCE 패치도 `? IS NULL` 체크의 타입 문제가 잔존해 근본 해결 안 됨. native 쿼리로 전환이 유일한 안전한 해결책. 기존 sentiment 쿼리에서 이미 검증된 `CAST(:param AS type) IS NULL` 패턴 재사용.
+- **AnalysisResponse.from() 2-인자 오버로드 유지**: 테스트 7곳에서 사용 중 — 삭제 불가 (워크플로우 적대적 검증으로 확인).
+- **GuardResult.withheldByThreshold 유지**: PromptGuardTest 2곳에서 사용 중 — 운영 로그·통계 분리용으로 의도된 필드.
+
+### 미완료 → 다음 세션
+- FE `.vscode/settings.json` `java.import.gradle.projectRootPaths` 추가 후 VS Code에서 "Java: Clean Java Language Server Workspace" 실행 필요 (LangChain4j import 오류 해소).
 
 ---
 

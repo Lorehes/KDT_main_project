@@ -229,7 +229,7 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              onClick={() => toast.info("계정 삭제는 고객지원(support@dartcommons.kr)에 문의해 주세요.")}
+              onClick={() => toast.info(`계정 삭제는 고객지원(${SUPPORT_EMAIL})에 문의해 주세요.`)}
               className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-destructive/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             >
               <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/10">
