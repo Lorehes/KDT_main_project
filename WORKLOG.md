@@ -2,12 +2,32 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-06-30
+updated: 2026-07-01
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-07-01 | DB_URL 오설정 수정 + 93k 콘텐츠 백필 완료
+
+**산출**:
+- `.env` DB_URL `5432` → `5433` 수정 — `dartcommons-postgres` 컨테이너 포트 정합. `gc-postgres`(5432, 타 프로젝트)를 잘못 가리키고 있어 앱이 빈 DB(133건)에 연결된 상태였음.
+- 앱 재시작 시 Flyway V21~V25 자동 적용 (V24: `content_fetched_at` 컬럼 추가 → 93,242건 모두 `NULL`로 세팅, V25: `content_backfill_jobs` 테이블 생성).
+- `.env` `CONTENT_BACKFILL_THROTTLE_MS=0` 추가 — 기본 500ms → 0ms로 단축.
+- 93k 콘텐츠 백필 실행 완료: `processed=93,010 / targeted=92,834`, `failed=0`, 소요 약 18시간 44분 (2026-06-30 11:13 KST → 2026-07-01 05:57 KST).
+
+### 결정 (코드에 드러나지 않는 사항)
+- **DB 오설정 근본 원인**: `.env.example`은 port 5433(docker-compose 정합)이 명시돼 있으나 `.env`에 5432가 잘못 기재됨. `gc-postgres`(5432)에 Flyway가 V21~V25까지 적용돼 133건의 오염된 데이터가 있었음 — 이 데이터는 무시.
+- **백필 스로틀 0ms**: DART API 일일 호출 한도 미실측 상태에서 속도 우선 선택. 실제 fetch당 ~60ms(네트워크+ZIP) 소요로 순 처리 속도 ~17건/초. 한도 초과 위험은 감수 — 재실행 시 `lastProcessedId` 커서로 재개 가능.
+- **처리 건수 오버슈팅(93,010 > 92,834)**: 백필 실행 중 신규 공시 유입(~176건)으로 `targeted`보다 많이 처리됨 — 정상 동작(커서가 신규 공시도 포함해 순회).
+
+### 미완료 → 다음 세션
+- Stage 3 임베딩 백필: content_text가 채워진 93k 공시를 Chroma에 임베딩 적재 (현재 DB에 본문 있으나 Chroma는 비어있음)
+- FE 유사 공시 UI: `SimilarDisclosureItem[]` 카드 컴포넌트 (별도 Spec 필요)
+- Stage 3 Testcontainers 통합 테스트
 
 ---
 

@@ -114,6 +114,7 @@ updated: 2026-06-02
 | 2026-06-29 | Jin | ef03d2d | feat(disclosure): 백필 잡 추적·탄력성 강화 + 리뷰 7건 수정 [7/9 L] | Disclosure/Infra/Shared | 7 | 9 | L | 백필 잡 추적+탄력성 강화 |
 | 2026-06-30 | Jin | 8e5f19c | feat(analysis,infra): Stage 3 RAG Chroma+임베딩 구현 + 리뷰 5건 수정 [9/8 L] | Analysis/Infra | 9 | 8 | L | Stage3 RAG Chroma+임베딩 구현 |
 | 2026-06-30 | Jin | 3b3b0df | fix(disclosure,analysis,frontend): 공시 q검색 lower(bytea) 버그+경고 정리 [7/8 M] | Disclosure/Analysis/Frontend | 7 | 8 | M | 공시 q검색 lower(bytea) 버그+경고 정리 |
+| 2026-07-01 | Jin | 303792e | chore(ops): DB_URL 오설정 수정 + 93k 콘텐츠 백필 완료 [5/7 S] | Ops | 5 | 7 | S | DB_URL 5432→5433 수정+93k 백필 완료 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -121,5 +122,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 2 | 22 | 101 | 8.1 | 6.1 |
+| Jin | 1 | 23 | 102 | 8.1 | 6.1 |
 <!-- SUMMARY:END -->
