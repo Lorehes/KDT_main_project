@@ -49,7 +49,10 @@ public class LangChain4jChromaClient implements ChromaClient {
     public void upsert(String id, float[] vector, Map<String, String> metadata) {
         Metadata lc4jMeta = new Metadata();
         metadata.forEach(lc4jMeta::put);
-        TextSegment segment = TextSegment.from("", lc4jMeta);
+        // TextSegment.from(text, meta)는 text가 blank면 ensureNotBlank로 예외("text cannot be null or blank").
+        // 본 스토어는 문서 원문을 Postgres에만 두고 Chroma엔 벡터+메타데이터만 저장하는 설계 —
+        // query()가 segment text를 읽지 않으므로 non-blank 요건 충족용으로 id(rcept_no)를 텍스트로 사용.
+        TextSegment segment = TextSegment.from(id, lc4jMeta);
         // LangChain4j 1.0.0-beta5: add(String,Embedding,TextSegment) 미존재 → addAll() 사용
         store.addAll(List.of(id), List.of(Embedding.from(vector)), List.of(segment));
     }
