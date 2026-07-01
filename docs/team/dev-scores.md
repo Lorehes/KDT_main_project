@@ -115,7 +115,7 @@ updated: 2026-06-02
 | 2026-06-30 | Jin | 8e5f19c | feat(analysis,infra): Stage 3 RAG Chroma+임베딩 구현 + 리뷰 5건 수정 [9/8 L] | Analysis/Infra | 9 | 8 | L | Stage3 RAG Chroma+임베딩 구현 |
 | 2026-06-30 | Jin | 3b3b0df | fix(disclosure,analysis,frontend): 공시 q검색 lower(bytea) 버그+경고 정리 [7/8 M] | Disclosure/Analysis/Frontend | 7 | 8 | M | 공시 q검색 lower(bytea) 버그+경고 정리 |
 | 2026-07-01 | Jin | 303792e | chore(ops): DB_URL 오설정 수정 + 93k 콘텐츠 백필 완료 [5/7 S] | Ops | 5 | 7 | S | DB_URL 5432→5433 수정+93k 백필 완료 |
-| 2026-07-01 | Jin | 97864e2 | feat(analysis,infra): Stage 3 임베딩 백필+절삭 버그 수정 [8/9 L] | Analysis/Infra | 8 | 9 | L | Stage3 임베딩 백필 + 6700자↑ 500 버그 해소 |
+| 2026-07-01 | Jin | 0a07004 | feat(analysis,infra): Stage 3 임베딩 백필+절삭 버그 수정 [8/9 L] | Analysis/Infra | 8 | 9 | L | Stage3 임베딩 백필 + 6700자↑ 500 버그 해소 |
 <!-- SCORES -->
 
 ## 기간별 집계
