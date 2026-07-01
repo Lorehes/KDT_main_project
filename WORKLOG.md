@@ -11,6 +11,32 @@ updated: 2026-07-01
 
 ---
 
+## 2026-07-01 | Stage 3 임베딩 백필 + 절삭 버그 수정
+
+**산출**:
+- `OllamaEmbeddingClient.embed()` 단일 지점에서 substring 절삭(기본 6,000자) — 6,700자↑ 입력 시 Ollama HTTP 500(`"input length exceeds context length"`) 버그를 증분·백필 두 경로 동시 해소.
+- `EmbeddingProperties.maxChars`(기본 6000) + `EMBEDDING_MAX_CHARS` 환경변수 추가.
+- `DisclosureRepository.findIdsWithContentText` + `countWithContentText` — 임베딩 백필용 커서 쿼리.
+- `V26__create_embedding_backfill_jobs.sql` — `embedding_backfill_jobs` 테이블(V25 미러).
+- `EmbeddingBackfillJob` entity + `EmbeddingBackfillJobRepository` (analysis 도메인).
+- `EmbeddingBackfillJobStateService` — REQUIRES_NEW 별도 빈(self-invocation 방지, V25 패턴 답습).
+- `EmbeddingBackfillService` — CAS `createAndStartAsync()`, 커서 루프, safetyCap, stale RUNNING 재개, `analysisBackfillExecutor` 재사용, 건별 `stage3RagService.upsert()` 위임.
+- `EmbeddingBackfillController` — `POST /admin/analysis/embedding-backfill`(202/409) + `GET .../jobs/{jobId}`.
+- 테스트: `EmbeddingTruncationTest` 5건(단위) + `EmbeddingBackfillJobIT` 7건(Testcontainers, AopTestUtils CAS 실검증).
+
+### 결정 (코드에 드러나지 않는 사항)
+- **절삭 위치**: `OllamaEmbeddingClient`(infrastructure 레이어) — 백필에서만 자르면 증분 경로(Stage3RagService.upsert/findSimilar)의 500 버그가 남음. 모든 호출자가 이 클래스를 통과하므로 단일 지점 수정이 최소 diff이자 근본 수정.
+- **의미 손실 수용**: 6,000자↑ 문서(전체 31.6%)는 앞부분만 임베딩. DART 공시 요지가 앞단 구조라 수용. 문장경계/청크 분할은 후속 Spec으로 미룸(`ponytail:` 주석으로 마킹).
+- **잡 엔티티는 V25 미러(V13 아님)**: `AnalysisJob`(V13)은 watermark를 로컬 변수로만 유지 → `last_processed_id` 미영속 → 재시작 재개 불가. V25 `ContentBackfillJob`이 `last_processed_id` 영속화로 재개 지원 → 이를 미러.
+- **`analysisBackfillExecutor` 재사용**: 신규 풀 추가 없음. 동시 분석 백필과 공유하나 AtomicBoolean CAS로 중복 실행 자체를 막음.
+
+### 미완료 → 다음 세션
+- **임베딩 백필 실행**: `POST /admin/analysis/embedding-backfill`으로 67,847건 적재 (~2h, 저부하 시간대 권장)
+- **적재 후 검증**: Chroma count + similar_disclosures 응답 실측, confidence 분포 확인
+- **FE 유사 공시 UI**: `SimilarDisclosureItem[]` 카드 컴포넌트 (별도 Spec 필요)
+
+---
+
 ## 2026-07-01 | DB_URL 오설정 수정 + 93k 콘텐츠 백필 완료
 
 **산출**:

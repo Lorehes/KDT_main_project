@@ -58,6 +58,17 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
     long countPendingContentFetch();
 
     /**
+     * content_text 보유 공시 ID 청크 — Stage 3 임베딩 백필 커서 페이지네이션(stage3-embedding-backfill Spec).
+     * lastId=null이면 처음부터, lastId 지정 시 해당 id 이후(id > lastId) 조회. ORDER BY id ASC.
+     */
+    @Query("SELECT d.id FROM Disclosure d WHERE d.contentText IS NOT NULL AND (:lastId IS NULL OR d.id > :lastId) ORDER BY d.id ASC")
+    List<Long> findIdsWithContentText(@Param("lastId") Long lastId, Pageable pageable);
+
+    /** content_text 보유 공시 총 건수 — 임베딩 백필 estimated total / safetyCap 산출용. */
+    @Query("SELECT COUNT(d.id) FROM Disclosure d WHERE d.contentText IS NOT NULL")
+    long countWithContentText();
+
+    /**
      * content_text + content_fetched_at을 원자적으로 갱신 — CAS 조건: content_fetched_at IS NULL.
      * HIGH-3(TOCTOU) 수정: @Transactional 없는 외부 메서드에서 동시 호출 시 DB 수준 원자성 보장.
      * 반환값 1 = 갱신 성공, 0 = 다른 스레드가 선점(정상 — no-op).
