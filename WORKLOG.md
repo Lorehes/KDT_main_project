@@ -11,6 +11,28 @@ updated: 2026-07-01
 
 ---
 
+## 2026-07-01 | LLM_BASE_URL 미설정 버그 수정 + 분석 백필 620건
+
+**산출**:
+- `.env.example`: `LLM_BASE_URL=http://localhost:11434` 추가 + 함정 주석 3줄 — `OLLAMA_BASE_URL`은 `OllamaLlmClient`가 사용하지 않는 레거시 변수임을 명시. 신규 개발자 재발 방지.
+- 운영: 김무진(id=15) tier FREE→PRO (만료 2026-07-31, DB 직접 UPDATE).
+- 운영: id 93000~93884 분석 백필 실행 (620건, SUCCEEDED, analyzed=620, failed=0). 보유 3종목 6/25+ 미분석 21건 포함.
+
+### 결정 (코드에 드러나지 않는 사항)
+- **LLM 404 근본 원인**: `application.yml`의 `llm.base-url` 기본값이 6/25 OpenRouter 전환 시 `https://openrouter.ai/api/v1`로 바뀌었으나, 로컬 `.env`는 `LLM_PROVIDER=ollama`만 두고 `LLM_BASE_URL` 미설정 → `OllamaLlmClient`가 openrouter에 `/api/generate` 호출 → 404. 분석 6/25~7/1 5주 정체.
+- **`OLLAMA_BASE_URL` 혼동**: `.env`에 `OLLAMA_BASE_URL=http://localhost:11434`가 있어 설정된 것처럼 보이지만 이 변수는 `OllamaLlmClient`가 읽지 않음 — 반드시 `LLM_BASE_URL`을 써야 함. `.env.example`에 주석으로 명시.
+- **Chroma TextSegment 버그**: `LangChain4jChromaClient.upsert()`가 `TextSegment.from("", meta)`로 빈 문자열을 생성 → LangChain4j `ensureNotBlank` 예외. Stage 3 upsert 최초 구현(8e5f19c)부터 존재하던 버그. 임베딩 백필 실행이 이를 표면화. `TextSegment.from(id, meta)`로 수정(b4f34e2).
+- **Free 티어 공시 제한**: `DisclosureQueryService`는 Free 티어를 오늘 날짜·5건으로 강제. 오늘 보유 종목 공시가 없으면 피드가 빈 것이 정상 동작임 확인.
+- **Chroma 백필 중단 지점**: 59,000/67,847 (87%)에서 중단. 잡이 DB에 `RUNNING` 스테일로 남아 있음 — 무해. 다음 실행 시 `last_processed_id=84837`부터 자동 재개.
+
+### 미완료 → 다음 세션
+- 임베딩 백필 잔여 ~8,800건 (POST /admin/analysis/embedding-backfill 재실행)
+- 미분석 과거 공시 백필: 92k 중 약 91.6k 잔존 — 구간 분할 순차 실행 필요
+- `.env.example` 커밋 ← 이 세션에서 진행 중
+- 분석 완료 후 confidence 분포·similar_disclosures 응답 실측(Stage 3 품질 검증)
+
+---
+
 ## 2026-07-01 | Stage 3 임베딩 백필 + 절삭 버그 수정
 
 **산출**:
