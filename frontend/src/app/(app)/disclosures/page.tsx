@@ -2,7 +2,7 @@
 
 // [목적] 공시 피드 페이지(D15/m23) — 전체 공시를 필터·날짜 그룹으로 탐색, 페이지 누적 "더 보기"
 // [이유] 대시보드는 보유 종목 공시만 표시. 이 페이지는 전체 공시 탐색 + 감성 필터 제공
-// [사이드 임팩트] useDisclosures 쿼리를 sentiment·scope·page 파라미터로 제어. TierGate는 Pro 미달 시 3개월 이력 차단
+// [사이드 임팩트] useDisclosures 쿼리를 sentiment·scope·page 파라미터로 제어. 단일 컬럼 피드(우측 패널 없음)
 // [수정 시 고려사항] 날짜 그룹(오늘·어제·이번주)은 클라이언트에서 rcept_dt 파싱.
 //   R4 hasMore 가드: content.length < SIZE → 서버 데이터 고갈 → "더 보기" 숨김. R3(BE JOIN) 완료 후에도 유지 가능.
 //   필터 상태는 URL searchParams로 관리 권장(현재 로컬 state).
@@ -15,7 +15,6 @@ import { useSearchParams } from "next/navigation";
 import { useDisclosures, type Sentiment, type Disclosure } from "@/lib/api/disclosures";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
-import { TierGate } from "@/components/domain/TierGate";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -29,15 +28,17 @@ const FILTERS: { value: FilterType; label: string }[] = [
   { value: "WITHHELD", label: "보류" },
 ];
 
+// Map 사용 필수: 날짜 라벨("20260609")이 정수형 문자열 키라 plain object면 Object.entries가
+// 숫자 오름차순으로 재정렬 → BE의 rcept_dt DESC(최신순)가 뒤집힘. Map은 삽입 순서를 보존해 최신순 유지.
 function groupByDate(disclosures: Disclosure[]) {
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10).replace(/-/g, "");
 
-  const groups: Record<string, Disclosure[]> = {};
+  const groups = new Map<string, Disclosure[]>();
   disclosures.forEach((d) => {
     const label = d.rcept_dt === today ? "오늘" : d.rcept_dt === yesterday ? "어제" : d.rcept_dt;
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(d);
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label)!.push(d);
   });
   return groups;
 }
@@ -148,11 +149,8 @@ function DisclosuresFeedContent() {
         ))}
       </div>
 
-      {/* 2컬럼 레이아웃 — 왼쪽: 공시 피드 / 오른쪽: Pro 전용 분석 패널 */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[3fr_2fr]">
-
-        {/* ─── 왼쪽: 공시 피드 ─── */}
-        <div className="flex flex-col gap-6">
+      {/* 공시 피드 */}
+      <div className="flex flex-col gap-6">
           {showSkeleton && (
             <div className="flex flex-col gap-3" role="status" aria-label="공시 피드 불러오는 중">
               {[...Array(5)].map((_, i) => (
@@ -185,7 +183,7 @@ function DisclosuresFeedContent() {
             </div>
           )}
 
-          {Object.entries(groups).map(([dateLabel, items]) => (
+          {[...groups].map(([dateLabel, items]) => (
             <section key={dateLabel} aria-label={`${dateLabel} 공시`}>
               <div className="mb-3 flex items-center gap-3">
                 <h2 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">{dateLabel}</h2>
@@ -216,17 +214,6 @@ function DisclosuresFeedContent() {
               </button>
             </div>
           )}
-        </div>
-
-        {/* ─── 오른쪽: Pro 전용 분석 패널 (sticky) ─── */}
-        <div className="lg:sticky lg:top-20">
-          <TierGate requiredTier="PRO">
-            <div className="h-20 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
-              3개월 이전 공시 이력 (Pro 전용)
-            </div>
-          </TierGate>
-        </div>
-
       </div>
     </div>
   );

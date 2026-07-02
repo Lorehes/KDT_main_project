@@ -1,12 +1,15 @@
 "use client";
 
-// [목적] 공시 상세 페이지(D3/m04·D17/m17·D18/m20) — Free·Pro·Premium 단계별 분析 + 피드백
-// [이유] 티어별 정보 노출: Free(판정+요약), Pro(유사사례+주가반응), Premium(재무+업황). 티어 미달 시 TierGate
+// [목적] 공시 상세 페이지(D3/m04·D17/m17·D18/m20) — Free·Pro·Premium 단계별 분석 + 피드백
+//   Wave 1 리디자인(disclosure-detail-redesign): 목업 시각 언어로 레이아웃 재구성 —
+//   AI 인덱스 상단 강조 · 한 줄 요약 헤드라인 · 유사공시 Pro 카드 · Premium 다크 CTA.
+//   요인/단계 해설/예측/매수가 카드는 BE 신규 필드 의존 → Wave 2~3, 본 wave 미포함(없는 데이터 렌더 금지).
+// [이유] 티어별 정보 노출: Free(판정+요약), Pro(유사사례+주가반응), Premium(재무+업황). 티어 미달 시 TierGate/다크 CTA
 // [사이드 임팩트] disclosure 로드 완료 후 analysis 쿼리 활성(R7) — 직렬화로 미스매치 방지.
-//   analysis null → disclosure.sentiment 폴백 대신 "분析 대기 중" 배지(R1, 자본시장법 §11.1).
+//   analysis null → disclosure.sentiment 폴백 대신 "분석 대기 중" 배지(R1, 자본시장법 §11.1).
 // [수정 시 고려사항] 원문 인용 필드(corp_name·report_nm·수치)는 LLM 변형 없이 그대로 렌더(CLAUDE.md §4).
-//   is_withheld=true 또는 confidence<0.5 시 SentimentBadge를 WITHHELD로 표시(투자자 보호 의무).
-//   Premium financial_context는 현재 JSON 원시 출력 — 구조화된 테이블 UI로 교체 예정
+//   is_withheld=true 또는 confidence<0.5 시 SentimentBadge를 WITHHELD로, AI 인덱스를 "신뢰도 낮음"으로 표시(투자자 보호 의무).
+//   Premium financial_context는 현재 JSON 원시 출력 — Wave 2에서 구조화된 테이블 UI로 교체 예정.
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -14,8 +17,10 @@ import { ExternalLink, ArrowLeft } from "lucide-react";
 import { useDisclosure, useDisclosureAnalysis, EXPECTED_REACTION_CONFIG } from "@/lib/api/disclosures";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
+import { useUIStore } from "@/lib/stores/uiStore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SUPPORT_EMAIL } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import { SUPPORT_EMAIL, TIER_LABEL } from "@/lib/constants";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { ConfidenceMeter } from "@/components/domain/ConfidenceMeter";
 import { DisclaimerNotice } from "@/components/domain/DisclaimerNotice";
@@ -27,9 +32,10 @@ export default function DisclosureDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
   const { isPro, isPremium } = useTierCheck();
+  const { setUpsellModalOpen } = useUIStore();
 
   const { data: disclosure, isLoading: discLoading } = useDisclosure(id);
-  // R7: disclosure 로드 완료 후 분析 쿼리 활성 — 미스매치 데이터 렌더 방지
+  // R7: disclosure 로드 완료 후 분석 쿼리 활성 — 미스매치 데이터 렌더 방지
   const { data: analysis, isLoading: analysisLoading } = useDisclosureAnalysis(id, { enabled: !!disclosure });
   const showSkeleton = useDelayedLoading(discLoading || analysisLoading);
 
@@ -47,10 +53,7 @@ export default function DisclosureDetailPage() {
                   <Skeleton className="h-4 w-64" />
                   <Skeleton className="h-3 w-24" />
                 </div>
-                <Skeleton className="h-7 w-16 rounded-full" />
-              </div>
-              <div className="border-t border-border pt-4">
-                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-10 w-24" />
               </div>
             </div>
             <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -101,42 +104,44 @@ export default function DisclosureDetailPage() {
         {/* ── 메인 컨텐츠 ── */}
         <div className="flex flex-col gap-5">
 
-          {/* 헤더 — 회사명·코드·제목은 DART 원본 그대로 렌더 (LLM 변형 금지) */}
+          {/* 헤더 — 회사명·코드·제목은 DART 원본 그대로 렌더 (LLM 변형 금지). AI 인덱스 상단 우측 강조(목업) */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xl font-extrabold text-foreground">{disclosure.corp_name}</span>
                   <span className="font-mono text-sm text-muted-foreground">{disclosure.stock_code}</span>
+                  {sentiment
+                    ? <SentimentBadge sentiment={sentiment} isWithheld={isWithheld} size="sm" />
+                    : (
+                      // R1: analysis 미완료 → 룰 기반 sentiment 대신 "분석 대기 중" 명시 (자본시장법 §11.1)
+                      <span
+                        className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground"
+                        role="status"
+                        aria-label="AI 분석 대기 중"
+                      >
+                        분석 대기 중
+                      </span>
+                    )
+                  }
                 </div>
-                <p className="mt-1.5 text-base text-foreground">{disclosure.report_nm}</p>
+                <p className="mt-2 text-base font-bold leading-snug text-foreground">{disclosure.report_nm}</p>
                 <time className="mt-1 block text-xs text-muted-foreground" dateTime={disclosure.rcept_dt}>
                   접수일 {disclosure.rcept_dt}
                 </time>
               </div>
-              {sentiment
-                ? <SentimentBadge sentiment={sentiment} isWithheld={isWithheld} />
-                : (
-                  // R1: analysis 미완료 → 룰 기반 sentiment 대신 "분析 대기 중" 명시 (자본시장법 §11.1)
-                  <span
-                    className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground"
-                    role="status"
-                    aria-label="AI 분석 대기 중"
-                  >
-                    분석 대기 중
-                  </span>
-                )
-              }
-            </div>
 
-            {analysis?.confidence !== undefined && (
-              <div className="mt-4 border-t border-border pt-4">
-                <ConfidenceMeter confidence={analysis.confidence} />
-              </div>
-            )}
+              {/* AI 인덱스 — confidence 시각화(ConfidenceMeter 재활용). withheld면 "신뢰도 낮음" 표기 */}
+              {analysis?.confidence !== undefined && (
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">AI 인덱스</span>
+                  <ConfidenceMeter confidence={analysis.confidence} />
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Free — AI 분석 요약 */}
+          {/* Free — 한 줄 요약 헤드라인 (기존 summary 활용, Wave 2에서 headline 전용 필드로 분리 예정) */}
           {analysis && (
             <section className="rounded-2xl border border-border bg-card p-6 shadow-sm" aria-labelledby="summary-heading">
               <h2 id="summary-heading" className="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-primary">AI 분석 요약</h2>
@@ -188,7 +193,7 @@ export default function DisclosureDetailPage() {
             )}
           </section>
 
-          {/* Premium — 재무 영향 + 업황 */}
+          {/* Premium — 재무 영향 + 업황. 미달 시 다크 네이비 CTA 카드(목업) */}
           <section aria-labelledby="premium-heading">
             <h2 id="premium-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
               재무·업황 심층 분석
@@ -196,15 +201,27 @@ export default function DisclosureDetailPage() {
             </h2>
             {isPremium && analysis?.financial_context ? (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                {/* W7에서 구조화된 재무 테이블·업황 비교 UI로 교체 예정 */}
+                {/* Wave 2에서 구조화된 재무 테이블·업황 비교 UI로 교체 예정 */}
                 <pre className="whitespace-pre-wrap text-sm text-foreground">
                   {JSON.stringify(analysis.financial_context, null, 2)}
                 </pre>
               </div>
             ) : !isPremium ? (
-              <TierGate requiredTier="PREMIUM">
-                <div className="h-36 rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground">재무 영향 지표 · 업황 비교 (Premium 전용)</div>
-              </TierGate>
+              <div className="flex flex-col gap-3 rounded-2xl bg-[color:var(--color-brand-navy)] p-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-base font-extrabold text-white">재무·업황 보러가기</p>
+                  <p className="mt-1 text-sm text-white/70">과거 재무 추이·업황 비교 심층 분석은 {TIER_LABEL.PREMIUM} 플랜에서 제공됩니다.</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setUpsellModalOpen(true)}
+                  aria-label={`${TIER_LABEL.PREMIUM} 플랜으로 업그레이드`}
+                >
+                  {TIER_LABEL.PREMIUM} 업그레이드하기 →
+                </Button>
+              </div>
             ) : null}
           </section>
 

@@ -2209,3 +2209,26 @@ curl -u admin:<password> \
 ### 미완료 → 다음 세션
 - `auth-email-verify` 전용 통합 테스트(`EmailVerifyIntegrationTest`) — `@MockitoBean MailNotificationClient` + ArgumentCaptor 패턴으로 작성 권장
 - `notification-read-status` — 알림 읽음 상태 DB 영속 (FE Zustand 로컬 Set 임시 처리 상태)
+
+## 2026-07-02 | disclosure-detail-redesign Wave 1 — 공시 상세 시각 리디자인
+
+### 변경 파일
+- `frontend/src/app/(app)/disclosures/[id]/page.tsx` — Wave 1 레이아웃 재구성
+- `frontend/src/app/(app)/disclosures/page.tsx` — 우측 패널 제거 + 날짜 정렬 버그 수정
+- `docs/specs/Approved/disclosure-detail-redesign.md` — Spec (Draft→Approved)
+
+### 완료
+- **공시 상세 Wave 1**: AI 인덱스(confidence)를 헤더 상단 우측으로 강조 이동, SentimentBadge 제목 인라인 배치, Premium 다크 CTA 카드(brand-navy) 교체. 기존 로직(R1·R7·판단보류·면책·피드백) 전부 유지. tsc+eslint 통과, 코드리뷰 A.
+- **공시 피드 정렬 버그 수정**: `groupByDate` Record→Map 교체 — 날짜 키가 숫자형 문자열("20260609")이라 plain object에서 정수 오름차순 재정렬 → 최신순 깨짐 버그. Map은 삽입 순서 보존으로 수정.
+- **공시 피드 우측 패널 제거**: `useTierCheck` import 제거, 2컬럼 그리드 단일 컬럼으로 단순화.
+
+### 결정 (코드에 드러나지 않는 사항)
+- **Wave 1 범위 확정**: 기존 데이터(confidence/summary/similar/sentiment)만으로 목업 시각 재구성. 신규 필드(key_points/factors/headline/예측) 없는 카드는 렌더하지 않음(가짜 플레이스홀더 금지 — 자본시장법·환각 가드).
+- **티어 경계 확정**: 요인/단계해설=**Free**(Wave 2 Stage 2 산출), 예측 차트=**Pro**(Wave 3 유사공시 실측 일자평균 방식 A), 매수가 박스=**티어 무관**(Wave 3 포트폴리오 API 조인).
+- **예측 산출 방식 A 확정**: forward D+1~D+5는 LLM 미래 예측(방식 B) 비채택 — 자본시장법 리스크. 과거 유사공시 실측 평균으로 "과거 유사 사례 평균 등락" 프레이밍 사용.
+- **Flyway 불필요 확인**: Wave 2 신규 필드(key_points/factors/headline)는 `analysis_results.stage_details` JSONB에 저장 — 기존 컬럼 재활용.
+
+### 미완료 → 다음 세션
+- **Wave 2**: Stage 2 LLM 프롬프트+record에 headline/key_points[]/positive·negative_factors[] 추가 → stage_details JSONB 저장 → AnalysisResponse 화이트리스트 노출 → FE 카드 렌더
+- **Wave 3**: D+1~D+5 유사공시 실측 일자평균(방식 A) + 포트폴리오 avg_buy_price 박스
+- **모바일 검증**: OAuth 계정 → Playwright state 저장 후 `/dc-review-frontend` 재실행 권장
