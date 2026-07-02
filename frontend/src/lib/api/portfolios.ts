@@ -23,6 +23,8 @@ export interface Portfolio {
   corp_name?: string;      // nullable — BE stocks 마스터 미등재 엣지케이스 대비
   avg_buy_price?: number;  // BigDecimal → number (AES-256 복호화 후 반환)
   quantity?: number;
+  close_price?: number;    // 최신 종가(공개 시세). KRX 일배치 미수집 시 undefined (Wave 3)
+  price_asof?: string;     // 종가 기준일 YYYY-MM-DD. close_price와 함께 null 가능
   memo?: string;
   created_at: string;
   updated_at?: string;

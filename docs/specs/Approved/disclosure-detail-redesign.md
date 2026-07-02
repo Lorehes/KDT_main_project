@@ -145,4 +145,12 @@ updated: 2026-07-02
 ### 예상 wave 수
 - **3 wave / 3 PR**. Wave 1(FE 단독, 즉시 착수 가능)만으로도 목업 시각 개선의 시각적 핵심 달성. Wave 2~3은 BE/LLM 선행 필요.
 
-<!-- 다음: 사용자 승인 시 /dc-spec-move disclosure-detail-redesign Approved → /dc-implement -->
+## 구현 후 스코프 정정 (2026-07-02)
+
+- **Wave 1 완료**(aac864e): 시각 리레이아웃 — AI 인덱스 상단, Premium 다크 CTA.
+- **Wave 2 완료**(e01ce8b): Stage 2 LLM key_points/호재·악재 요인 생성 → stage_details JSONB → 전 티어 노출 → FE 카드.
+- **Wave 3(축소) 완료**: 내 평균 매수가 박스(#10) + PriceReactionChart P1 크래시 버그 수정(v2 계약 정합).
+- **⚠️ 예측 차트(#8/#9) 분리**: Tech Review의 "방식 A = 유사공시 실측 재활용"은 **오류**였음 — `SimilarDisclosureItem` v2가 `priceReaction5dPct`를 제거(KRX 주가 API 미구현)했고 `stock_prices` 일자별 시계열 테이블이 없음. 예측 차트는 **KRX 과거 주가 시계열 수집 + Flyway 테이블 신설**이 선행돼야 하는 별도 서브프로젝트 → 신규 Spec으로 분리.
+- **모델 품질 미결정**: Wave 2 요인/해설의 실 LLM 품질은 [[analysis-stage2-smoke]] 2026-07-02 재검 참조 — gemma3(생성 우수/낙관편향) vs qwen3(분류 우수/§4 손상) 딜레마, 별도 트랙 결정 대기.
+
+<!-- 다음: KRX 시계열 Spec(예측 차트 선행) + Stage2 모델 결정 트랙 -->

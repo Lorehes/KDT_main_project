@@ -140,8 +140,10 @@ public class PortfolioService {
                 .collect(Collectors.toSet());
         Map<String, String> corpNameMap = stockMasterService.findByStockCodeIn(stockCodes).stream()
                 .collect(Collectors.toMap(Stock::getStockCode, Stock::getCorpName, (a, b) -> a));
+        // 최신 종가 1회 벌크 조회 — N+1 방지(summary 경로와 동일 패턴). 미수집 종목은 맵 미포함 → null 폴백.
+        Map<String, StockPriceProvider.PriceInfo> priceMap = stockPriceProvider.findLatestPrices(stockCodes);
         return entities.stream()
-                .map(e -> toResponse(e, corpNameMap.get(e.getStockCode())))
+                .map(e -> toResponse(e, corpNameMap.get(e.getStockCode()), priceMap.get(e.getStockCode())))
                 .toList();
     }
 
@@ -150,7 +152,7 @@ public class PortfolioService {
         PortfolioEntity e = findOwned(userId, portfolioId);
         String corpName = stockMasterService.findByStockCode(e.getStockCode())
                 .map(Stock::getCorpName).orElse(null);
-        return toResponse(e, corpName);
+        return toResponse(e, corpName, stockPriceProvider.findLatestPrice(e.getStockCode()).orElse(null));
     }
 
     /**
@@ -222,7 +224,8 @@ public class PortfolioService {
                 .memo(request.memo())
                 .build();
         portfolioRepository.save(portfolio);
-        return toResponse(portfolio, corpName);
+        return toResponse(portfolio, corpName,
+                stockPriceProvider.findLatestPrice(portfolio.getStockCode()).orElse(null));
     }
 
     public PortfolioResponse updatePortfolio(Long userId, Long portfolioId, PortfolioRequest request) {
@@ -236,7 +239,8 @@ public class PortfolioService {
         );
         String corpName = stockMasterService.findByStockCode(portfolio.getStockCode())
                 .map(Stock::getCorpName).orElse(null);
-        return toResponse(portfolio, corpName);
+        return toResponse(portfolio, corpName,
+                stockPriceProvider.findLatestPrice(portfolio.getStockCode()).orElse(null));
     }
 
     @CacheEvict(value = "portfolioStockCodes", key = "#userId")
@@ -252,7 +256,11 @@ public class PortfolioService {
                         "해당 포트폴리오에 접근할 권한이 없습니다"));
     }
 
-    private PortfolioResponse toResponse(PortfolioEntity e, String corpName) {
+    /*
+     * price=null이면 종가 미수집(비거래일·배치 실패·마스터 미등재) — closePrice/priceAsof는 null로 반환, FE가 손익 미표시 폴백.
+     * closePrice는 공개 시세라 로깅 제약 없음. avgBuyPrice/quantity(PII)만 로그 금지(CLAUDE.md §7).
+     */
+    private PortfolioResponse toResponse(PortfolioEntity e, String corpName, StockPriceProvider.PriceInfo price) {
         String decryptedPrice = encryptor.decrypt(e.getAvgBuyPriceEnc());
         String decryptedQty   = encryptor.decrypt(e.getQuantityEnc());
         // avg_buy_price·quantity 복호화 값은 절대 로그 출력 금지 — 금융 개인정보(CLAUDE.md §7)
@@ -262,6 +270,8 @@ public class PortfolioService {
                 corpName,
                 parseSafe(decryptedPrice),
                 parseSafe(decryptedQty),
+                price != null ? price.closePrice() : null,
+                price != null ? price.priceAsof()  : null,
                 e.getMemo(),
                 e.getCreatedAt(),
                 e.getUpdatedAt()

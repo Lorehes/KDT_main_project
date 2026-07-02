@@ -176,7 +176,9 @@ updated: 2026-05-30
 // 응답 (매수가/수량은 평문 반환하되 저장은 암호화; 손익 계산은 복호화 후 앱 계층)
 {
   "id": 12, "stock_code": "005930", "corp_name": "삼성전자",
-  "avg_buy_price": 71000, "quantity": 10, "memo": "장기",
+  "avg_buy_price": 71000, "quantity": 10,
+  "close_price": 74400, "price_asof": "2026-07-02",  // 최신 종가(공개 시세). KRX 미수집 시 null (Wave 3)
+  "memo": "장기",
   "created_at": "2026-05-30T09:00:00+09:00"
 }
 ```

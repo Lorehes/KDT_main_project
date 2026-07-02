@@ -119,6 +119,7 @@ updated: 2026-06-02
 | 2026-07-01 | Jin | 69eb715 | docs(infra): LLM_BASE_URL 미설정 함정 .env.example 문서화 [7/8 S] | Docs/Infra | 7 | 8 | S | LLM 404 재발 방지 — OLLAMA_BASE_URL 혼동 주석 |
 | 2026-07-02 | Jin | 084e5c7 | feat(frontend): 공시 상세 Wave1 시각 리디자인 + 피드 정렬 버그 수정 [4/8 M] | Frontend | 4 | 8 | M | 공시 상세 Wave1 시각 리디자인 |
 | 2026-07-02 | Jin | a1959f5 | feat(analysis,frontend): Stage2 요인/해설 생성+노출 Wave2 [7/9 L] | Analysis/Infra/Frontend | 7 | 9 | L | Stage2 요인/해설 생성+노출 |
+| 2026-07-02 | Jin | 6768606 | feat(user,frontend): 매수가 박스 + 유사공시 크래시 수정 Wave3 [6/8 L] | User/Frontend | 6 | 8 | L | 매수가 박스 + 유사공시 크래시 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -126,5 +127,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 2 | 18 | 106 | 8.1 | 6.1 |
+| Jin | 3 | 19 | 107 | 8.1 | 6.1 |
 <!-- SUMMARY:END -->

@@ -1,15 +1,16 @@
 "use client";
 
 // [목적] 공시 상세 페이지(D3/m04·D17/m17·D18/m20) — Free·Pro·Premium 단계별 분석 + 피드백
-//   Wave 1 리디자인(disclosure-detail-redesign): 목업 시각 언어로 레이아웃 재구성 —
-//   AI 인덱스 상단 강조 · 한 줄 요약 헤드라인 · 유사공시 Pro 카드 · Premium 다크 CTA.
-//   요인/단계 해설/예측/매수가 카드는 BE 신규 필드 의존 → Wave 2~3, 본 wave 미포함(없는 데이터 렌더 금지).
-// [이유] 티어별 정보 노출: Free(판정+요약), Pro(유사사례+주가반응), Premium(재무+업황). 티어 미달 시 TierGate/다크 CTA
+//   Wave 1: 목업 리레이아웃(AI 인덱스·한 줄 요약·Premium 다크 CTA). Wave 2: 이런내용이에요/호재·악재 요인(Free).
+//   Wave 3: 내 평균 매수가 박스(티어 무관) + 유사공시 v2(유사도 리스트). 예측 차트는 KRX 시계열 미구현으로 별도 Spec.
+// [이유] 티어별 정보 노출: Free(판정+요약+요인), Pro(유사공시), Premium(재무·업황). 티어 미달 시 TierGate/다크 CTA
 // [사이드 임팩트] disclosure 로드 완료 후 analysis 쿼리 활성(R7) — 직렬화로 미스매치 방지.
 //   analysis null → disclosure.sentiment 폴백 대신 "분석 대기 중" 배지(R1, 자본시장법 §11.1).
+//   usePortfolios로 보유 종목 매칭 — 매수가(복호화 PII)는 렌더만, 절대 로깅 금지(CLAUDE.md §7).
 // [수정 시 고려사항] 원문 인용 필드(corp_name·report_nm·수치)는 LLM 변형 없이 그대로 렌더(CLAUDE.md §4).
 //   is_withheld=true 또는 confidence<0.5 시 SentimentBadge를 WITHHELD로, AI 인덱스를 "신뢰도 낮음"으로 표시(투자자 보호 의무).
-//   Premium financial_context는 현재 JSON 원시 출력 — Wave 2에서 구조화된 테이블 UI로 교체 예정.
+//   similar_disclosures는 v2(similarity_score) — priceReaction5dPct 제거됨. 예측 차트 부활은 KRX 시계열 Spec 후.
+//   Premium financial_context는 현재 JSON 원시 출력 — Stage 5 구조화 UI로 교체 예정.
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -26,7 +27,7 @@ import { ConfidenceMeter } from "@/components/domain/ConfidenceMeter";
 import { DisclaimerNotice } from "@/components/domain/DisclaimerNotice";
 import { TierGate } from "@/components/domain/TierGate";
 import { FeedbackPrompt } from "@/components/domain/FeedbackPrompt";
-import { PriceReactionChart } from "@/components/domain/PriceReactionChart";
+import { usePortfolios } from "@/lib/api/portfolios";
 
 export default function DisclosureDetailPage() {
   const params = useParams<{ id: string }>();
@@ -38,6 +39,20 @@ export default function DisclosureDetailPage() {
   // R7: disclosure 로드 완료 후 분석 쿼리 활성 — 미스매치 데이터 렌더 방지
   const { data: analysis, isLoading: analysisLoading } = useDisclosureAnalysis(id, { enabled: !!disclosure });
   const showSkeleton = useDelayedLoading(discLoading || analysisLoading);
+
+  // 내 평균 매수가 박스(Wave 3, 티어 무관) — 이 공시 종목을 보유 중이면 매수가 대비 현재가 손익 표시.
+  // 매수가는 복호화된 금융 PII — 렌더만 하고 절대 로깅 금지(CLAUDE.md §7).
+  const { data: portfolios } = usePortfolios();
+  const holding = portfolios?.find((p) => p.stock_code === disclosure?.stock_code);
+  // 매수가·현재가 둘 다 있고 매수가>0이어야 손익 계산 — 미입력(CSV 등록)·종가 미수집·매수가 0이면 박스 미노출(0 나눗셈 방지).
+  const position =
+    holding?.avg_buy_price != null && holding.avg_buy_price > 0 && holding.close_price != null
+      ? {
+          avg: holding.avg_buy_price,
+          cur: holding.close_price,
+          pnlPct: ((holding.close_price - holding.avg_buy_price) / holding.avg_buy_price) * 100,
+        }
+      : null;
 
   if (discLoading || analysisLoading) {
     if (!showSkeleton) return null;
@@ -193,32 +208,48 @@ export default function DisclosureDetailPage() {
             </section>
           )}
 
-          {/* Pro — 유사 공시 + 주가 반응 차트 */}
+          {/* 내 평균 매수가 (Wave 3, 티어 무관) — 보유 종목일 때만. 색+부호 병용(a11y), 정보 제공 톤(자본시장법) */}
+          {position && (
+            <section className="rounded-2xl border border-border bg-muted/30 p-6" aria-labelledby="position-heading">
+              <h2 id="position-heading" className="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-primary">내 평균 매수가</h2>
+              <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                <p className="text-sm text-muted-foreground">평균 매수가 <span className="font-bold text-foreground">{position.avg.toLocaleString("ko-KR")}원</span></p>
+                <p className="text-sm text-muted-foreground">현재가 <span className="font-bold text-foreground">{position.cur.toLocaleString("ko-KR")}원</span></p>
+                <p className={`text-sm font-extrabold ${position.pnlPct >= 0 ? "text-[color:var(--color-sentiment-positive)]" : "text-[color:var(--color-sentiment-negative)]"}`}>
+                  평가손익 {position.pnlPct >= 0 ? "+" : ""}{position.pnlPct.toFixed(1)}%
+                </p>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">보유 종목 기준 참고용 정보이며, 투자 판단의 근거가 아닙니다.</p>
+            </section>
+          )}
+
+          {/* Pro — 과거 유사 공시 (Stage 3 RAG 유사도). 주가 반응 차트는 KRX 시계열 구현 후 별도 Spec */}
           <section aria-labelledby="pro-heading">
             <h2 id="pro-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
-              과거 유사 공시 반응
+              과거 유사 공시
               <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
             </h2>
-            {isPro && analysis?.similar_disclosures ? (
+            {isPro && analysis?.similar_disclosures?.length ? (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <PriceReactionChart data={analysis.similar_disclosures} />
-                <ul className="mt-4 divide-y divide-border" aria-label="유사 공시 목록">
+                <ul className="divide-y divide-border" aria-label="유사 공시 목록">
                   {analysis.similar_disclosures.map((s) => (
-                    <li key={s.rcept_no} className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{s.corp_name}</p>
-                        <time className="font-mono text-xs text-muted-foreground">{s.rcept_dt}</time>
-                      </div>
-                      <span className={`font-mono text-sm font-extrabold ${s.price_reaction_5d_pct > 0 ? "text-[color:var(--color-sentiment-positive)]" : "text-[color:var(--color-sentiment-negative)]"}`}>
-                        {s.price_reaction_5d_pct > 0 ? "+" : ""}{s.price_reaction_5d_pct.toFixed(1)}%
-                      </span>
+                    <li key={s.rcept_no} className="py-3 first:pt-0 last:pb-0">
+                      <Link href={`/disclosures/${s.disclosure_id}`} className="group flex items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-foreground group-hover:underline">{s.corp_name}</p>
+                          <time className="font-mono text-xs text-muted-foreground" dateTime={s.rcept_dt}>{s.rcept_dt}</time>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+                          유사도 {Math.round(s.similarity_score * 100)}%
+                        </span>
+                      </Link>
                     </li>
                   ))}
                 </ul>
               </div>
             ) : !isPro ? (
               <TierGate requiredTier="PRO">
-                <div className="h-40 rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground">과거 주가 반응 차트 (Pro 전용)</div>
+                <div className="h-40 rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground">과거 유사 공시 (Pro 전용)</div>
               </TierGate>
             ) : (
               <p className="text-sm text-muted-foreground">유사 공시 데이터가 없습니다.</p>

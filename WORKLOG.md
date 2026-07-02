@@ -2260,6 +2260,21 @@ curl -u admin:<password> \
 - **LLM 클라이언트 파서 중복 유지**: OllamaLlmClient/OpenRouterLlmClient의 Stage2OutputRaw+normalizeList는 기존 의도된 중복(캡슐화 우선). 공유 Stage2RawMapper 추출은 후속 리팩터로 분리.
 
 ### 미완료 → 다음 세션
-- **Wave 3**: D+1~D+5 유사공시 실측 일자평균 + 포트폴리오 avg_buy_price 박스
-- **실 LLM smoke test**: qwen3:4b / OpenRouter 모델이 key_points/factors를 품질 있게 생성하는지 실측 검증 필요 (배관은 통합 테스트로 확인됨, 출력 품질은 별도)
 - **파서 중복 리팩터**: OllamaLlmClient ↔ OpenRouterLlmClient의 Stage2OutputRaw+helpers를 공유 Stage2RawMapper로 추출 (tech-debt, 기능 영향 없음)
+
+## 2026-07-02 | disclosure-detail-redesign Wave 3(축소) — 매수가 박스 + 유사공시 크래시 수정
+
+### 완료
+- **매수가 박스(#10)**: usePortfolios로 공시 종목 보유 매칭 → 매수가/현재가/평가손익. avg>0 가드(0 나눗셈), 색+부호(a11y), "참고용 정보" 면책, 무로깅. BE PortfolioResponse에 close_price/price_asof 추가(공개 시세, StockPriceProvider 재사용, list=벌크 조회로 N+1 방지).
+- **P1 크래시 버그 수정**: BE SimilarDisclosureItem v2가 priceReaction5dPct 제거(KRX 미구현)했는데 FE는 v1 기대 → Pro 유사공시 있는 공시 열면 `.toFixed()` 크래시. v2(similarity_score) 정합 + 유사도 리스트로 재구성. PriceReactionChart.tsx 삭제(dead).
+- PortfolioIntegrationTest 종가 有/無 2건 추가. api_spec §portfolios 동기.
+
+### 결정 (코드에 드러나지 않는 사항)
+- **예측 차트(#8/#9) 별도 Spec 분리**: Tech Review "방식 A=유사공시 실측 재활용"은 오류 — 그 데이터가 v2에서 제거됨(KRX 주가 API 미구현). 일자별 시계열 테이블(stock_prices) 없음. 예측 차트 = KRX 과거 주가 수집 + Flyway 테이블의 별도 서브프로젝트.
+- **close_price carrier 선택**: 신규 엔드포인트 대신 PortfolioResponse 확장(이미 stocks 마스터 조회 + StockPriceProvider 주입). 공개 시세라 로깅 제약 없음(avg_buy_price만 PII).
+
+### 미완료 → 다음 세션
+- **KRX 시계열 Spec**: stock_prices 일자별 테이블 + KRX 과거 주가 백필 → 예측 차트(#8/#9) 부활 선행 조건. /dc-plan 대상.
+- **Stage2 모델 결정**: gemma3(생성 우수/낙관편향) vs qwen3(분류 우수/§4 숫자·회사명 손상) 딜레마 해소. config 기본값 gemma vs smoke 문서 qwen 불일치도 함께. [[analysis-stage2-smoke]] 2026-07-02 참조.
+- **파서 중복 리팩터**: OllamaLlmClient ↔ OpenRouterLlmClient의 Stage2OutputRaw+helpers를 공유 Stage2RawMapper로 추출 (tech-debt).
+- **모바일 검증**: OAuth Playwright state 저장 후 /dc-review-frontend 재실행.

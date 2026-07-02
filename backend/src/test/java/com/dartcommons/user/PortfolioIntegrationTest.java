@@ -126,6 +126,31 @@ class PortfolioIntegrationTest {
     }
 
     @Test
+    @DisplayName("포트폴리오 생성 — 종가 수집된 종목은 close_price·price_asof 반환 (Wave 3 매수가 박스)")
+    void createPortfolio_withClosePrice_returnsPriceFields() throws Exception {
+        // 종가 수집 상황 재현 — resetStockPrices()가 NULL로 초기화하므로 이 종목만 세팅
+        jdbcTemplate.update("UPDATE stocks SET close_price = 74400, price_asof = DATE '2026-07-02' WHERE stock_code = '005930'");
+        String token = signupAndGetToken(uniqueEmail());
+
+        JsonNode resp = createPortfolio(token, "005930");
+
+        assertThat(resp.get("close_price").decimalValue()).isEqualByComparingTo(new BigDecimal("74400"));
+        assertThat(resp.get("price_asof").asText()).isEqualTo("2026-07-02");
+    }
+
+    @Test
+    @DisplayName("포트폴리오 생성 — 종가 미수집 종목은 close_price null (손익 박스 미노출 폴백)")
+    void createPortfolio_withoutClosePrice_nullPriceFields() throws Exception {
+        // resetStockPrices()로 close_price=NULL 상태 — 별도 세팅 없음
+        String token = signupAndGetToken(uniqueEmail());
+
+        JsonNode resp = createPortfolio(token, "005930");
+
+        assertThat(resp.get("close_price").isNull()).isTrue();
+        assertThat(resp.get("price_asof").isNull()).isTrue();
+    }
+
+    @Test
     @DisplayName("포트폴리오 목록 조회 — 200 + 2종목 corp_name bulk 조회 경로 검증")
     void listPortfolios_success_returns200() throws Exception {
         String token = signupAndGetToken(uniqueEmail());

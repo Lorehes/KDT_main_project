@@ -32,11 +32,16 @@ export interface Disclosure {
   summary?: string;
 }
 
+// v2 (analysis-stage3-rag-chroma): priceReaction5dPct 제거(KRX 주가 API 미구현) → 유사도 기반.
+// KRX 시계열 주가 구현 시 별도 v3에서 일자별 반응 필드 재추가 예정([[disclosure-detail-redesign]] 예측차트 Spec).
 export interface SimilarDisclosure {
+  disclosure_id: number;
   rcept_no: string;
   corp_name: string;
+  corp_code: string;
+  disclosure_type: string;
   rcept_dt: string;
-  price_reaction_5d_pct: number;
+  similarity_score: number;
 }
 
 export interface DisclosureAnalysis {
