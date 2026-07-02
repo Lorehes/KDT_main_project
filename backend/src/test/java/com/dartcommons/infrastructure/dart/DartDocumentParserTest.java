@@ -53,6 +53,64 @@ class DartDocumentParserTest {
         assertThat(result).contains("삼성전자 공시 내용");
     }
 
+    // ── content-text-charset-mojibake: charset 프로빙 회귀 ──
+
+    @Test
+    @DisplayName("UTF-8 문서인데 인코딩 선언 없음 → mojibake 없이 정상(과거엔 EUC-KR 기본으로 깨짐)")
+    void extractText_utf8_noDeclaration_noMojibake() {
+        // 선언 없는 UTF-8 한글 — 기존 detectCharset은 EUC-KR 기본 적용 → mojibake. 이제 UTF-8 strict가 잡음.
+        String html = "<html><body><p>한전기술 계약금액 448억원 규모입니다</p></body></html>";
+        byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+
+        String result = parser.extractText(bytes);
+
+        assertThat(result).contains("한전기술 계약금액 448억원 규모입니다");
+        assertThat(result).doesNotContain("�");  // 치환문자(�) 없음
+    }
+
+    @Test
+    @DisplayName("UTF-8 문서인데 EUC-KR로 잘못 선언 → 선언 무시하고 UTF-8로 정상 디코딩")
+    void extractText_utf8_wronglyDeclaredEucKr() {
+        // 실제 mojibake 원인 재현: 선언은 euc-kr인데 바이트는 UTF-8 → UTF-8 strict가 먼저 성공해 선언 무시
+        String html = "<?xml version=\"1.0\" encoding=\"euc-kr\"?><html><body><p>취득금액 319,100,000,000원</p></body></html>";
+        byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+
+        String result = parser.extractText(bytes);
+
+        assertThat(result).contains("취득금액 319,100,000,000원");
+        assertThat(result).doesNotContain("�");
+    }
+
+    @Test
+    @DisplayName("UTF-8 BOM → BOM 제거 + 정상 디코딩")
+    void extractText_utf8Bom() {
+        String html = "<html><body><p>BOM 포함 공시 본문</p></body></html>";
+        byte[] content = html.getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = new byte[content.length + 3];
+        bytes[0] = (byte) 0xEF; bytes[1] = (byte) 0xBB; bytes[2] = (byte) 0xBF;  // UTF-8 BOM
+        System.arraycopy(content, 0, bytes, 3, content.length);
+
+        String result = parser.extractText(bytes);
+
+        assertThat(result).contains("BOM 포함 공시 본문");
+        assertThat(result).doesNotContain("﻿");  // BOM 문자 제거됨
+        assertThat(result).doesNotContain("�");
+    }
+
+    @Test
+    @DisplayName("EUC-KR 문서인데 인코딩 선언 없음 → MS949 프로빙으로 정상")
+    void extractText_euckr_noDeclaration_probed() {
+        Assumptions.assumeTrue(Charset.isSupported("MS949"), "MS949 미지원 환경 — 테스트 skip");
+        Charset ms949 = Charset.forName("MS949");
+        String html = "<html><body><p>현대지에프홀딩스 주식매수청구권 사항</p></body></html>";
+        byte[] bytes = html.getBytes(ms949);
+
+        String result = parser.extractText(bytes);
+
+        assertThat(result).contains("현대지에프홀딩스 주식매수청구권 사항");
+        assertThat(result).doesNotContain("�");
+    }
+
     @Test
     @DisplayName("표(table) 직렬화 — td 셀은 공백으로 연결, tr은 개행 처리")
     void extractText_tableSerialization() {

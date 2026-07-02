@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-07-03
 updated: 2026-07-03
 ---
 
 # 공시 본문 charset 오디코딩(mojibake) 수정 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-07-03, dc-tech-review 승인 + 재수집 24k 우선 확정)
 
 ## 배경 / 목적
 
@@ -62,4 +62,45 @@ updated: 2026-07-03
 - 재수집 범위·DART 호출 한도 내 배치 크기
 - 일부 문서가 원천적으로 혼합 인코딩(한/일 혼재)이라 완전 복구 불가한 비율
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-07-03)
+
+### 확정된 결정 (사용자 승인 · 2026-07-03)
+1. **재수집 범위 = `�` 포함 24,389건 우선** — DB로 식별 가능한 손상분 먼저. 전량(68k, valid-but-wrong 포함)은 후속(비용·완전성 트레이드오프). 카드 #3의 `content_text LIKE '%�%'` 대상 한정.
+2. **프로빙 오판율·DART 재호출 한도** — 구현 중 실측(사용자 결정 불필요). content 백필 기존 throttle 준수.
+
+### 아키텍처 분해
+- 영향 레이어: **backend(infrastructure/dart + disclosure)**. FE·응답 계약 무변경.
+- 신규: 없음. 수정: `DartDocumentParser.detectCharset`/`extractText`(charset 프로빙), `DartDocumentParserTest`(케이스). 재수집·재분석은 기존 백필 잡 재사용.
+
+### 조사 확정 (근원)
+- `DartDocumentParser.extractText`: `detectCharset(bytes)` → `new String(bytes, charset)`. `detectCharset`은 앞 300B에서 `encoding="..."` 선언 스캔 → 없으면 **EUC-KR 기본**(`DartDocumentParser.java:82`).
+- `new String(bytes, charset)`은 **절대 예외 안 던짐** — 잘못된 charset이면 조용히 `�`(U+FFFD) 또는 valid-but-wrong 한자("異질리권")로 손상. → 로그 없이 DB 저장.
+- **실측 인과(2026-07-03)**: 94128 한전기술 계약 본문의 계약금액 구간이 mojibake("������怨�") → gemma가 숫자를 못 읽고 **"448조원" 환각** → 투자자에게 틀린 계약금액 노출. **mojibake = 틀린 숫자의 1차 원인.**
+- 규모: `�` 포함 **24,389건**. 단 valid-but-wrong(`�` 없음)은 이 수치 밖 — DB만으론 완전 식별 불가(원본 raw 바이트 미저장).
+- content 백필 재수집 조건: `content_fetched_at IS NULL`(`DisclosureRepository.java:50`) → 재수집하려면 대상의 content_text+content_fetched_at을 NULL로.
+
+### 작업 카드
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `DartDocumentParser` charset 프로빙 — BOM 검사 + **strict-decode(UTF-8 CodingErrorAction.REPORT 성공→UTF-8, 실패→MS949→EUC-KR)**. 선언은 참고하되 디코딩 실패/치환문자율로 검증. `new String` 무예외 대체 | backend/infra | BE | 상 | - |
+| 2 | `DartDocumentParserTest` — UTF-8·EUC-KR·MS949·BOM·선언없음·선언오류·한/일 혼합 바이트 정확 디코딩 + 회귀(태그/엔티티 처리 유지) | backend/infra | BE | 중 | 1 |
+| 3 | (운영) 손상 식별 + 재수집 — `content_text LIKE '%�%'` 대상 content_text·content_fetched_at NULL 처리 → content 백필(`content_fetched_at IS NULL`)이 수정 파서로 재fetch | 운영/BE | BE | 중 | 1, 확인필요 |
+| 4 | (운영) 재수집 공시 재분석 — 숫자 정확도 육안 검증(94128 등 재확인) 후 [[stage2-body-in-prompt]] 재분석과 병합 | 운영/BE | BE | 중 | 3 |
+
+### DB / 마이그레이션 영향
+- **Flyway 불필요** — 스키마 무변경. content_text **데이터**만 재수집으로 정정.
+- 재수집 대상의 content_text·content_fetched_at을 NULL로 되돌리는 UPDATE(데이터, 마이그레이션 아님) — 운영 배치.
+
+### 외부 계약 영향
+- **DART 문서 파싱 정밀화**(내부). 계약 불변. 재수집은 DART document.xml 재호출 → **일일 호출 한도·throttle** 준수 필요(content 백필 잡의 기존 throttle 활용).
+
+### 리스크 & 법적 검토
+- **[핵심] 투자자 오도(자본시장법 §11 + CLAUDE.md §4)**: mojibake → LLM 숫자 환각(448조원) → 틀린 계약금액·수치 노출. 원본 인용 필드(수치) 정확성 직결 — 본 Spec의 최우선 동기.
+- **재수집 완전성**: `�` LIKE는 valid-but-wrong mojibake를 못 잡음 → 완전 복구하려면 전량(67,876) 재수집이나 비용 큼. → **확인 필요: 24k(� only) vs 68k(전량) 재수집 범위.**
+- **charset 오판 잔존**: strict 프로빙도 짧은/모호한 바이트열은 오판 가능 — 치환문자율 임계로 방어, 완전 무결 보장 불가(확인 필요).
+- **재수집 비용**: DART API 대량 재호출 — 한도 내 배치 분할. 재분석까지 연쇄(수 시간).
+
+### 예상 wave 수
+- **1 wave(파서+테스트, 카드 1~2) + 운영(재수집+재분석, 카드 3~4)**. 코드는 단일 PR. 재수집·재분석은 배포 후 운영 단계.
+
+<!-- 다음: 확인 필요(재수집 범위 24k vs 68k · 프로빙 오판율 · DART 한도) 판단 → /dc-spec-move Approved → /dc-implement -->

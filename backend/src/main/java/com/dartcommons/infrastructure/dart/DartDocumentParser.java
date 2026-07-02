@@ -2,16 +2,22 @@ package com.dartcommons.infrastructure.dart;
 
 import org.springframework.stereotype.Component;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /*
  * [목적] DART document.xml 바이트(HTML/XML 마크업)를 임베딩·분석에 적합한 평문 텍스트로 변환.
- *       ① EUC-KR/MS949 인코딩 감지 ② 태그 제거 ③ 표 직렬화 ④ HTML 엔티티 디코딩 ⑤ 공백 정규화.
+ *       ① charset 프로빙 디코딩(BOM→UTF-8 strict→선언→MS949→EUC-KR) ② 태그 제거 ③ 표 직렬화 ④ HTML 엔티티 ⑤ 공백 정규화.
  * [이유] DART 원문은 독자 HTML 마크업(XML 선언 + HTML body). DOM/SAX 파서는 비정규 HTML에 취약.
  *       정규식 기반 추출이 실용적 — DART 원문은 스크립트 복잡도 낮고 구조 단순.
  *       LLM 미사용 원칙(CLAUDE.md §4): 원본 수치·날짜·회사명은 변형 없이 그대로 포함.
@@ -34,14 +40,23 @@ public class DartDocumentParser {
 
     // EUC-KR 지원 여부 JRE별 차이 — 초기화 시 확인 후 폴백
     private static final Charset DEFAULT_CHARSET;
+    /** strict 프로빙 후보(순서 중요) — UTF-8 우선(자기검증), 실패 시 한국어 레거시 MS949(EUC-KR superset). */
+    private static final List<Charset> PROBE_CHARSETS;
     static {
-        Charset cs;
+        Charset eucKr;
         try {
-            cs = Charset.forName("EUC-KR");
+            eucKr = Charset.forName("EUC-KR");
         } catch (Exception e) {
-            cs = StandardCharsets.UTF_8;
+            eucKr = StandardCharsets.UTF_8;
         }
-        DEFAULT_CHARSET = cs;
+        DEFAULT_CHARSET = eucKr;
+        Charset ms949;
+        try {
+            ms949 = Charset.forName("MS949");  // = windows-949, CP949 — EUC-KR 상위집합(한글 완성형 전부 커버)
+        } catch (Exception e) {
+            ms949 = eucKr;
+        }
+        PROBE_CHARSETS = List.of(StandardCharsets.UTF_8, ms949);
     }
 
     // script/style/head 블록 전체 제거 (내용 포함)
@@ -79,7 +94,7 @@ public class DartDocumentParser {
 
     /**
      * DART document.xml raw 바이트 → 평문 텍스트.
-     * 인코딩 선언이 없으면 EUC-KR 기본 적용(DART 구 공시 특성).
+     * charset 프로빙(BOM → UTF-8 strict → 선언 → MS949 strict → EUC-KR lenient)으로 mojibake 방지.
      * MAX_RAW_BYTES(5MB) 초과 입력은 절사 — 정규식 처리 시간 상한 보장.
      */
     public String extractText(byte[] rawBytes) {
@@ -87,25 +102,87 @@ public class DartDocumentParser {
         if (rawBytes.length > MAX_RAW_BYTES) {
             rawBytes = Arrays.copyOf(rawBytes, MAX_RAW_BYTES);
         }
-        Charset charset = detectCharset(rawBytes);
-        String markup = new String(rawBytes, charset);
+        String markup = decodeBytes(rawBytes);
         return processMarkup(markup);
     }
 
-    private Charset detectCharset(byte[] bytes) {
+    /*
+     * [목적] raw 바이트를 올바른 charset으로 디코딩 — content-text-charset-mojibake Spec 카드 #1.
+     * [이유] 기존 `new String(bytes, charset)`는 잘못된 charset이어도 예외 없이 조용히 mojibake('�' 또는 valid-but-wrong)
+     *       생성 → DB 저장 → LLM이 깨진 숫자를 읽고 환각(94128 "448조원"). strict 디코딩(REPORT)으로 실패를 감지해
+     *       올바른 charset을 선택한다.
+     * [사이드 임팩트] UTF-8은 바이트 구조가 자기검증(연속 바이트 규칙) → strict 성공 시 거의 확실히 UTF-8(오탐 ≈0).
+     *               한국어 레거시(EUC-KR/MS949) 문서는 UTF-8 strict 실패 → 다음 후보로. 최후엔 EUC-KR lenient(무예외).
+     * [수정 시 고려사항] 선언 charset이 UTF-8이 아니면서 strict 성공 시 신뢰(카드 #1). 짧은/모호한 바이트열은
+     *                  여전히 오판 가능 — 완전 무결 보장 불가(Spec 리스크). 후보 추가는 PROBE_CHARSETS만 수정.
+     */
+    private String decodeBytes(byte[] bytes) {
+        // 1) BOM 우선 — 명시적 인코딩 신호(BOM 바이트는 제거)
+        BomResult bom = detectBom(bytes);
+        if (bom != null) {
+            return new String(bytes, bom.offset(), bytes.length - bom.offset(), bom.charset());
+        }
+        // 2) UTF-8 strict — 자기검증이라 성공하면 UTF-8로 확정(오탐 ≈0)
+        Optional<String> utf8 = decodeStrict(bytes, StandardCharsets.UTF_8);
+        if (utf8.isPresent()) return utf8.get();
+        // 3) 선언된 charset(UTF-8 외)이 strict 성공하면 신뢰
+        Charset declared = detectDeclaredCharset(bytes);
+        if (declared != null && !StandardCharsets.UTF_8.equals(declared)) {
+            Optional<String> d = decodeStrict(bytes, declared);
+            if (d.isPresent()) return d.get();
+        }
+        // 4) 한국어 레거시 후보 strict 프로빙 (MS949 등)
+        for (Charset cs : PROBE_CHARSETS) {
+            if (StandardCharsets.UTF_8.equals(cs)) continue;  // 이미 시도
+            Optional<String> s = decodeStrict(bytes, cs);
+            if (s.isPresent()) return s.get();
+        }
+        // 5) 최후 — 어느 것도 strict 통과 못하면 EUC-KR lenient(무예외, 최선 추정)
+        return new String(bytes, DEFAULT_CHARSET);
+    }
+
+    /** malformed/unmappable를 REPORT로 감지하는 strict 디코딩 — 실패 시 Optional.empty(잘못된 charset). */
+    private static Optional<String> decodeStrict(byte[] bytes, Charset cs) {
+        CharsetDecoder decoder = cs.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT);
+        try {
+            return Optional.of(decoder.decode(ByteBuffer.wrap(bytes)).toString());
+        } catch (CharacterCodingException e) {
+            return Optional.empty();
+        }
+    }
+
+    /** BOM 감지 — 있으면 charset + BOM 바이트 길이(offset) 반환. 없으면 null. */
+    private static BomResult detectBom(byte[] b) {
+        if (b.length >= 3 && (b[0] & 0xFF) == 0xEF && (b[1] & 0xFF) == 0xBB && (b[2] & 0xFF) == 0xBF) {
+            return new BomResult(StandardCharsets.UTF_8, 3);
+        }
+        if (b.length >= 2 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xFE) {
+            return new BomResult(StandardCharsets.UTF_16LE, 2);
+        }
+        if (b.length >= 2 && (b[0] & 0xFF) == 0xFE && (b[1] & 0xFF) == 0xFF) {
+            return new BomResult(StandardCharsets.UTF_16BE, 2);
+        }
+        return null;
+    }
+
+    private record BomResult(Charset charset, int offset) {}
+
+    /** XML 선언의 encoding 속성에서 charset 추출 — 없거나 미지원이면 null. */
+    private static Charset detectDeclaredCharset(byte[] bytes) {
         // XML 선언은 ASCII 범위이므로 ISO-8859-1로 안전하게 읽을 수 있음
         String header = new String(bytes, 0, Math.min(MAX_DECLARATION_SCAN_BYTES, bytes.length),
                 StandardCharsets.ISO_8859_1);
         Matcher m = ENCODING_DECL.matcher(header);
         if (m.find()) {
-            String enc = m.group(1).trim();
             try {
-                return Charset.forName(enc);
+                return Charset.forName(m.group(1).trim());
             } catch (Exception ignored) {
-                // 알 수 없는 인코딩 — 기본값 사용
+                // 알 수 없는 인코딩 — null 반환(프로빙에 위임)
             }
         }
-        return DEFAULT_CHARSET;
+        return null;
     }
 
     private String processMarkup(String markup) {

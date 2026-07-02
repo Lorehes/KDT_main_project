@@ -2371,3 +2371,19 @@ curl -u admin:<password> \
 - **카드 #3(운영)**: 기존 오탐 withheld 분석 재분석 — stage2-body-in-prompt 재분석과 병합.
 - **content-text-charset-mojibake** Spec(Draft) — 이슈2, content_text 24k mojibake. tech-review 대기.
 - stage2-body-in-prompt 카드 #6 배치 재분석(최근 공시 확대).
+
+## 2026-07-03 | content-text-charset-mojibake (카드 1~2) — 파서 charset 프로빙
+
+### 완료
+- `DartDocumentParser`: `new String(bytes,charset)`(무예외 mojibake) → charset 프로빙(BOM→UTF-8 strict→선언→MS949→EUC-KR lenient). detectCharset을 decodeBytes/decodeStrict/detectBom/detectDeclaredCharset으로 분해.
+- `DartDocumentParserTest` 5건 추가(UTF-8 선언없음·EUC-KR 오선언·BOM·MS949 프로빙). 13/13 통과.
+
+### 결정
+- **UTF-8 strict 우선**: UTF-8 바이트 자기검증 특성(오탐≈0)으로 선언보다 먼저 시도 → "UTF-8 문서를 EUC-KR로 오판"(94128 원인) 직접 차단.
+- **재수집 24k 우선**(`�` 포함), 전량 68k는 후속.
+
+### 미완료 → 다음 세션 (운영)
+- **카드 #3 재수집**: `content_text LIKE '%�%'`(24k) 대상 content_text·content_fetched_at NULL → content 백필(content_fetched_at IS NULL) 재실행 → 수정 파서로 재수집.
+- **카드 #4 재분석**: 재수집 공시 재분석 → 94128 "448조원"이 실제 계약금액으로 정정되는지 검증.
+- valid-but-wrong(`�` 없는) mojibake는 전량 재수집 시 커버(후속).
+- gemma 요인 과생성 튜닝(정형 공시 요인 억제) + 본문 없는 공시 key_points 필드라벨 에코 억제.
