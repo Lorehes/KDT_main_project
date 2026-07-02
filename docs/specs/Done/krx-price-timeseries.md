@@ -1,13 +1,14 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-02
 updated: 2026-07-02
 ---
 
 # KRX 주가 시계열 수집 (stock_prices) Spec
 
-> 상태: Draft → **Approved** (2026-07-02, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-07-02, Wave A~C 구현 완료 · 커밋 97ab0ce·392b266·949812e)
+> ⚠️ 운영 액션 잔여: `POST /admin/stocks/price-backfill` 1회 실행해야 stock_prices에 실 데이터 적재됨.
 
 ## 배경 / 목적
 

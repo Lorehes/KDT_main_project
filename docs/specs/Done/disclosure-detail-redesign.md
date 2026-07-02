@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-02
 updated: 2026-07-02
 ---
 
 # 공시 상세 페이지 리디자인 Spec
 
-> 상태: Draft → **Approved** (2026-07-02, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-07-02, Wave 1~3 + 예측차트 구현 완료 · 커밋 aac864e·e01ce8b·7600a91·949812e)
 
 ## 배경 / 목적
 
