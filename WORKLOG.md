@@ -2262,6 +2262,24 @@ curl -u admin:<password> \
 ### 미완료 → 다음 세션
 - **파서 중복 리팩터**: OllamaLlmClient ↔ OpenRouterLlmClient의 Stage2OutputRaw+helpers를 공유 Stage2RawMapper로 추출 (tech-debt, 기능 영향 없음)
 
+## 2026-07-02 | krx-price-timeseries Wave A — V27 stock_prices + KrxPriceSyncJob 시계열 병행
+
+### 완료
+- V27 `stock_prices(stock_code FK, trade_date, close_price, PK(stock_code,trade_date))` Flyway 마이그레이션.
+- `StockPrice` 엔티티(`@IdClass(StockPriceId)` — record 아닌 class, JPA spec 준수), `StockPriceRepository`(`upsertPrice` ON CONFLICT DO NOTHING, `findReactionPrices`, `findLatestOnOrBefore`).
+- `KrxPriceSyncJob` 확장 — `stock.updatePrice()` 후 `stockPriceRepository.upsertPrice()` 1줄 추가(이상치 필터 재사용). 오늘부터 시계열 축적 시작.
+- 통합 테스트: `stock_prices` 적재·ON CONFLICT DO NOTHING 멱등 검증 1건 추가(`@BeforeEach DELETE FROM stock_prices`).
+- 리뷰 수정 2건: `StockPriceId` record→class(JPA spec), `upsertPrice` `@Transactional` 추가.
+
+### 결정
+- **IdClass record 비채택**: JPA `@IdClass` spec이 no-arg constructor 요구 → record(canonical ctor)는 spec 미보장. Hibernate 6 우연 허용 가능하나 이식성 위해 일반 class 사용.
+- **upsertPrice 행당 1호출 유지**: ~341종목 × 1회/일이라 batch 불필요(YAGNI).
+
+### 미완료 → 다음 세션
+- **Wave B(백필)**: `PriceBackfillService` — 평일 캘린더 3년 역순, 커버 종목 한정, @Async+진행률+안전망.
+- **Wave C(반응 산출)**: `StockPriceService.findReactionSeries()`, 유사 공시 D+1~D+5 평균 등락 → disclosure-detail-redesign 예측 차트(#8/#9) 언블록.
+- **Stage2 모델 결정** 및 **파서 중복 리팩터** (이전 세션 미완료 지속)
+
 ## 2026-07-02 | disclosure-detail-redesign Wave 3(축소) — 매수가 박스 + 유사공시 크래시 수정
 
 ### 완료

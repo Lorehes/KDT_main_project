@@ -3,6 +3,7 @@ package com.dartcommons.stocks;
 import com.dartcommons.infrastructure.krx.KrxClient;
 import com.dartcommons.infrastructure.krx.KrxClient.StockCloseInfo;
 import com.dartcommons.stocks.entities.Stock;
+import com.dartcommons.stocks.repositories.StockPriceRepository;
 import com.dartcommons.stocks.repositories.StockRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,7 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 /*
- * [목적] 평일 18:00 KST 일배치 — KRX 전종목 종가를 stocks.close_price/price_asof에 적재.
+ * [목적] 평일 18:00 KST 일배치 — KRX 전종목 종가를 stocks.close_price(요약용)에 갱신 +
+ *       stock_prices(시계열, Wave A krx-price-timeseries) 멱등 upsert 병행.
  *       종가 적재 완료 후 stockByCode·stocksByCodeIn Caffeine 캐시를 전체 무효화.
  * [이유] 평일 장 마감(15:30) + KRX 데이터 확정(~16:30) 후 여유를 두고 18:00에 실행.
  *       KrxClient.fetchAllClosePrices()는 KRX 직접(MDCSTAT01501) → GitHub cache CSV 폴백 2단계.
@@ -32,8 +34,8 @@ import java.util.Map;
  *               Spring Boot 3.x 기본 프록시 순서에서 캐시 evict는 트랜잭션 커밋 후 발생 — 분기 1회 배치라 실위험 무시.
  *               2단 이상치 방어: KrxClient(1단, 절대 — 1원 미만) + syncPrices(2단, 상대 — 전일 대비 ±50%).
  *               액면분할·합병 시 ±50% 초과가 정상일 수 있음 — WARN 로그만 남기고 배치 실패로 처리 안 함(graceful).
- * [수정 시 고려사항] Stage 5(주가 5일 반응) 착수 시 stock_prices 시계열 테이블 도입 — 이 잡의 역할은
- *                  stocks.close_price 갱신(빠른 요약용)과 stock_prices INSERT(시계열용) 병행으로 확장.
+ * [수정 시 고려사항] krx-price-timeseries Spec Wave A: 이 잡이 이제 stocks.close_price 갱신(요약용)과
+ *                  stock_prices upsert(시계열용)를 병행 수행. StockPriceRepository.upsertPrice()가 ON CONFLICT DO NOTHING.
  *                  비거래일(공휴일·주말) 에러 없이 종료 — fetchAllClosePrices()가 빈 Map 반환하면 UPDATE 0건.
  *                  배치 실패 알림이 필요하면 ApplicationEventPublisher로 NotificationDispatcher에 이벤트 발행.
  *                  ±50% 임계는 상수화 권장 — 향후 조정 필요 시 한 곳만 수정.
@@ -45,8 +47,9 @@ public class KrxPriceSyncJob {
 
     private static final Logger log = LoggerFactory.getLogger(KrxPriceSyncJob.class);
 
-    private final KrxClient       krxClient;
-    private final StockRepository stockRepository;
+    private final KrxClient            krxClient;
+    private final StockRepository      stockRepository;
+    private final StockPriceRepository stockPriceRepository;
 
     /** 전일 대비 변동률 ±50% 초과를 이상치로 판단하는 임계 — 상/하한가(±30%)는 통과, 명백한 오염만 차단. */
     private static final BigDecimal ANOMALY_THRESHOLD = new BigDecimal("0.5");
@@ -92,6 +95,9 @@ public class KrxPriceSyncJob {
             }
 
             stock.updatePrice(info.closePrice(), info.priceAsof());
+            // Wave A(krx-price-timeseries): stocks.close_price 요약 갱신과 동시에 stock_prices 시계열 멱등 적재.
+            // ON CONFLICT DO NOTHING — 일배치 재실행·비거래일(빈 Map) 시 안전.
+            stockPriceRepository.upsertPrice(stock.getStockCode(), info.priceAsof(), info.closePrice());
             updated++;
         }
 
@@ -99,7 +105,7 @@ public class KrxPriceSyncJob {
             log.warn("KrxPriceSyncJob: 이상치(±50% 초과) 스킵 {}건 — 액면분할·합병이면 정상, 그 외 수동 검토 권장",
                     anomalySkipped);
         }
-        log.info("KrxPriceSyncJob 완료: 종가수집={}, DB업데이트={}, 이상치스킵={}",
-                priceMap.size(), updated, anomalySkipped);
+        log.info("KrxPriceSyncJob 완료: 종가수집={}, DB업데이트(stocks)={}, stock_prices적재={}, 이상치스킵={}",
+                priceMap.size(), updated, updated, anomalySkipped);
     }
 }

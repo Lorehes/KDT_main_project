@@ -4,6 +4,7 @@ import com.dartcommons.TestcontainersConfiguration;
 import com.dartcommons.disclosure.DisclosurePollingJob;
 import com.dartcommons.disclosure.services.DisclosureBackfillService;
 import com.dartcommons.infrastructure.krx.KrxClient;
+import com.dartcommons.stocks.repositories.StockPriceRepository;
 import com.dartcommons.user.services.EmailVerificationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -62,14 +63,16 @@ class KrxPriceSyncJobIntegrationTest {
     @MockitoBean DisclosureBackfillService backfillService;
     @MockitoBean EmailVerificationService emailVerificationService;
 
-    @Autowired KrxPriceSyncJob krxPriceSyncJob;
-    @Autowired JdbcTemplate    jdbcTemplate;
-    @Autowired MockMvc         mockMvc;
-    @Autowired ObjectMapper    objectMapper;
-    @Autowired CacheManager    cacheManager;
+    @Autowired KrxPriceSyncJob       krxPriceSyncJob;
+    @Autowired JdbcTemplate          jdbcTemplate;
+    @Autowired MockMvc               mockMvc;
+    @Autowired ObjectMapper          objectMapper;
+    @Autowired CacheManager          cacheManager;
+    @Autowired StockPriceRepository  stockPriceRepository;
 
     @BeforeEach
     void reset() {
+        jdbcTemplate.update("DELETE FROM stock_prices");   // Wave A: 시계열 초기화
         jdbcTemplate.update("UPDATE stocks SET close_price = NULL, price_asof = NULL");
         cacheManager.getCache("stockByCode").clear();
         cacheManager.getCache("stocksByCodeIn").clear();
@@ -203,6 +206,35 @@ class KrxPriceSyncJobIntegrationTest {
         BigDecimal afterNormal = jdbcTemplate.queryForObject(
                 "SELECT close_price FROM stocks WHERE stock_code = '005930'", BigDecimal.class);
         assertThat(afterNormal).isEqualByComparingTo(new BigDecimal("6000")); // 갱신됨
+    }
+
+    @Test
+    @DisplayName("syncPrices Wave A — stock_prices 시계열 적재·멱등 검증 (ON CONFLICT DO NOTHING)")
+    void syncPrices_waveA_insertsStockPriceRow_andIdempotent() {
+        LocalDate today = LocalDate.now();
+        given(krxClient.fetchAllClosePrices()).willReturn(Map.of(
+                "005930", new KrxClient.StockCloseInfo(new BigDecimal("72000"), today)
+        ));
+
+        // 1회 실행 → stock_prices 행 생성
+        krxPriceSyncJob.syncPrices();
+        Long count1 = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM stock_prices WHERE stock_code = '005930' AND trade_date = ?",
+                Long.class, today);
+        assertThat(count1).isEqualTo(1L);
+
+        // 2회 실행 → ON CONFLICT DO NOTHING → 행 중복 없음
+        krxPriceSyncJob.syncPrices();
+        Long count2 = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM stock_prices WHERE stock_code = '005930' AND trade_date = ?",
+                Long.class, today);
+        assertThat(count2).isEqualTo(1L);
+
+        // 값 검증
+        BigDecimal storedPrice = jdbcTemplate.queryForObject(
+                "SELECT close_price FROM stock_prices WHERE stock_code = '005930' AND trade_date = ?",
+                BigDecimal.class, today);
+        assertThat(storedPrice).isEqualByComparingTo(new BigDecimal("72000"));
     }
 
     @Test
