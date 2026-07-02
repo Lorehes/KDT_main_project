@@ -30,13 +30,20 @@ public class PromptGuard {
     public static final int MAX_ITEM_CHARS = 200;
 
     /*
-     * 자본시장법 표현 금지 키워드 (통합기획서 §11.1).
-     * 단순 contains — 부정문/맥락 구분 못함. 매칭 시 보류 처리(과보수 OK).
+     * 자본시장법 권유 표현 금지 패턴 (통합기획서 §11.1).
+     * promptguard-legal-term-false-positive: bare 매수/매도/추천은 법률·사실 용어("주식매수청구권"·"자기주식취득"·
+     * "매수세")에 오탐 → 본문 투입 후 폭증 → 권유 맥락(동사/부사 결합)만 차단하도록 재정의.
+     * 여전히 문맥 완벽 구분은 못하므로(부정문 등) 다층 방어(L1 프롬프트 + confidence 보류 + 면책)와 병행.
      */
     private static final List<Pattern> FORBIDDEN_PATTERNS = List.of(
-            Pattern.compile("추천"),
-            Pattern.compile("매수"),
-            Pattern.compile("매도"),
+            // promptguard-legal-term-false-positive: bare 매수/매도/추천은 법률·사실 용어("주식매수청구권",
+            //   "매도청구권", "자기주식취득", "매수세")에 오탐 → 본문 투입 후 오탐 폭증. 권유 맥락 결합만 차단.
+            // 권유 동사/명사와 결합된 매수·매도 (매수 뒤 청구권/세/예정 등 사실 용어는 미매칭 → 통과)
+            Pattern.compile("(매수|매도)\\s*(추천|권유|하세요|하시|타이밍|기회|찬스|하는\\s*게)"),
+            // 권유 부사 + 매수·매도
+            Pattern.compile("(지금|당장|꼭|반드시|무조건)\\s*(매수|매도)"),
+            // 추천이 동사·권유로 쓰인 경우 (통상 공시에 '추천사유' 등 명사 결합은 드묾)
+            Pattern.compile("추천\\s*(합니다|해요|해\\s*드|드립니다|드려|종목|주|하는|하니|합니당)"),
             Pattern.compile("사세요"),
             Pattern.compile("파세요"),
             Pattern.compile("수익\\s*보장"),

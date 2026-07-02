@@ -78,6 +78,50 @@ class PromptGuardTest {
     }
 
     @Test
+    @DisplayName("법률·사실 용어는 오탐 없이 통과 (promptguard-legal-term-false-positive)")
+    void legalTermsNotFlagged() {
+        String[] passCases = {
+                "주식매수청구권 행사 기간이 명시되었습니다.",   // 매수청구권
+                "반대주주의 매도청구권 관련 사항입니다.",       // 매도청구권
+                "자기주식취득을 결정한 공시입니다.",            // 자기주식취득
+                "기관 매수세가 유입된 것으로 보입니다.",        // 매수세(시황)
+                "전환사채 매도 예정 물량이 존재합니다.",        // 매도 예정(사실)
+                "이 종목을 매수하기로 한 계약이 체결되었습니다." // 매수하기로(사실 서술) — 권유 아님
+        };
+        for (String summary : passCases) {
+            Stage2Output out = new Stage2Output(Sentiment.NEUTRAL, new BigDecimal("0.850"), summary);
+            PromptGuard.GuardResult r = guard.sanitize(out, 0.6);
+            assertThat(r.forbiddenHit())
+                    .as("'%s' 는 법률/사실 용어라 오탐되면 안 됨", summary)
+                    .isFalse();
+            assertThat(r.withheld()).isFalse();
+        }
+    }
+
+    @Test
+    @DisplayName("실제 권유 표현은 계속 차단 (과소 차단 방지)")
+    void solicitationStillBlocked() {
+        String[] blockCases = {
+                "지금 매수하세요",
+                "이 종목 매수 추천합니다",
+                "매수 타이밍입니다",
+                "지금이 매수 기회입니다",
+                "당장 매도하시길 바랍니다",
+                "이 종목을 추천드립니다",
+                "꼭 사세요",
+                "수익 보장됩니다"
+        };
+        for (String summary : blockCases) {
+            Stage2Output out = new Stage2Output(Sentiment.POSITIVE, new BigDecimal("0.950"), summary);
+            PromptGuard.GuardResult r = guard.sanitize(out, 0.6);
+            assertThat(r.forbiddenHit())
+                    .as("'%s' 는 권유 표현이라 차단되어야 함", summary)
+                    .isTrue();
+            assertThat(r.withheld()).isTrue();
+        }
+    }
+
+    @Test
     @DisplayName("summary 240자 초과 → 마지막 마침표 부근에서 truncate")
     void capsSummaryAtSentenceBoundary() {
         String longSummary = ("이 회사는 자기주식 취득을 결정했습니다. "

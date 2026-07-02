@@ -2356,3 +2356,18 @@ curl -u admin:<password> \
 - **카드 #6 재분석 실행**: (1) 본문포함 smoke로 gemma vs qwen 품질 실측 → LLM_MODEL 확정, (2) 소수 육안 검증, (3) 최근 공시 idFrom/idTo 배치 재분석. **이걸 해야 목업 요인/해설이 실제로 채워짐**(현재 코드만 배포, 데이터 미갱신).
 - 재분석은 실 LLM(Ollama/OpenRouter) 필요 — 앱 재기동(현재 gemma/chroma로 떠있던 것 → .env 원복됨) 후 실행.
 - 미커밋 Draft: `price-backfill-partial-status`(안전망 PARTIAL) — 이번 커밋에 포함.
+
+## 2026-07-03 | promptguard-legal-term-false-positive (카드 1~2) — 오탐 개선
+
+### 완료
+- `PromptGuard.FORBIDDEN_PATTERNS` bare 매수/매도/추천 → 권유 맥락 패턴 재정의(동사·부사 결합만 차단). 사세요·파세요·수익보장·손실없·확정수익·꼭사 유지.
+- `PromptGuardTest` 양방향 2건: 법률용어 통과(주식매수청구권·자기주식취득·매수세 등 6) + 실권유 차단(지금 매수하세요·매수 추천 등 8). 8/8 통과.
+
+### 결정
+- **차단 기준 = 권유 맥락**: 자본시장법이 금하는 건 '투자 권유/추천'이지 '매수/매도' 단어 자체가 아님. 본문 투입으로 법률용어 오탐이 폭증해 재정의 불가피.
+- **접근 A(맥락 패턴)** 채택, B(화이트리스트 차감) 비채택 — 법률용어 전수 열거 불가.
+
+### 미완료 → 다음 세션
+- **카드 #3(운영)**: 기존 오탐 withheld 분석 재분석 — stage2-body-in-prompt 재분석과 병합.
+- **content-text-charset-mojibake** Spec(Draft) — 이슈2, content_text 24k mojibake. tech-review 대기.
+- stage2-body-in-prompt 카드 #6 배치 재분석(최근 공시 확대).
