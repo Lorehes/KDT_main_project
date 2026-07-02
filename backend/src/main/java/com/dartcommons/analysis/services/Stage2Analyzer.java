@@ -1,5 +1,6 @@
 package com.dartcommons.analysis.services;
 
+import com.dartcommons.analysis.dto.Stage2Detail;
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
@@ -7,6 +8,8 @@ import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
 import com.dartcommons.infrastructure.llm.LlmClient;
 import com.dartcommons.infrastructure.llm.LlmProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -38,19 +41,22 @@ public class Stage2Analyzer {
     private final AnalysisResultRepository resultRepo;
     private final DisclosureRepository disclosureRepo;
     private final LlmProperties props;
+    private final ObjectMapper objectMapper;
 
     public Stage2Analyzer(LlmClient llmClient,
                           Stage2PromptBuilder promptBuilder,
                           PromptGuard promptGuard,
                           AnalysisResultRepository resultRepo,
                           DisclosureRepository disclosureRepo,
-                          LlmProperties props) {
+                          LlmProperties props,
+                          ObjectMapper objectMapper) {
         this.llmClient = llmClient;
         this.promptBuilder = promptBuilder;
         this.promptGuard = promptGuard;
         this.resultRepo = resultRepo;
         this.disclosureRepo = disclosureRepo;
         this.props = props;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -98,12 +104,17 @@ public class Stage2Analyzer {
                     disclosureId, d.getCorpName());
         }
 
+        Stage2Output out = guarded.sanitized();
+        // withheld면 key_points/요인을 저장·노출하지 않음 — 신뢰 못하는 분석은 "판단 보류"만 표시(§11.1).
+        // 특히 금지 키워드로 withheld된 경우 해당 텍스트를 stage_details로 영속/전송하지 않도록 차단.
+        String stageDetails = guarded.withheld() ? null : serializeDetail(out);
         AnalysisResult result = AnalysisResult.builder()
                 .disclosureId(disclosureId)
-                .sentiment(guarded.sanitized().sentiment())
-                .confidence(guarded.sanitized().confidence())
+                .sentiment(out.sentiment())
+                .confidence(out.confidence())
                 .withheld(guarded.withheld())
-                .summary(guarded.sanitized().summary())
+                .summary(out.summary())
+                .stageDetails(stageDetails)
                 .stageReached((short) 2)
                 .modelName(props.model())
                 .build();
@@ -112,6 +123,23 @@ public class Stage2Analyzer {
         log.info("Stage2 완료: id={} disclosureId={} sentiment={} confidence={} withheld={}",
                 saved.getId(), disclosureId, saved.getSentiment(), saved.getConfidence(), saved.isWithheld());
         return Optional.of(saved);
+    }
+
+    /**
+     * key_points/호재·악재 요인을 stage_details JSONB 문자열로 직렬화(disclosure-detail-redesign Wave 2).
+     * 세 리스트가 모두 비면 null 반환 → 컬럼 null 유지(구버전 분석과 동일, FE 폴백).
+     * 직렬화 실패는 분석 저장 자체를 막지 않음(부가 정보) — WARN 후 null.
+     */
+    private String serializeDetail(Stage2Output out) {
+        Stage2Detail detail = new Stage2Detail(out.keyPoints(), out.positiveFactors(), out.negativeFactors());
+        if (detail.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(detail);
+        } catch (JsonProcessingException e) {
+            // 예외 메시지에 요인 원문이 실릴 수 있어 타입만 기록(§11.1 유출 방지).
+            log.warn("Stage2: stage_details 직렬화 실패 — 부가 정보 없이 저장 진행 errType={}", e.getClass().getSimpleName());
+            return null;
+        }
     }
 
     /**

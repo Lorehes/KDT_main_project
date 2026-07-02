@@ -46,6 +46,10 @@ export interface DisclosureAnalysis {
   confidence: number;
   is_withheld: boolean;
   summary: string;
+  // Free (Stage 2) — 비어있으면 BE가 필드 자체를 생략(NON_NULL). 구버전 분석도 미포함.
+  key_points?: string[];
+  positive_factors?: string[];
+  negative_factors?: string[];
   stage_reached: number;
   // Pro 이상
   expected_reaction?: ExpectedReaction;

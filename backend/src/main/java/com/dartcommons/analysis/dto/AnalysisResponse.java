@@ -27,7 +27,9 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
         "analysis_id", "disclosure_id",
-        "sentiment", "confidence", "is_withheld", "summary", "stage_reached",
+        "sentiment", "confidence", "is_withheld", "summary",
+        "key_points", "positive_factors", "negative_factors",
+        "stage_reached",
         "expected_reaction", "rationale", "similar_disclosures",
         "financial_context",
         "disclaimer", "report_inaccuracy_path", "created_at"
@@ -39,6 +41,12 @@ public record AnalysisResponse(
         BigDecimal confidence,
         @JsonProperty("is_withheld")   boolean isWithheld,
         String summary,
+
+        // Free (Stage 2) — disclosure-detail-redesign Wave 2. 비어있으면 null로 두어 직렬화 제외.
+        @JsonProperty("key_points") List<String> keyPoints,
+        @JsonProperty("positive_factors") List<String> positiveFactors,
+        @JsonProperty("negative_factors") List<String> negativeFactors,
+
         @JsonProperty("stage_reached") short stageReached,
 
         // Pro+ (Stage 3~4) — Free 응답에서는 null로 두어 직렬화 제외
@@ -73,7 +81,8 @@ public record AnalysisResponse(
      * [수정 시 고려사항] similar가 null이면 Free 응답과 동일(JSON 필드 미포함) — Chroma 비활성 시 AnalysisQueryService가 null 전달.
      *                  tier 필드 추가 시 AnalysisResponseTest.allTiers_alwaysIncludeDisclaimerAndReportPath() 도 갱신.
      */
-    public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar) {
+    public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar,
+                                        Stage2Detail detail) {
         String reportPath = "/api/v1/analyses/" + ar.getId() + "/feedback";
 
         boolean proPlus = tier == Tier.PRO || tier == Tier.PREMIUM;
@@ -85,6 +94,12 @@ public record AnalysisResponse(
                 ar.getConfidence(),
                 ar.isWithheld(),
                 ar.getSummary(),
+
+                // Free(Stage 2) — 모든 티어 노출. 빈 리스트는 null로 접어 JSON 제외(하위 호환).
+                detail == null ? null : emptyToNull(detail.keyPoints()),
+                detail == null ? null : emptyToNull(detail.positiveFactors()),
+                detail == null ? null : emptyToNull(detail.negativeFactors()),
+
                 ar.getStageReached(),
 
                 proPlus ? ar.getExpectedReaction() : null,
@@ -99,8 +114,18 @@ public record AnalysisResponse(
         );
     }
 
-    /** similar=null 단축 오버로드 — Stage 3 비활성 환경(Free 조회 등)에서 사용. */
+    /** detail=null 오버로드 — stage_details 미보유(구버전 분석) 또는 상세 불필요 시. */
+    public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar) {
+        return from(ar, tier, similar, null);
+    }
+
+    /** similar·detail=null 단축 오버로드 — Stage 3 비활성 환경(Free 조회 등)에서 사용. */
     public static AnalysisResponse from(AnalysisResult ar, Tier tier) {
-        return from(ar, tier, null);
+        return from(ar, tier, null, null);
+    }
+
+    /** 빈/ null 리스트를 null로 정규화 — @JsonInclude(NON_NULL)로 빈 배열 노출 방지. */
+    private static List<String> emptyToNull(List<String> list) {
+        return (list == null || list.isEmpty()) ? null : list;
     }
 }

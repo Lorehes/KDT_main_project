@@ -78,7 +78,7 @@ public class OllamaLlmClient implements LlmClient {
     )
     public Stage2Output classifyStage2(String prompt) {
         // think=false 가 핵심 — qwen3 thinking 모드는 format=json과 충돌해 빈 응답 발생(smoke test 검증).
-        // num_predict=400 은 3줄 요약 + JSON 키 + sentiment/confidence 총량 여유.
+        // num_predict=800 — Wave 2에서 summary + key_points + 호재/악재 요인 리스트가 추가되어 400→800 상향.
         // temperature=0.2 는 결정론적 분류 유도 (창의성 억제).
         Map<String, Object> body = Map.of(
                 "model", props.model(),
@@ -88,7 +88,7 @@ public class OllamaLlmClient implements LlmClient {
                 "think", false,
                 "options", Map.of(
                         "temperature", 0.2,
-                        "num_predict", 400
+                        "num_predict", 800
                 )
         );
 
@@ -135,13 +135,17 @@ public class OllamaLlmClient implements LlmClient {
     private record Stage2OutputRaw(
             String sentiment,
             BigDecimal confidence,
-            String summary
+            String summary,
+            @JsonProperty("key_points") java.util.List<String> keyPoints,
+            @JsonProperty("positive_factors") java.util.List<String> positiveFactors,
+            @JsonProperty("negative_factors") java.util.List<String> negativeFactors
     ) {
         Stage2Output toStage2Output() {
             Sentiment s = parseSentiment(sentiment);
             BigDecimal c = clampConfidence(confidence);
             String sum = summary == null ? "" : summary.trim();
-            return new Stage2Output(s, c, sum);
+            return new Stage2Output(s, c, sum,
+                    normalizeList(keyPoints), normalizeList(positiveFactors), normalizeList(negativeFactors));
         }
 
         private static Sentiment parseSentiment(String raw) {
@@ -154,6 +158,12 @@ public class OllamaLlmClient implements LlmClient {
             if (raw.compareTo(BigDecimal.ZERO) < 0) return BigDecimal.ZERO;
             if (raw.compareTo(BigDecimal.ONE) > 0) return BigDecimal.ONE;
             return raw.setScale(3, java.math.RoundingMode.HALF_UP);
+        }
+
+        /** null/공백 항목 제거 후 불변 리스트 — LLM이 필드 누락·빈문자 반환해도 안전. */
+        private static java.util.List<String> normalizeList(java.util.List<String> raw) {
+            if (raw == null) return java.util.List.of();
+            return raw.stream().filter(x -> x != null && !x.isBlank()).map(String::trim).toList();
         }
     }
 }

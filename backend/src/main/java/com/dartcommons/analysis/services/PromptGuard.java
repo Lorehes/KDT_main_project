@@ -24,6 +24,11 @@ public class PromptGuard {
     /** Spec 결정 5: 240자(3줄 × 80자) — qwen3:4b 횡설수설 방지. */
     public static final int SUMMARY_MAX_CHARS = 240;
 
+    /** Wave 2: key_points/요인 리스트 항목 수 상한 — 프롬프트 가이드(1~4개)에 여유. LLM 환각·주입 시 무한 팽창 차단. */
+    public static final int MAX_LIST_ITEMS = 8;
+    /** Wave 2: 리스트 항목 1개 글자 수 상한 — summary(240) 규율과 정합. 초과 시 절단 후 "…". */
+    public static final int MAX_ITEM_CHARS = 200;
+
     /*
      * 자본시장법 표현 금지 키워드 (통합기획서 §11.1).
      * 단순 contains — 부정문/맥락 구분 못함. 매칭 시 보류 처리(과보수 OK).
@@ -51,19 +56,44 @@ public class PromptGuard {
      */
     public GuardResult sanitize(Stage2Output raw, double confidenceThreshold) {
         String summary = raw.summary() == null ? "" : raw.summary();
-        boolean forbiddenHit = containsForbidden(summary);
+        // Wave 2: key_points/호재·악재 요인도 사용자 노출 텍스트 → 자본시장법 금지 키워드 동일 스캔(§11.1).
+        boolean forbiddenHit = containsForbidden(summary)
+                || anyForbidden(raw.keyPoints())
+                || anyForbidden(raw.positiveFactors())
+                || anyForbidden(raw.negativeFactors());
         String capped = capLength(summary);
 
         boolean withheldByThreshold = raw.confidence().doubleValue() < confidenceThreshold;
         boolean withheld = forbiddenHit || withheldByThreshold;
 
-        Stage2Output sanitized = new Stage2Output(raw.sentiment(), raw.confidence(), capped);
+        // 리스트도 항목 수·길이 캡 — LLM 환각/프롬프트 주입에 의한 JSONB 팽창·전 티어 응답 비대화 차단(summary 캡과 정합).
+        Stage2Output sanitized = new Stage2Output(raw.sentiment(), raw.confidence(), capped,
+                capList(raw.keyPoints()), capList(raw.positiveFactors()), capList(raw.negativeFactors()));
         return new GuardResult(sanitized, withheld, forbiddenHit, withheldByThreshold);
     }
 
+    /** 리스트 항목 수(MAX_LIST_ITEMS)와 항목별 길이(MAX_ITEM_CHARS)를 캡. null 안전. */
+    private static List<String> capList(List<String> items) {
+        if (items == null || items.isEmpty()) return items;
+        return items.stream()
+                .limit(MAX_LIST_ITEMS)
+                .map(s -> s != null && s.length() > MAX_ITEM_CHARS ? s.substring(0, MAX_ITEM_CHARS) + "…" : s)
+                .toList();
+    }
+
     private static boolean containsForbidden(String text) {
+        if (text == null) return false;
         for (Pattern p : FORBIDDEN_PATTERNS) {
             if (p.matcher(text).find()) return true;
+        }
+        return false;
+    }
+
+    /** 리스트 항목 중 하나라도 금지 키워드 매칭 시 true. null 안전. */
+    private static boolean anyForbidden(List<String> items) {
+        if (items == null) return false;
+        for (String item : items) {
+            if (containsForbidden(item)) return true;
         }
         return false;
     }

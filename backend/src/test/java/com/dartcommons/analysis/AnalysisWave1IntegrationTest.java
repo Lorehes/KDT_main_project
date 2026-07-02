@@ -2,9 +2,11 @@ package com.dartcommons.analysis;
 
 import com.dartcommons.TestcontainersConfiguration;
 import com.dartcommons.analysis.dto.AnalysisResponse;
+import com.dartcommons.analysis.dto.Stage2Detail;
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.entities.AnalysisJob;
 import com.dartcommons.analysis.entities.AnalysisResult;
+import com.dartcommons.analysis.services.Stage2Analyzer;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.shared.enums.Tier;
 import com.dartcommons.analysis.repositories.AnalysisJobRepository;
@@ -13,6 +15,7 @@ import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
 import com.dartcommons.disclosure.DisclosurePollingJob;
 import com.dartcommons.infrastructure.llm.LlmClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,6 +68,8 @@ class AnalysisWave1IntegrationTest {
     @Autowired private AnalysisResultRepository resultRepo;
     @Autowired private DisclosureRepository disclosureRepo;
     @Autowired private LlmClient llmClient;
+    @Autowired private Stage2Analyzer stage2Analyzer;
+    @Autowired private ObjectMapper objectMapper;
 
     @Test
     @DisplayName("V13 마이그레이션 적용 + AnalysisJob 영속화 라운드트립")
@@ -150,6 +155,40 @@ class AnalysisWave1IntegrationTest {
         assertThat(proResp.expectedReaction()).isEqualTo(AnalysisResult.ExpectedReaction.UP);
         assertThat(proResp.rationale()).contains("과거 동일 유형");
         assertThat(proResp.disclaimer()).isEqualTo(AnalysisResponse.DISCLAIMER);
+    }
+
+    @Test
+    @DisplayName("Wave 2: analyze() → stage_details(JSONB) 왕복 — key_points/요인 직렬화·역직렬화 실검증")
+    @Transactional
+    void stage2DetailJsonbRoundTrip() throws Exception {
+        // report_nm에 "감자" 포함 → Stage2PromptBuilder 프롬프트에 반영 → MockLlmClient 악재 시나리오(요인 생성)
+        Disclosure d = saveDisclosure("20260702000010", "테스트기업", "감자결정", "OTHER");
+
+        Optional<AnalysisResult> saved = stage2Analyzer.analyze(d.getId());
+        assertThat(saved).isPresent();
+        assertThat(saved.get().getSentiment()).isEqualTo(Sentiment.NEGATIVE);
+
+        // 실 PostgreSQL JSONB 컬럼에서 다시 읽어 String+SqlTypes.JSON 매핑이 이중 인코딩 없이 왕복하는지 검증
+        AnalysisResult reloaded = resultRepo.findByDisclosureId(d.getId()).orElseThrow();
+        assertThat(reloaded.getStageDetails()).isNotNull();
+
+        Stage2Detail detail = objectMapper.readValue(reloaded.getStageDetails(), Stage2Detail.class);
+        assertThat(detail.keyPoints()).isNotEmpty();
+        assertThat(detail.negativeFactors()).isNotEmpty();
+        assertThat(detail.positiveFactors()).isEmpty();  // 악재 시나리오는 호재 요인 없음
+    }
+
+    @Test
+    @DisplayName("Wave 2: withheld면 stage_details 미저장 — 신뢰 못하는 분석의 요인 영속·노출 차단(§11.1)")
+    @Transactional
+    void stage2WithheldSuppressesDetail() {
+        // 신뢰도 0.3 < 임계 0.6 → withheld=true. 판단보류 시나리오는 요인도 없지만, withheld 시 저장 억제 경로 검증.
+        Disclosure d = saveDisclosure("20260702000011", "테스트기업", "판단보류시나리오 공시", "OTHER");
+
+        Optional<AnalysisResult> saved = stage2Analyzer.analyze(d.getId());
+        assertThat(saved).isPresent();
+        assertThat(saved.get().isWithheld()).isTrue();
+        assertThat(saved.get().getStageDetails()).isNull();
     }
 
     // --- 픽스처 헬퍼 ---

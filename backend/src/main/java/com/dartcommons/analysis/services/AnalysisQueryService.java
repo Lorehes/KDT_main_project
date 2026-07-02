@@ -2,8 +2,12 @@ package com.dartcommons.analysis.services;
 
 import com.dartcommons.analysis.dto.AnalysisResponse;
 import com.dartcommons.analysis.dto.SimilarDisclosureItem;
+import com.dartcommons.analysis.dto.Stage2Detail;
 import com.dartcommons.shared.enums.Tier;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,8 +31,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AnalysisQueryService {
 
+    private static final Logger log = LoggerFactory.getLogger(AnalysisQueryService.class);
+
     private final AnalysisResultCacheService analysisResultCacheService;
     private final Stage3RagService stage3RagService;
+    private final ObjectMapper objectMapper;
 
     public AnalysisResponse getByDisclosureId(Long disclosureId, Tier tier) {
         var result = analysisResultCacheService.findByDisclosureId(disclosureId);
@@ -46,6 +53,21 @@ public class AnalysisQueryService {
             similar = null;
         }
 
-        return AnalysisResponse.from(result, tier, similar);
+        return AnalysisResponse.from(result, tier, similar, parseDetail(result.getStageDetails()));
+    }
+
+    /*
+     * stage_details(JSONB 문자열)를 Stage2Detail로 역직렬화 — key_points/호재·악재 요인(Wave 2).
+     * null/공백(구버전 분석) 또는 파싱 실패 시 null 반환 → 신규 카드 미노출(FE 폴백). 조회를 막지 않음.
+     */
+    private Stage2Detail parseDetail(String stageDetails) {
+        if (stageDetails == null || stageDetails.isBlank()) return null;
+        try {
+            return objectMapper.readValue(stageDetails, Stage2Detail.class);
+        } catch (Exception e) {
+            // e.getMessage()는 Jackson이 소스 스니펫(=stage_details 원문)을 포함할 수 있어 로깅 금지(§11.1 유출 방지). 타입만 기록.
+            log.warn("stage_details 역직렬화 실패 — 상세 카드 생략 errType={}", e.getClass().getSimpleName());
+            return null;
+        }
     }
 }

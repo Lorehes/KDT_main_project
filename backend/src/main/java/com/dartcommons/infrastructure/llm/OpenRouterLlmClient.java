@@ -3,6 +3,7 @@ package com.dartcommons.infrastructure.llm;
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.shared.util.HostWhitelist;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -97,7 +98,7 @@ public class OpenRouterLlmClient implements LlmClient {
     public Stage2Output classifyStage2(String prompt) {
         // response_format=json_object: OpenRouter가 JSON만 출력하도록 강제.
         // temperature=0.2: 결정론적 분류 유도 (창의성 억제) — OllamaLlmClient와 동일.
-        // max_tokens=400: 3줄 요약 + JSON 키 + sentiment/confidence 총량 여유.
+        // max_tokens=800: Wave 2에서 key_points + 호재/악재 요인 리스트 추가로 400→800 상향(OllamaLlmClient와 정합).
         Map<String, Object> body = Map.of(
                 "model", props.model(),
                 "messages", List.of(
@@ -105,7 +106,7 @@ public class OpenRouterLlmClient implements LlmClient {
                 ),
                 "response_format", Map.of("type", "json_object"),
                 "temperature", 0.2,
-                "max_tokens", 400
+                "max_tokens", 800
         );
 
         OpenRouterResponse res = restClient.post()
@@ -154,13 +155,17 @@ public class OpenRouterLlmClient implements LlmClient {
     private record Stage2OutputRaw(
             String sentiment,
             BigDecimal confidence,
-            String summary
+            String summary,
+            @JsonProperty("key_points") List<String> keyPoints,
+            @JsonProperty("positive_factors") List<String> positiveFactors,
+            @JsonProperty("negative_factors") List<String> negativeFactors
     ) {
         Stage2Output toStage2Output() {
             Sentiment s = parseSentiment(sentiment);
             BigDecimal c = clampConfidence(confidence);
             String sum = summary == null ? "" : summary.trim();
-            return new Stage2Output(s, c, sum);
+            return new Stage2Output(s, c, sum,
+                    normalizeList(keyPoints), normalizeList(positiveFactors), normalizeList(negativeFactors));
         }
 
         private static Sentiment parseSentiment(String raw) {
@@ -173,6 +178,12 @@ public class OpenRouterLlmClient implements LlmClient {
             if (raw.compareTo(BigDecimal.ZERO) < 0) return BigDecimal.ZERO;
             if (raw.compareTo(BigDecimal.ONE) > 0) return BigDecimal.ONE;
             return raw.setScale(3, java.math.RoundingMode.HALF_UP);
+        }
+
+        /** null/공백 항목 제거 후 불변 리스트 — OllamaLlmClient와 동일 로직. */
+        private static List<String> normalizeList(List<String> raw) {
+            if (raw == null) return List.of();
+            return raw.stream().filter(x -> x != null && !x.isBlank()).map(String::trim).toList();
         }
     }
 }

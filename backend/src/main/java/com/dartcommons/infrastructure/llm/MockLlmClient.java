@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /*
  * [목적] 통합 테스트 + 로컬 개발용 결정론적 LLM 스텁 — Ollama 없이도 wave 1 검증 가능.
@@ -32,11 +33,17 @@ public class MockLlmClient implements LlmClient {
         }
         if (prompt.contains("악재시나리오") || prompt.contains("감자") || prompt.contains("상장폐지")) {
             return new Stage2Output(Sentiment.NEGATIVE, HIGH_CONFIDENCE,
-                    "회사 가치에 부정적 영향이 예상되는 공시입니다. 주식 가치 희석 가능성이 있습니다. 신중한 검토가 필요합니다.");
+                    "회사 가치에 부정적 영향이 예상되는 공시입니다. 주식 가치 희석 가능성이 있습니다. 신중한 검토가 필요합니다.",
+                    List.of("자본 조정 목적의 공시가 접수되었습니다."),
+                    List.of(),
+                    List.of("주식 가치 희석 가능성", "재무 구조 악화 우려"));
         }
         if (prompt.contains("호재시나리오") || prompt.contains("무상증자") || prompt.contains("자기주식취득")) {
             return new Stage2Output(Sentiment.POSITIVE, HIGH_CONFIDENCE,
-                    "주주 가치에 긍정적 영향이 예상되는 공시입니다. 기업의 자신감 신호로 해석됩니다. 시장 반응은 종목별 상이할 수 있습니다.");
+                    "주주 가치에 긍정적 영향이 예상되는 공시입니다. 기업의 자신감 신호로 해석됩니다. 시장 반응은 종목별 상이할 수 있습니다.",
+                    List.of("주주 환원 성격의 공시가 접수되었습니다."),
+                    List.of("주주 가치 제고 기대", "기업의 자신감 신호"),
+                    List.of());
         }
         // 기본: 중립 + 중간 신뢰도
         return new Stage2Output(Sentiment.NEUTRAL, new BigDecimal("0.650"),

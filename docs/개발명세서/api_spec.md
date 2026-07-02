@@ -219,6 +219,12 @@ updated: 2026-05-30
   "confidence": 0.62,               // 0~1 필수
   "is_withheld": false,             // true면 "판단 보류" 표시(신뢰도 낮음)
   "summary": "전환사채 1,000억 발행으로 주식 추가 발행 가능성이 있어...", // 3줄
+
+  // Free(Stage 2) — 모든 티어. 비어있으면 필드 제외(NON_NULL). 구버전 분석(stage_details=null)도 미포함.
+  "key_points": ["1,000억 규모 전환사채 발행을 결정했습니다.", "전환가액은 현재가 대비 할인 적용됩니다."],
+  "positive_factors": ["신규 자금 조달로 유동성 확보"],
+  "negative_factors": ["주식 가치 희석 가능성", "기존 주주 지분율 하락"],
+
   "stage_reached": 4,               // 1~5
 
   // TIER:PRO 이상에서만 채워짐 (Stage 3~4)
@@ -241,6 +247,8 @@ updated: 2026-05-30
 > **불변 규칙**([[CLAUDE]] §6-6·§7): `confidence` 필드 항상 포함, `is_withheld=true`면 호재/악재 단정 대신 "판단 보류" 표시. **모든 분석 응답에 `disclaimer`와 신고 경로(`report_inaccuracy_path`) 동반.** 티어 미달 사용자에게는 상위 Stage 필드를 응답에서 **제외**(노출 후 마스킹 금지)하고, 화면은 업셀 CTA로 처리([[design_structure]]).
 
 > **Stage 3·5 미구현 정책 (2026-06-23 기준)**: `similar_disclosures` (Stage 3 RAG)·`financial_context` (Stage 5) 필드는 **구현 완료 전까지 모든 티어에서 `null` 반환**하며 `@JsonInclude(NON_NULL)`에 의해 JSON 직렬화에서 제외됨. FE는 이 필드가 `null`일 때 Pro+·Premium 업셀 CTA로 처리 중(의도적 설계). Stage 3·5 Spec 완료 시 `AnalysisResponse.from()` 내 `TODO Stage-3/5` 주석 교체 지점 참조.
+
+> **key_points·factors (Stage 2, disclosure-detail-redesign Wave 2, 2026-07-02)**: `key_points`(이런 내용이에요)·`positive_factors`/`negative_factors`(호재/악재 요인)는 **Free 포함 전 티어** 노출. Stage 2 LLM이 동일 호출에서 생성하여 `analysis_results.stage_details`(JSONB)에 저장(Flyway 불필요). 빈 배열이면 `null`로 접어 직렬화 제외 → FE는 카드 미노출. 기존 분석(stage_details=null)은 재분석 전까지 미포함. PromptGuard(§11.1)가 요인 텍스트도 금지 키워드 스캔 → 매칭 시 `is_withheld=true`.
 
 **`POST /api/v1/analyses/{analysisId}/feedback` 요청**
 

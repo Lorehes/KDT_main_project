@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
  * [목적] Stage 2 LLM 호출 프롬프트 생성 — DART 공시 메타(report_nm + disclosure_type + corp_name + rcept_dt)를
  *       투자 자문 표현 금지 가드 포함 한국어 프롬프트로 직렬화.
  * [이유] analysis-stage2-llm Spec §6.2: 본문 미사용 + 메타 기반 분류 + 환각 방지 record 스키마.
+ *       disclosure-detail-redesign Wave 2: 동일 호출에서 key_points(이런 내용이에요)·positive/negative_factors(호재/악재 요인)도
+ *       생성하도록 JSON 스키마 확장. 요인은 정보 제공용 중립 서술 강제(권유 표현 금지) — PromptGuard(L2)가 재검.
  *       통합기획서 §11.1 리스크 1: 프롬프트에 자본시장법 가드 명시(L1) — 응답 후처리 PromptGuard(L2)와 이중.
  * [사이드 임팩트] 프롬프트 변경은 LLM 응답 품질에 직접 영향 — A/B 통계로만 변경 권장.
  *               disclosure_type=OTHER (8%) 케이스는 report_nm만 신뢰하도록 안내 → 신뢰도 자연 하락 → withheld 가드.
@@ -46,13 +48,19 @@ public class Stage2PromptBuilder {
                 {
                   "sentiment": "POSITIVE 또는 NEUTRAL 또는 NEGATIVE",
                   "confidence": 0.0 ~ 1.0 사이의 실수 (확신 정도),
-                  "summary": "3줄 이내 한국어 자연어 요약"
+                  "summary": "3줄 이내 한국어 자연어 요약",
+                  "key_points": ["공시의 핵심 내용을 사실 기반으로 1~4개 항목. 각 항목은 한 문장."],
+                  "positive_factors": ["투자자 관점의 호재 요인 0~3개. 없으면 빈 배열 []."],
+                  "negative_factors": ["투자자 관점의 악재 요인 0~3개. 없으면 빈 배열 []."]
                 }
 
                 중요:
                 - 회사명·보고서 제목·수치·날짜는 원본 그대로 인용. 변형 금지.
                 - 확신이 약하면 confidence를 낮게(예: 0.4) 보고하세요. 추측 금지.
                 - summary는 마침표로 끝나는 완결 문장 3줄 이내.
+                - key_points는 공시 내용의 사실 해설(무엇이 결정/발생했는가). 추측·전망 금지.
+                - positive_factors/negative_factors는 정보 제공용 중립 서술. "매수/매도", "사세요", "수익 보장" 등 권유 표현 절대 금지.
+                - 해당 요인이 없으면 빈 배열 []로 두세요. 억지로 채우지 마세요.
                 """.formatted(
                 d.getCorpName(),
                 d.getReportNm(),

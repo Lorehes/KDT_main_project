@@ -13,7 +13,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, ArrowLeft } from "lucide-react";
+import { ExternalLink, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { useDisclosure, useDisclosureAnalysis, EXPECTED_REACTION_CONFIG } from "@/lib/api/disclosures";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
@@ -161,6 +161,38 @@ export default function DisclosureDetailPage() {
             </section>
           )}
 
+          {/* Free — 이런 내용이에요 (key_points, Stage 2). withheld/미보유 시 미노출 */}
+          {analysis && !isWithheld && (analysis.key_points?.length ?? 0) > 0 && (
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-sm" aria-labelledby="keypoints-heading">
+              <h2 id="keypoints-heading" className="mb-4 text-[11px] font-extrabold uppercase tracking-widest text-primary">이런 내용이에요</h2>
+              <ol className="flex flex-col gap-3">
+                {analysis.key_points!.map((point, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-extrabold text-primary" aria-hidden>{i + 1}</span>
+                    <p className="text-[15px] leading-relaxed text-foreground">{point}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* Free — 영향 요인 (호재/악재 2컬럼, Stage 2). 색+아이콘+텍스트 병용(a11y) */}
+          {analysis && !isWithheld && ((analysis.positive_factors?.length ?? 0) > 0 || (analysis.negative_factors?.length ?? 0) > 0) && (
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-sm" aria-labelledby="factors-heading">
+              <h2 id="factors-heading" className="mb-4 text-[11px] font-extrabold uppercase tracking-widest text-primary">영향 요인</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FactorColumn
+                  kind="positive"
+                  items={analysis.positive_factors ?? []}
+                />
+                <FactorColumn
+                  kind="negative"
+                  items={analysis.negative_factors ?? []}
+                />
+              </div>
+            </section>
+          )}
+
           {/* Pro — 유사 공시 + 주가 반응 차트 */}
           <section aria-labelledby="pro-heading">
             <h2 id="pro-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
@@ -267,6 +299,44 @@ export default function DisclosureDetailPage() {
       <div className="mt-6 lg:hidden">
         <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? `mailto:${SUPPORT_EMAIL}`} />
       </div>
+    </div>
+  );
+}
+
+// [목적] 영향 요인 단일 컬럼(호재 또는 악재) — 색+아이콘+텍스트 3중 표기로 색맹 배려(CLAUDE.md §6-5)
+// [이유] 한국 증시 관행: 호재=빨강(positive)/악재=파랑(negative) 토큰. 색상 단독 의미 전달 금지(WCAG 2.1 AA)
+// [사이드 임팩트] 공시 상세 Free 영향 요인 섹션에서만 사용. sentiment 토큰 변경 시 함께 반영
+// [수정 시 고려사항] items 빈 배열이면 "해당 없음" 표기 — 부모가 두 컬럼 모두 빈 경우 섹션 자체를 미노출
+function FactorColumn({ kind, items }: { kind: "positive" | "negative"; items: string[] }) {
+  const isPositive = kind === "positive";
+  const Icon = isPositive ? TrendingUp : TrendingDown;
+  const label = isPositive ? "호재 요인" : "악재 요인";
+  // 완전한 리터럴 클래스 — Tailwind JIT가 감지하도록 조건부로 전체 문자열 선택
+  const textClass = isPositive
+    ? "text-[color:var(--color-sentiment-positive)]"
+    : "text-[color:var(--color-sentiment-negative)]";
+  const dotClass = isPositive
+    ? "bg-[color:var(--color-sentiment-positive)]"
+    : "bg-[color:var(--color-sentiment-negative)]";
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-4">
+      <div className="mb-3 flex items-center gap-1.5">
+        <Icon className={`size-4 ${textClass}`} aria-hidden />
+        <span className={`text-sm font-extrabold ${textClass}`}>{label}</span>
+      </div>
+      {items.length > 0 ? (
+        <ul className="flex flex-col gap-2">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2 text-sm leading-relaxed text-foreground">
+              <span className={`mt-2 size-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden />
+              {item}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">해당 없음</p>
+      )}
     </div>
   );
 }

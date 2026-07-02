@@ -2232,3 +2232,34 @@ curl -u admin:<password> \
 - **Wave 2**: Stage 2 LLM 프롬프트+record에 headline/key_points[]/positive·negative_factors[] 추가 → stage_details JSONB 저장 → AnalysisResponse 화이트리스트 노출 → FE 카드 렌더
 - **Wave 3**: D+1~D+5 유사공시 실측 일자평균(방식 A) + 포트폴리오 avg_buy_price 박스
 - **모바일 검증**: OAuth 계정 → Playwright state 저장 후 `/dc-review-frontend` 재실행 권장
+
+## 2026-07-02 | disclosure-detail-redesign Wave 2 — Stage2 요인/해설 생성+stage_details JSONB+FE 카드
+
+### 변경 파일 (17개)
+- `backend/.../analysis/dto/Stage2Output.java` — key_points/positiveFactors/negativeFactors 추가 (3-arg 호환 생성자)
+- `backend/.../analysis/dto/Stage2Detail.java` — 신규 JSONB 페이로드 record
+- `backend/.../analysis/dto/AnalysisResponse.java` — 3개 Free 필드 + from() 오버로드
+- `backend/.../analysis/services/Stage2PromptBuilder.java` — 신규 JSON 스키마(key_points/factors)
+- `backend/.../analysis/services/Stage2Analyzer.java` — serializeDetail/withheld 억제
+- `backend/.../analysis/services/PromptGuard.java` — anyForbidden(리스트) + capList(8개·200자)
+- `backend/.../analysis/services/AnalysisQueryService.java` — parseDetail + Jackson 로그 보안
+- `backend/.../infrastructure/llm/Ollama·OpenRouter·MockLlmClient.java` — Raw 파서 확장
+- `backend/.../analysis/entities/AnalysisResult.java` — stageDetails 주석 갱신
+- `backend/src/test/.../AnalysisWave1IntegrationTest.java` — JSONB 왕복·withheld 억제 통합 테스트 2건
+- `frontend/src/lib/api/disclosures.ts` — DisclosureAnalysis 타입 확장
+- `frontend/src/app/(app)/disclosures/[id]/page.tsx` — "이런 내용이에요" + FactorColumn 2컬럼
+- `docs/개발명세서/api_spec.md` — §2.4 key_points/factors 정책 주석 추가
+- `docs/dev-log/backend.jsonl` / `frontend.jsonl`
+
+### 결정 (코드에 드러나지 않는 사항)
+- **stage_details JSONB 재활용 확정**: 신규 컬럼 대신 기존 `analysis_results.stage_details` JSONB에 Stage2Detail 직렬화 → Flyway 마이그레이션 없음. Stage 4~5 상세 병합도 동일 컬럼 가능.
+- **자본시장법 가드 확대**: PromptGuard가 summary뿐 아니라 key_points/factors 리스트 항목도 금지 키워드 스캔. withheld=true 시 stage_details=null로 저장·응답 모두 차단(단일 writer 보장).
+- **리스트 캡 기준**: 항목 8개 / 항목당 200자 (summary 240자 캡과 정합). 보안 리뷰(security #6) 수정.
+- **Jackson 로그 보안**: e.getMessage() → e.getClass().getSimpleName()만 기록 (stage_details 원문 노출 차단, security #7).
+- **3-arg 호환 생성자 전략**: Stage2Output 기존 호출부(Mock 폴백/PromptGuard 재구성/테스트 12곳) 무수정 유지. Wave 2 신규 6-arg 완전형은 LLM 클라이언트 Raw 파서만 사용.
+- **LLM 클라이언트 파서 중복 유지**: OllamaLlmClient/OpenRouterLlmClient의 Stage2OutputRaw+normalizeList는 기존 의도된 중복(캡슐화 우선). 공유 Stage2RawMapper 추출은 후속 리팩터로 분리.
+
+### 미완료 → 다음 세션
+- **Wave 3**: D+1~D+5 유사공시 실측 일자평균 + 포트폴리오 avg_buy_price 박스
+- **실 LLM smoke test**: qwen3:4b / OpenRouter 모델이 key_points/factors를 품질 있게 생성하는지 실측 검증 필요 (배관은 통합 테스트로 확인됨, 출력 품질은 별도)
+- **파서 중복 리팩터**: OllamaLlmClient ↔ OpenRouterLlmClient의 Stage2OutputRaw+helpers를 공유 Stage2RawMapper로 추출 (tech-debt, 기능 영향 없음)

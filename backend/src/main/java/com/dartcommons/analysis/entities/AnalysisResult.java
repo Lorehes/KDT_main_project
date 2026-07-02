@@ -62,7 +62,10 @@ public class AnalysisResult {
     @Column(name = "stage_reached", nullable = false)
     private short stageReached;
 
-    /** JSONB. wave 2에서 raw LLM 응답 직렬화 저장 — 본 Spec wave 1은 null. */
+    /**
+     * JSONB. disclosure-detail-redesign Wave 2부터 Stage2Detail(key_points/호재·악재 요인) JSON 저장.
+     * 구버전 분석·요인 전무 시 null. Stage2Analyzer가 직렬화, AnalysisQueryService가 역직렬화.
+     */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "stage_details", columnDefinition = "jsonb")
     private String stageDetails;
