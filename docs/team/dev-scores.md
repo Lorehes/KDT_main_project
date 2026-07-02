@@ -123,6 +123,7 @@ updated: 2026-06-02
 | 2026-07-02 | Jin | 97ab0ce | feat(stocks): KRX 주가 시계열 Wave A — V27+일배치 병행 [6/9 M] | Stocks/Infra | 6 | 9 | M | stock_prices 시계열 테이블+일배치 |
 | 2026-07-02 | Jin | 392b266 | feat(stocks): KRX 과거 3년 주가 백필 Wave B [6/9 L] | Stocks/Infra | 6 | 9 | L | 과거 주가 백필 잡+안전망 |
 | 2026-07-02 | Jin | 82e5543 | feat(analysis,stocks,frontend): 예측 차트 반응 산출 Wave C [7/9 L] | Analysis/Stocks/Frontend | 7 | 9 | L | 유사공시 D+1~D+5 평균 예측 차트 |
+| 2026-07-03 | Jin | 09942a0 | feat(analysis,infra): Stage2 프롬프트 본문 투입 + num_ctx 상향 [8/9 M] | Analysis/Infra | 8 | 9 | M | Stage2 본문 발췌 투입 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -130,5 +131,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 6 | 22 | 110 | 8.1 | 6.1 |
+| Jin | 1 | 18 | 106 | 8.1 | 6.1 |
 <!-- SUMMARY:END -->

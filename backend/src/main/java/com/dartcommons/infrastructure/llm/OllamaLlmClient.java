@@ -78,7 +78,9 @@ public class OllamaLlmClient implements LlmClient {
     )
     public Stage2Output classifyStage2(String prompt) {
         // think=false 가 핵심 — qwen3 thinking 모드는 format=json과 충돌해 빈 응답 발생(smoke test 검증).
-        // num_predict=800 — Wave 2에서 summary + key_points + 호재/악재 요인 리스트가 추가되어 400→800 상향.
+        // num_predict=800 — summary + key_points + 호재/악재 요인 리스트 출력 총량.
+        // num_ctx=8192 — stage2-body-in-prompt Spec: 본문 발췌(~6000자≈3~4k 토큰) + 프롬프트 + 출력 수용.
+        //   미설정 시 Ollama 기본 컨텍스트(모델별 ~2048)라 본문이 조용히 절단되어 본문 투입 효과 소멸(Spec 핵심 카드).
         // temperature=0.2 는 결정론적 분류 유도 (창의성 억제).
         Map<String, Object> body = Map.of(
                 "model", props.model(),
@@ -88,7 +90,8 @@ public class OllamaLlmClient implements LlmClient {
                 "think", false,
                 "options", Map.of(
                         "temperature", 0.2,
-                        "num_predict", 800
+                        "num_predict", 800,
+                        "num_ctx", 8192
                 )
         );
 

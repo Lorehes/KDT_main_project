@@ -1,6 +1,7 @@
 package com.dartcommons.infrastructure.llm;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /*
  * [목적] LLM provider 설정 — application.yml의 dartcommons.llm.* 바인딩.
@@ -13,6 +14,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * [수정 시 고려사항] provider 값 추가 시 대응 LlmClient 구현체 + HostWhitelist.PROD_ALLOWED 동시 추가 필수.
  *                  timeoutMs 기본값 60s(Ollama) → 30s(Cloud)로 변경(Cloud LLM은 응답 빠름).
  *                  Stage 3~5 전용 모델/타임아웃 필요 시 별도 @ConfigurationProperties 분리 검토.
+ *                  stage2BodyMaxChars(stage2-body-in-prompt): Stage 2 프롬프트에 넣을 본문 발췌 상한.
+ *                  content-max-chars(Stage 1 저장 5만자)와 별개 — 프롬프트 토큰/비용 균형용(결정: 6000).
+ *                  @DefaultValue: @TestPropertySource 등 yml 키 미제공 환경에서도 record 바인딩 성공 보장.
  */
 @ConfigurationProperties(prefix = "dartcommons.llm")
 public record LlmProperties(
@@ -22,6 +26,7 @@ public record LlmProperties(
         String model,               // 기본 google/gemma-3-4b-it:free (openrouter) / qwen3:4b (ollama)
         int timeoutMs,              // 기본 30000 (Cloud) / 60000 (Ollama)
         int maxRetries,             // 기본 2 (네트워크/타임아웃)
-        double confidenceThreshold  // 기본 0.6 (결정 2) — 미만 시 is_withheld=true
+        double confidenceThreshold, // 기본 0.6 (결정 2) — 미만 시 is_withheld=true
+        @DefaultValue("6000") int stage2BodyMaxChars // Stage 2 프롬프트 본문 발췌 상한(글자). 0이면 본문 미투입
 ) {
 }

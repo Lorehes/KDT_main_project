@@ -31,7 +31,7 @@ class OpenRouterLlmClientTest {
         int port = httpServer.getAddress().getPort();
         LlmProperties props = new LlmProperties(
                 "openrouter", "http://localhost:" + port, "test-key",
-                "test-model", 5000, 1, 0.6);
+                "test-model", 5000, 1, 0.6, 6000);
         client = new OpenRouterLlmClient(props);
     }
 
@@ -117,7 +117,7 @@ class OpenRouterLlmClientTest {
     void 생성자_apiKey_빈값_IllegalStateException발생() {
         // M1 수정 검증: apiKey 공백 시 부팅 시점에 즉시 실패 (재시도 낭비 방지)
         LlmProperties blankKeyProps = new LlmProperties(
-                "openrouter", "http://localhost:1", "", "test-model", 5000, 1, 0.6);
+                "openrouter", "http://localhost:1", "", "test-model", 5000, 1, 0.6, 6000);
 
         assertThatThrownBy(() -> new OpenRouterLlmClient(blankKeyProps))
                 .isInstanceOf(IllegalStateException.class)

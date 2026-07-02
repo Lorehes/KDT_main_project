@@ -98,7 +98,10 @@ public class OpenRouterLlmClient implements LlmClient {
     public Stage2Output classifyStage2(String prompt) {
         // response_format=json_object: OpenRouter가 JSON만 출력하도록 강제.
         // temperature=0.2: 결정론적 분류 유도 (창의성 억제) — OllamaLlmClient와 동일.
-        // max_tokens=800: Wave 2에서 key_points + 호재/악재 요인 리스트 추가로 400→800 상향(OllamaLlmClient와 정합).
+        // max_tokens=800: key_points + 호재/악재 요인 리스트 출력 총량(OllamaLlmClient와 정합).
+        // stage2-body-in-prompt: 프롬프트에 본문 발췌(~6000자)가 포함되면 입력 토큰이 공시당 수천 토큰 증가 →
+        //   OpenRouter는 입력 토큰당 과금이므로 월 공시량 × 본문 토큰만큼 비용↑. Cloud 모델은 컨텍스트가 커
+        //   Ollama의 num_ctx 같은 별도 설정은 불필요. readTimeout(props.timeoutMs)은 긴 입력에도 30s로 충분(응답 빠름).
         Map<String, Object> body = Map.of(
                 "model", props.model(),
                 "messages", List.of(

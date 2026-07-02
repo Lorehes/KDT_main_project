@@ -2336,3 +2336,23 @@ curl -u admin:<password> \
 - **운영 필수**: `POST /admin/stocks/price-backfill` 1회 실행해야 예측 차트에 실 데이터 표시(현재 stock_prices 비어있음).
 - **Stage2 모델 결정**(gemma vs qwen), **파서 중복 리팩터**, **모바일 검증** (지속)
 - disclosure-detail-redesign / krx-price-timeseries 둘 다 Done 전환 후보.
+
+## 2026-07-03 | stage2-body-in-prompt 코드(카드 1~5) — Stage2 본문 투입
+
+### 완료
+- `LlmProperties.stage2BodyMaxChars`(@DefaultValue 6000) + application.yml `stage2-body-max-chars`.
+- `Stage2PromptBuilder`: content_text 앞 6000자 발췌 섹션 + 본문 근거 지시(추측 금지·수치 발췌 그대로만). 서로게이트 안전 절삭. 본문 없음/cap=0 → 메타 전용 폴백.
+- `OllamaLlmClient` num_ctx=8192 추가 — **본문 절단 방지(Spec 핵심)**. 미설정 시 Ollama 기본(~2048)이 본문 조용히 절단.
+- `OpenRouterLlmClient` 입력토큰 비용 주석(Cloud는 컨텍스트 커 num_ctx 불필요).
+- `Stage2PromptBuilderTest` 4건(본문/절삭/null/cap0). `OpenRouterLlmClientTest` 생성자 8-arg 정정. BE 254/254 통과.
+
+### 결정 (사용자 확정)
+- **본문 상한 6000자** — DART 공시 앞부분 핵심 배치 특성, 토큰/비용 균형.
+- **재분석 범위 = 최근 공시만(기간 한정)** — 전량 ~68k 아님. idFrom/idTo 배치.
+- **모델 결정 = 구현 후 본문포함 smoke로 gemma vs qwen 확정** ([[analysis-stage2-smoke]] 미결정 트랙 종료 예정).
+- num_ctx 8192 — 6000자(~3~4k 토큰)+프롬프트+출력 수용.
+
+### 미완료 → 다음 세션 (운영 필수)
+- **카드 #6 재분석 실행**: (1) 본문포함 smoke로 gemma vs qwen 품질 실측 → LLM_MODEL 확정, (2) 소수 육안 검증, (3) 최근 공시 idFrom/idTo 배치 재분석. **이걸 해야 목업 요인/해설이 실제로 채워짐**(현재 코드만 배포, 데이터 미갱신).
+- 재분석은 실 LLM(Ollama/OpenRouter) 필요 — 앱 재기동(현재 gemma/chroma로 떠있던 것 → .env 원복됨) 후 실행.
+- 미커밋 Draft: `price-backfill-partial-status`(안전망 PARTIAL) — 이번 커밋에 포함.

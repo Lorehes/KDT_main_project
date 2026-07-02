@@ -155,6 +155,9 @@ dartcommons:
     # 결정 2: 0.6 미만 → is_withheld=true (판단 보류).
     # 운영 조정은 SystemConfig 키 analysis.stage2.confidence_threshold 후속 검토.
     confidence-threshold: ${LLM_CONFIDENCE_THRESHOLD:0.6}
+    # Stage 2 프롬프트 본문 발췌 상한(글자) — stage2-body-in-prompt Spec. 6000자 ≈ num_ctx 8192 수용.
+    # content-max-chars(5만자, Stage 1 저장)와 별개. 0이면 본문 미투입(메타 전용 폴백).
+    stage2-body-max-chars: ${STAGE2_BODY_MAX_CHARS:6000}
     # 임베딩 모델 — Stage 3 RAG (analysis-stage3-rag-chroma Spec)
     # provider=mock: 테스트/로컬(임베딩 불필요). provider=ollama: nomic-embed-text 모델 사용.
     # EMBEDDING_BASE_URL: Ollama 서버 주소 (기본 http://localhost:11434)
