@@ -203,6 +203,31 @@ public class KrxClient {
         }
     }
 
+    /**
+     * 특정 거래일의 전종목 종가 조회 — PriceBackfillService(Wave B krx-price-timeseries)가 과거일 반복 호출.
+     * 전략: ① KRX 직접(MDCSTAT01501, date) → ② GitHub cache CSV(date) 폴백.
+     * 비거래일(공휴일·주말)은 양 소스 모두 빈 응답 → 빈 Map 반환(호출자가 스킵).
+     * fetchAllClosePrices()와 달리 최근 거래일 자동 탐색(B128) 없이 인자 date를 그대로 사용.
+     *
+     * @param date 조회할 거래일(KST 기준)
+     * @return stockCode → StockCloseInfo. 비거래일·전 소스 실패 시 빈 Map.
+     */
+    public Map<String, StockCloseInfo> fetchClosePricesForDate(LocalDate date) {
+        String tradeDate = date.format(YYYYMMDD);
+        try {
+            Map<String, StockCloseInfo> result = fetchClosePricesFromKrx(tradeDate);
+            if (!result.isEmpty()) return result;
+        } catch (Exception e) {
+            log.warn("KRX 과거 종가 fetch 실패(date={}) — GitHub cache 폴백: {}", date, SecretMasker.mask(e.getMessage()));
+        }
+        try {
+            return fetchClosePricesFromGithubCache(date);
+        } catch (Exception e) {
+            log.warn("GitHub cache 과거 종가 폴백 실패(date={}): {}", date, SecretMasker.mask(e.getMessage()));
+            return Map.of();
+        }
+    }
+
     /** B128.bld resource bundle에서 최근 거래일(YYYYMMDD) 조회. 실패 시 null 반환. */
     private String fetchLatestTradingDate() {
         try {

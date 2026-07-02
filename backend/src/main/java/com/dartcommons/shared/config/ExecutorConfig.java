@@ -67,6 +67,24 @@ public class ExecutorConfig {
     }
 
     /**
+     * KRX 과거 주가 백필 풀 — PriceBackfillService(krx-price-timeseries Wave B) 전용, 단일 스레드.
+     * core=max=1: 날짜 역순 순차 처리(KRX rate limit 보호) + 3년 1회성 관리자 잡이라 병렬 불필요.
+     * DART content fetch(contentFetchExecutor)와 격리 — 별도 외부 API(KRX)라 상호 간섭 방지.
+     */
+    @Bean(name = "priceBackfillExecutor")
+    public TaskExecutor priceBackfillExecutor() {
+        ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
+        exec.setCorePoolSize(1);
+        exec.setMaxPoolSize(1);
+        exec.setQueueCapacity(1);   // 단일 스레드가 즉시 소비 — AtomicBoolean single-flight로 큐는 실질 미사용(백로그 불가)
+        exec.setThreadNamePrefix("price-backfill-");
+        exec.setWaitForTasksToCompleteOnShutdown(true);
+        exec.setAwaitTerminationSeconds(60);
+        exec.initialize();
+        return exec;
+    }
+
+    /**
      * DART 본문 fetch 풀 — DisclosureContentFetchListener(실시간) + DisclosureContentBackfillService(백필) 공용.
      * max=2: DART 일일 호출 한도 보호(한도 실측 전 보수적 제한). 큐=500: 실시간 이벤트 유실 최소화(300→500).
      * awaitTerminationSeconds=60: 진행 중 fetch가 완료될 시간 확보 후 종료.

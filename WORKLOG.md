@@ -2276,9 +2276,27 @@ curl -u admin:<password> \
 - **upsertPrice 행당 1호출 유지**: ~341종목 × 1회/일이라 batch 불필요(YAGNI).
 
 ### 미완료 → 다음 세션
-- **Wave B(백필)**: `PriceBackfillService` — 평일 캘린더 3년 역순, 커버 종목 한정, @Async+진행률+안전망.
 - **Wave C(반응 산출)**: `StockPriceService.findReactionSeries()`, 유사 공시 D+1~D+5 평균 등락 → disclosure-detail-redesign 예측 차트(#8/#9) 언블록.
 - **Stage2 모델 결정** 및 **파서 중복 리팩터** (이전 세션 미완료 지속)
+
+## 2026-07-02 | krx-price-timeseries Wave B — KRX 과거 3년 주가 백필
+
+### 완료
+- V28 `price_backfill_jobs`(커서=last_processed_date DATE) + `PriceBackfillJob` 엔티티·Repository·`PriceBackfillJobStateService`(REQUIRES_NEW).
+- `PriceBackfillService`: @Async CAS single-flight, 어제→3년전 평일 역순 반복, 커버 종목 FK 필터, 진행률 20일 배치 flush, **consecutive-empty 20 안전망**(mid-run 장애 포착).
+- `PriceBackfillController`(/admin/stocks/price-backfill 202/409), `KrxClient.fetchClosePricesForDate()`(과거일 KRX→GitHub cache 폴백) 노출, `priceBackfillExecutor`(core1/max1).
+- IT 4건: V28 적용, happy path 적재+SUCCEEDED, 안전망 FAILED, 중복 409.
+- 리뷰 수정 5건: 안전망 startup-only→consecutive(mid-run 포착), resume targeted 정합, errorMessage 마스킹, processed 의미 주석, queueCapacity.
+
+### 결정
+- **안전망 = 연속 빈응답 20 평일**: 시작 장애뿐 아니라 중간 장애도 포착. 장 연휴 최대 연속 평일(~6일) << 20이라 정상 휴장 오탐 없음. "SUCCEEDED인데 데이터 구멍"이 예측 차트 신뢰성에 직결되어 강화.
+- **processed=날짜 수(행 수 아님)**: 진행률=(processed+failed)/targeted. 적재 행 수는 로그로만(DTO 노출 불필요).
+- **커버 종목 FK 필터 필수**: fetchClosePricesForDate는 전종목(~2800) 반환하나 stock_prices FK는 stocks(~341)만 참조.
+
+### 미완료 → 다음 세션
+- **Wave C(반응 산출)**: `StockPriceService.findReactionSeries(stockCode, d0, days)` + 유사 공시 D+1~D+5 평균 등락 → disclosure-detail-redesign 예측 차트(#8/#9) 언블록. (`StockPriceRepository.findReactionPrices`/`findLatestOnOrBefore` 이미 준비됨.)
+- **운영**: 실 KRX 과거일 커버리지·rate limit 확인 후 POST /admin/stocks/price-backfill 1회 실행.
+- **Stage2 모델 결정**, **파서 중복 리팩터** (지속)
 
 ## 2026-07-02 | disclosure-detail-redesign Wave 3(축소) — 매수가 박스 + 유사공시 크래시 수정
 
