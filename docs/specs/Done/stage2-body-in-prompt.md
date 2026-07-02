@@ -1,13 +1,14 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-03
 updated: 2026-07-03
 ---
 
 # Stage 2 프롬프트 본문(content_text) 투입 Spec
 
-> 상태: Draft → **Approved** (2026-07-03, dc-tech-review 승인 + 결정 3건 확정)
+> 상태: Approved → **Done** (2026-07-03, 코드 카드1~5 커밋 09942a0 + 카드6 재분석 실행: gemma 확정·최근 30건)
+> 잔여(비차단): 전체 재분석 확대·gemma 요인 과생성 튜닝은 후속(WORKLOG).
 
 ## 배경 / 목적
 

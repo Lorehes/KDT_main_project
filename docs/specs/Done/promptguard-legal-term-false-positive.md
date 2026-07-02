@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-03
 updated: 2026-07-03
 ---
 
 # PromptGuard 법률용어 오탐 개선 Spec
 
-> 상태: Draft → **Approved** (2026-07-03, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-07-03, 코드 카드1~2 커밋 782745e + 카드3 재분석 반영: 30건 재분석 0 오탐 확인)
 
 ## 배경 / 목적
 
