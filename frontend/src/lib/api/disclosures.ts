@@ -44,6 +44,13 @@ export interface SimilarDisclosure {
   similarity_score: number;
 }
 
+// Wave C 예측 차트 — 과거 유사 공시 실측 D+1~D+5 평균 등락(방식 A). 표본 없으면 BE가 필드 생략.
+export interface PriceReactionForecast {
+  series: { day: number; avg_pct: number }[];
+  sample_size: number;
+  avg_5d_pct: number;
+}
+
 export interface DisclosureAnalysis {
   analysis_id: number;
   disclosure_id: number;
@@ -60,6 +67,7 @@ export interface DisclosureAnalysis {
   expected_reaction?: ExpectedReaction;
   rationale?: string;
   similar_disclosures?: SimilarDisclosure[];
+  price_reaction_forecast?: PriceReactionForecast;
   // Premium 이상
   financial_context?: Record<string, unknown>;
   disclaimer: string;

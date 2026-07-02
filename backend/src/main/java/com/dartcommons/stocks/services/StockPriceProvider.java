@@ -3,6 +3,7 @@ package com.dartcommons.stocks.services;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -35,6 +36,21 @@ public interface StockPriceProvider {
      */
     Map<String, PriceInfo> findLatestPrices(Collection<String> stockCodes);
 
+    /**
+     * D0 기준 D+1~D+days 거래일 등락률(%) 시계열 — 예측 차트(krx-price-timeseries Wave C, disclosure-detail-redesign #8/#9).
+     * 기준가 = baseDate 이전(inclusive) 최신 종가, 이후 최대 days 거래일 종가와의 % 변화.
+     * stock_prices 시계열 필요 — Wave A/B 미적재 종목·구간은 빈 리스트.
+     *
+     * @param stockCode KRX 6자리 종목코드
+     * @param baseDate  D0(공시 접수일)
+     * @param days      조회할 후행 거래일 수(예: 5 → D+1~D+5)
+     * @return day(1..days) → 등락률(%). 데이터 부족 시 짧거나 빈 리스트(추측 금지).
+     */
+    List<PriceReaction> findReactionSeries(String stockCode, LocalDate baseDate, int days);
+
     /** 종가 + 기준일 컨테이너 — 신선도 표시용. */
     record PriceInfo(BigDecimal closePrice, LocalDate priceAsof) {}
+
+    /** D+day의 기준가 대비 등락률(%) — 예측 차트 1개 봉. */
+    record PriceReaction(int day, BigDecimal pct) {}
 }

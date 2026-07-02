@@ -150,7 +150,7 @@ updated: 2026-07-02
 - **Wave 1 완료**(aac864e): 시각 리레이아웃 — AI 인덱스 상단, Premium 다크 CTA.
 - **Wave 2 완료**(e01ce8b): Stage 2 LLM key_points/호재·악재 요인 생성 → stage_details JSONB → 전 티어 노출 → FE 카드.
 - **Wave 3(축소) 완료**: 내 평균 매수가 박스(#10) + PriceReactionChart P1 크래시 버그 수정(v2 계약 정합).
-- **⚠️ 예측 차트(#8/#9) 분리**: Tech Review의 "방식 A = 유사공시 실측 재활용"은 **오류**였음 — `SimilarDisclosureItem` v2가 `priceReaction5dPct`를 제거(KRX 주가 API 미구현)했고 `stock_prices` 일자별 시계열 테이블이 없음. 예측 차트는 **KRX 과거 주가 시계열 수집 + Flyway 테이블 신설**이 선행돼야 하는 별도 서브프로젝트 → 신규 Spec으로 분리.
+- **✅ 예측 차트(#8/#9) 완료** (2026-07-02, [[krx-price-timeseries]] Wave A~C 경유): KRX 시계열(`stock_prices`) 구축 후 유사 공시 실측 D+1~D+5 평균 등락(방식 A)을 산출해 Pro 예측 차트 렌더. 최초 Tech Review의 "유사공시 즉시 재활용"은 오류였고(데이터 부재), KRX 시계열 서브프로젝트를 선행해 해소.
 - **모델 품질 미결정**: Wave 2 요인/해설의 실 LLM 품질은 [[analysis-stage2-smoke]] 2026-07-02 재검 참조 — gemma3(생성 우수/낙관편향) vs qwen3(분류 우수/§4 손상) 딜레마, 별도 트랙 결정 대기.
 
 <!-- 다음: KRX 시계열 Spec(예측 차트 선행) + Stage2 모델 결정 트랙 -->

@@ -2,7 +2,8 @@
 
 // [목적] 공시 상세 페이지(D3/m04·D17/m17·D18/m20) — Free·Pro·Premium 단계별 분석 + 피드백
 //   Wave 1: 목업 리레이아웃(AI 인덱스·한 줄 요약·Premium 다크 CTA). Wave 2: 이런내용이에요/호재·악재 요인(Free).
-//   Wave 3: 내 평균 매수가 박스(티어 무관) + 유사공시 v2(유사도 리스트). 예측 차트는 KRX 시계열 미구현으로 별도 Spec.
+//   Wave 3: 내 평균 매수가 박스(티어 무관) + 유사공시 v2(유사도 리스트).
+//   예측 차트(Pro): 과거 유사 사례 실측 D+1~D+5 평균 등락(방식 A) — krx-price-timeseries Wave C 데이터 소비.
 // [이유] 티어별 정보 노출: Free(판정+요약+요인), Pro(유사공시), Premium(재무·업황). 티어 미달 시 TierGate/다크 CTA
 // [사이드 임팩트] disclosure 로드 완료 후 analysis 쿼리 활성(R7) — 직렬화로 미스매치 방지.
 //   analysis null → disclosure.sentiment 폴백 대신 "분석 대기 중" 배지(R1, 자본시장법 §11.1).
@@ -27,6 +28,7 @@ import { ConfidenceMeter } from "@/components/domain/ConfidenceMeter";
 import { DisclaimerNotice } from "@/components/domain/DisclaimerNotice";
 import { TierGate } from "@/components/domain/TierGate";
 import { FeedbackPrompt } from "@/components/domain/FeedbackPrompt";
+import { PriceForecastChart } from "@/components/domain/PriceForecastChart";
 import { usePortfolios } from "@/lib/api/portfolios";
 
 export default function DisclosureDetailPage() {
@@ -223,7 +225,18 @@ export default function DisclosureDetailPage() {
             </section>
           )}
 
-          {/* Pro — 과거 유사 공시 (Stage 3 RAG 유사도). 주가 반응 차트는 KRX 시계열 구현 후 별도 Spec */}
+          {/* Pro — 과거 유사 사례 5일 평균 등락(Wave C 예측 차트). 방식 A 실측, stock_prices 표본 있을 때만 */}
+          {isPro && (analysis?.price_reaction_forecast?.series.length ?? 0) > 0 && (
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm" aria-labelledby="forecast-heading">
+              <h2 id="forecast-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
+                과거 유사 사례 5일 등락
+                <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
+              </h2>
+              <PriceForecastChart forecast={analysis!.price_reaction_forecast!} />
+            </section>
+          )}
+
+          {/* Pro — 과거 유사 공시 (Stage 3 RAG 유사도) */}
           <section aria-labelledby="pro-heading">
             <h2 id="pro-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
               과거 유사 공시

@@ -1,6 +1,7 @@
 package com.dartcommons.analysis.services;
 
 import com.dartcommons.analysis.dto.AnalysisResponse;
+import com.dartcommons.analysis.dto.PriceReactionForecast;
 import com.dartcommons.analysis.dto.SimilarDisclosureItem;
 import com.dartcommons.analysis.dto.Stage2Detail;
 import com.dartcommons.shared.enums.Tier;
@@ -32,9 +33,12 @@ import java.util.List;
 public class AnalysisQueryService {
 
     private static final Logger log = LoggerFactory.getLogger(AnalysisQueryService.class);
+    /** 예측 차트 후행 거래일 수(D+1~D+5) — disclosure-detail-redesign 목업 기준. */
+    private static final int FORECAST_DAYS = 5;
 
     private final AnalysisResultCacheService analysisResultCacheService;
     private final Stage3RagService stage3RagService;
+    private final PriceReactionForecastService forecastService;
     private final ObjectMapper objectMapper;
 
     public AnalysisResponse getByDisclosureId(Long disclosureId, Tier tier) {
@@ -53,7 +57,12 @@ public class AnalysisQueryService {
             similar = null;
         }
 
-        return AnalysisResponse.from(result, tier, similar, parseDetail(result.getStageDetails()));
+        // Wave C 예측 차트 — 유사 공시들의 실측 D+1~D+5 평균 등락(방식 A). stock_prices 미적재/표본 없으면 null.
+        PriceReactionForecast forecast = (similar != null)
+                ? forecastService.forecast(similar, FORECAST_DAYS).orElse(null)
+                : null;
+
+        return AnalysisResponse.from(result, tier, similar, parseDetail(result.getStageDetails()), forecast);
     }
 
     /*

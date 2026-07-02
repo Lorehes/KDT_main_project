@@ -2314,3 +2314,25 @@ curl -u admin:<password> \
 - **Stage2 모델 결정**: gemma3(생성 우수/낙관편향) vs qwen3(분류 우수/§4 숫자·회사명 손상) 딜레마 해소. config 기본값 gemma vs smoke 문서 qwen 불일치도 함께. [[analysis-stage2-smoke]] 2026-07-02 참조.
 - **파서 중복 리팩터**: OllamaLlmClient ↔ OpenRouterLlmClient의 Stage2OutputRaw+helpers를 공유 Stage2RawMapper로 추출 (tech-debt).
 - **모바일 검증**: OAuth Playwright state 저장 후 /dc-review-frontend 재실행.
+
+## 2026-07-02 | krx-price-timeseries Wave C — 반응 산출 (예측 차트 완성)
+
+### 완료
+- `StockPriceProvider.findReactionSeries(stockCode, D0, days)` seam 확장 + `StockPriceService` 구현: 기준가=on-or-before 최신 종가, D+N=N번째 거래일, %등락(0나눗셈 가드).
+- `PriceReactionForecastService`(analysis): 유사공시 disclosure_id→stockCode(findAllById 배치, N+1 방지) + rcept_dt→D0로 반응 조회 → 일자별 평균. 표본 스킵(id null·반응 없음).
+- `AnalysisResponse.price_reaction_forecast`(Pro+ 이중 게이트) + `AnalysisQueryService` 배선.
+- FE: `price_reaction_forecast` 타입 + `PriceForecastChart`(recharts, 색+부호+aria) + disclosure 상세 Pro "과거 유사 사례 5일 등락" 카드.
+- 테스트: 포캐스트 단위 4건 + findReactionSeries IT 3건. api_spec §2.4 동기(similar v2 예시 정정 포함).
+
+### 결정
+- **자본시장법 프레이밍**: "예측" 단정 금지 → "과거 유사 공시의 실제 5일 등락 평균 · 투자 판단 근거 아님"(방식 A, LLM 미래예측 비채택).
+- **stock_code=disclosure_id 해석**: Chroma 메타에 stock_code 미포함 → disclosure_id로 Disclosure.stockCode(기존 임베딩 호환).
+- **표본 없으면 미노출**: stock_prices 미적재 시 Optional.empty→null→FE 카드 없음(추측 금지).
+
+### disclosure-detail-redesign 완결
+- Wave 1(시각)·2(요인/해설)·3(매수가+크래시)·예측차트(본 wave) 전부 완료.
+
+### 미완료 → 다음 세션
+- **운영 필수**: `POST /admin/stocks/price-backfill` 1회 실행해야 예측 차트에 실 데이터 표시(현재 stock_prices 비어있음).
+- **Stage2 모델 결정**(gemma vs qwen), **파서 중복 리팩터**, **모바일 검증** (지속)
+- disclosure-detail-redesign / krx-price-timeseries 둘 다 Done 전환 후보.

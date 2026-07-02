@@ -30,7 +30,7 @@ import java.util.List;
         "sentiment", "confidence", "is_withheld", "summary",
         "key_points", "positive_factors", "negative_factors",
         "stage_reached",
-        "expected_reaction", "rationale", "similar_disclosures",
+        "expected_reaction", "rationale", "similar_disclosures", "price_reaction_forecast",
         "financial_context",
         "disclaimer", "report_inaccuracy_path", "created_at"
 })
@@ -53,6 +53,8 @@ public record AnalysisResponse(
         @JsonProperty("expected_reaction") ExpectedReaction expectedReaction,
         String rationale,
         @JsonProperty("similar_disclosures") List<SimilarDisclosureItem> similarDisclosures,
+        // Pro+ (Wave C) — 과거 유사 공시 실측 D+1~D+5 평균 등락(예측 차트). 표본 없으면 null.
+        @JsonProperty("price_reaction_forecast") PriceReactionForecast priceReactionForecast,
 
         // Premium (Stage 5) — Free/Pro 응답에서는 null
         @JsonProperty("financial_context") Object financialContext,
@@ -82,7 +84,7 @@ public record AnalysisResponse(
      *                  tier 필드 추가 시 AnalysisResponseTest.allTiers_alwaysIncludeDisclaimerAndReportPath() 도 갱신.
      */
     public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar,
-                                        Stage2Detail detail) {
+                                        Stage2Detail detail, PriceReactionForecast forecast) {
         String reportPath = "/api/v1/analyses/" + ar.getId() + "/feedback";
 
         boolean proPlus = tier == Tier.PRO || tier == Tier.PREMIUM;
@@ -105,6 +107,7 @@ public record AnalysisResponse(
                 proPlus ? ar.getExpectedReaction() : null,
                 proPlus ? ar.getRationale() : null,
                 proPlus ? similar : null,   // Stage 3 RAG — Chroma 비활성 시 similar=null → JSON 제외
+                proPlus ? forecast : null,  // Wave C 예측 — Free 제외, 표본 없으면 상위에서 null
 
                 null, // TODO Stage-5: financial_context — Stage 5 구현 시 premium ? ar.getFinancialContext() : null 로 교체
 
@@ -114,14 +117,20 @@ public record AnalysisResponse(
         );
     }
 
-    /** detail=null 오버로드 — stage_details 미보유(구버전 분석) 또는 상세 불필요 시. */
-    public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar) {
-        return from(ar, tier, similar, null);
+    /** forecast=null 오버로드 — 예측 미산출(Stage 3 비활성·표본 없음). */
+    public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar,
+                                        Stage2Detail detail) {
+        return from(ar, tier, similar, detail, null);
     }
 
-    /** similar·detail=null 단축 오버로드 — Stage 3 비활성 환경(Free 조회 등)에서 사용. */
+    /** detail·forecast=null 오버로드 — stage_details 미보유(구버전 분석) 또는 상세 불필요 시. */
+    public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar) {
+        return from(ar, tier, similar, null, null);
+    }
+
+    /** similar·detail·forecast=null 단축 오버로드 — Stage 3 비활성 환경(Free 조회 등)에서 사용. */
     public static AnalysisResponse from(AnalysisResult ar, Tier tier) {
-        return from(ar, tier, null, null);
+        return from(ar, tier, null, null, null);
     }
 
     /** 빈/ null 리스트를 null로 정규화 — @JsonInclude(NON_NULL)로 빈 배열 노출 방지. */

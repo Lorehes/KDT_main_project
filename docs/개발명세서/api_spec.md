@@ -233,9 +233,14 @@ updated: 2026-05-30
   "expected_reaction": "DOWN",      // UP | FLAT | DOWN
   "rationale": "동일 회사 동일 유형 공시 시 평균 5일 -6.3% 반응(과거 4건)",
   "similar_disclosures": [
-    { "rcept_no": "20250...", "corp_name": "...", "rcept_dt": "2025-...",
-      "price_reaction_5d_pct": -6.3 }
+    { "disclosure_id": 41, "rcept_no": "20250...", "corp_name": "...", "corp_code": "00126380",
+      "disclosure_type": "CONVERTIBLE_BOND", "rcept_dt": "2025-...", "similarity_score": 0.87 }
   ],
+  // TIER:PRO 이상 (Wave C) — 과거 유사 공시 실측 D+1~D+5 평균 등락(방식 A). stock_prices 표본 없으면 필드 생략.
+  "price_reaction_forecast": {
+    "series": [{ "day": 1, "avg_pct": -1.2 }, { "day": 5, "avg_pct": -4.7 }],
+    "sample_size": 4, "avg_5d_pct": -4.7
+  },
 
   // TIER:PREMIUM 에서만 (Stage 5)
   "financial_context": { /* 재무/업황 요약 */ },
