@@ -15,6 +15,9 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -28,7 +31,8 @@ import java.util.zip.ZipInputStream;
  * [사이드 임팩트] fetchDocumentBytes()는 DisclosureContentService에서 트랜잭션 외부에서 호출됨(HIGH-2 fix).
  *               DART 일일 호출 한도에 포함 — DisclosureContentBackfillService가 throttle 관리.
  *               MAX_ZIP_ENTRY_BYTES(10MB) 초과 항목은 DartApiException(TOO_LARGE)으로 거부.
- * [수정 시 고려사항] DART 에러 응답이 JSON으로 오는 경우(status=020 등) zip 매직넘버 검증이 DartApiException으로 변환.
+ * [수정 시 고려사항] DART 에러 응답(비-zip XML/JSON)은 status 코드로 분기: 020(사용한도)·800·900은 일시적 →
+ *                  RestClientException(transient, content_fetched_at NULL 유지 → 재수집 재시도), 그 외는 DartApiException(영구).
  *                  zip 내 파일이 여럿일 경우 첫 비디렉터리 항목만 사용 — 첨부파일이 먼저 오면 본문 누락 가능.
  *                  추후 rcept_no 기반 파일명 매칭(예: entry.getName().startsWith(rceptNo))으로 강화 가능.
  */
@@ -36,6 +40,11 @@ import java.util.zip.ZipInputStream;
 public class DartDocumentClient {
 
     private static final Logger log = LoggerFactory.getLogger(DartDocumentClient.class);
+
+    // DART 응답 status 코드(비-zip XML/JSON 에러) 추출용
+    private static final Pattern DART_STATUS = Pattern.compile("\"?status\"?\\s*[:>]\\s*\"?(\\d{3})");
+    // 일시적 status — 재수집 재시도 대상(영구 저장 금지). 020=사용한도 초과, 800/900=시스템 오류/점검.
+    private static final Set<String> TRANSIENT_DART_STATUS = Set.of("020", "800", "900");
 
     private final RestClient restClient;
     private final DartApiProperties props;
@@ -97,9 +106,16 @@ public class DartDocumentClient {
         if (zipBytes == null || zipBytes.length == 0) {
             throw new DartApiException("EMPTY", "document.xml empty response: rceptNo=" + rceptNo);
         }
-        // DART 에러 응답은 JSON으로 옴 — zip 매직넘버(PK=0x50 0x4B) 확인
+        // DART 에러 응답은 XML/JSON으로 옴 — zip 매직넘버(PK=0x50 0x4B) 확인
         if (zipBytes.length < 4 || zipBytes[0] != 0x50 || zipBytes[1] != 0x4B) {
             String preview = new String(zipBytes, 0, Math.min(200, zipBytes.length), StandardCharsets.UTF_8);
+            // status 020("사용한도 초과")·800/900(시스템 오류)은 일시적 — 영구 실패로 저장하면 재수집 불가.
+            // → RestClientException(transient)으로 던져 content_fetched_at을 NULL로 남겨 다음 백필에서 재시도.
+            String status = extractDartStatus(preview);
+            if (TRANSIENT_DART_STATUS.contains(status)) {
+                throw new RestClientException(
+                        "DART document transient status=" + status + " rceptNo=" + rceptNo + " (retryable)");
+            }
             throw new DartApiException("INVALID",
                     "document.xml not a zip for rceptNo=" + rceptNo + ": " + SecretMasker.mask(preview));
         }
@@ -138,5 +154,16 @@ public class DartDocumentClient {
         }
         throw new DartApiException("EMPTY",
                 "document.xml zip has no entries for rceptNo=" + rceptNo);
+    }
+
+    /** 비-zip DART 에러 응답 preview에서 status 코드(3자리) 추출 — 없으면 빈 문자열. (package-private: 테스트용) */
+    static String extractDartStatus(String preview) {
+        Matcher m = DART_STATUS.matcher(preview);
+        return m.find() ? m.group(1) : "";
+    }
+
+    /** status 코드가 일시적(재수집 재시도 대상)인지 — 020/800/900. (package-private: 테스트용) */
+    static boolean isTransientDartStatus(String status) {
+        return TRANSIENT_DART_STATUS.contains(status);
     }
 }
