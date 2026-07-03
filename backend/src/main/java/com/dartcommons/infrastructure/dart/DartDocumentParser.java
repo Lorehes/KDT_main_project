@@ -35,6 +35,14 @@ public class DartDocumentParser {
 
     private static final int MAX_DECLARATION_SCAN_BYTES = 300;
 
+    /**
+     * UTF-8 strict 실패 시 lenient 결과를 UTF-8로 수용하는 치환문자 비율 상한.
+     * 진짜 UTF-8(잡바이트 소수)은 ~0.5% 이하, EUC-KR을 UTF-8로 오독하면 ~30~50% → 명확히 분리됨.
+     * content-text-charset-mojibake 2차 수정: strict all-or-nothing이 소수 비적합 바이트에 문서 전체를
+     * EUC-KR로 폴백시켜 전면 mojibake 유발 → 이 임계로 UTF-8 우선 유지.
+     */
+    private static final double UTF8_LENIENT_MAX_REPLACEMENT_RATIO = 0.02;
+
     // ReDoS 방어: 5MB 초과 입력은 절사 후 처리 (DART 공시 원문은 통상 수십~수백KB)
     private static final int MAX_RAW_BYTES = 5 * 1024 * 1024;
 
@@ -125,20 +133,37 @@ public class DartDocumentParser {
         // 2) UTF-8 strict — 자기검증이라 성공하면 UTF-8로 확정(오탐 ≈0)
         Optional<String> utf8 = decodeStrict(bytes, StandardCharsets.UTF_8);
         if (utf8.isPresent()) return utf8.get();
-        // 3) 선언된 charset(UTF-8 외)이 strict 성공하면 신뢰
+        // 3) UTF-8 strict 실패지만 치환율이 낮으면 UTF-8로 확정(소수 잡바이트만 손상) — all-or-nothing 회피.
+        //    실측(content-text-charset-mojibake 2차): 실제 DART 문서에 Win-1252 문장부호 등 UTF-8 비적합 바이트가
+        //    섞여 있어 strict가 문서 전체를 포기 → EUC-KR 폴백 → 전면 mojibake. 대다수가 UTF-8이면 소수 �만 감수.
+        String utf8Lenient = new String(bytes, StandardCharsets.UTF_8);  // REPLACE — 잘못된 바이트만 U+FFFD
+        if (replacementRatio(utf8Lenient) < UTF8_LENIENT_MAX_REPLACEMENT_RATIO) {
+            return utf8Lenient;
+        }
+        // 4) 선언된 charset(UTF-8 외)이 strict 성공하면 신뢰
         Charset declared = detectDeclaredCharset(bytes);
         if (declared != null && !StandardCharsets.UTF_8.equals(declared)) {
             Optional<String> d = decodeStrict(bytes, declared);
             if (d.isPresent()) return d.get();
         }
-        // 4) 한국어 레거시 후보 strict 프로빙 (MS949 등)
+        // 5) 한국어 레거시 후보 strict 프로빙 (MS949 등)
         for (Charset cs : PROBE_CHARSETS) {
             if (StandardCharsets.UTF_8.equals(cs)) continue;  // 이미 시도
             Optional<String> s = decodeStrict(bytes, cs);
             if (s.isPresent()) return s.get();
         }
-        // 5) 최후 — 어느 것도 strict 통과 못하면 EUC-KR lenient(무예외, 최선 추정)
+        // 6) 최후 — 어느 것도 strict 통과 못하면 EUC-KR lenient(무예외, 최선 추정)
         return new String(bytes, DEFAULT_CHARSET);
+    }
+
+    /** 문자열 내 U+FFFD(치환문자) 비율 — 0이면 손상 없음. 빈 문자열은 0. */
+    private static double replacementRatio(String s) {
+        if (s.isEmpty()) return 0.0;
+        int repl = 0;
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == '�') repl++;
+        }
+        return (double) repl / s.length();
     }
 
     /** malformed/unmappable를 REPORT로 감지하는 strict 디코딩 — 실패 시 Optional.empty(잘못된 charset). */

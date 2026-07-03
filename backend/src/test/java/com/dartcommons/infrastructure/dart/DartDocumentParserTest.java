@@ -82,6 +82,34 @@ class DartDocumentParserTest {
     }
 
     @Test
+    @DisplayName("UTF-8 본문에 잡바이트 1개 섞임 → 전면 mojibake 없이 UTF-8 유지 (strict all-or-nothing 회귀)")
+    void extractText_utf8_withStrayByte_staysUtf8() {
+        // 2차 수정 회귀: 실제 DART 문서는 UTF-8이면서 Win-1252 문장부호 등 비적합 바이트가 소수 섞임.
+        // strict all-or-nothing이면 문서 전체를 EUC-KR로 폴백 → "蹂寃" 식 전면 mojibake(94128 "448조원" 유발).
+        // 치환율 임계(2%) 미만이면 UTF-8 lenient 유지 → 한글·숫자 보존, 잡바이트만 �.
+        StringBuilder body = new StringBuilder("<html><body>");
+        for (int i = 0; i < 40; i++) {
+            body.append("<p>변경 계약금액 448억원 삼성전자 취득결정 리스크 공시 본문 ").append(i).append("</p>");
+        }
+        body.append("</body></html>");
+        byte[] kor = body.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = new byte[kor.length + 1];
+        System.arraycopy(kor, 0, bytes, 0, 500);
+        bytes[500] = (byte) 0xFF;  // UTF-8 비적합 잡바이트 1개
+        System.arraycopy(kor, 500, bytes, 501, kor.length - 500);
+
+        String result = parser.extractText(bytes);
+
+        // 원본 수치·회사명 보존(CLAUDE.md §4) — mojibake면 이 문자열들이 깨져 사라짐
+        assertThat(result).contains("448억원");
+        assertThat(result).contains("삼성전자");
+        assertThat(result).contains("계약금액");
+        // 치환문자는 극소수만(잡바이트 근방) — 전면 mojibake가 아님
+        long repl = result.chars().filter(c -> c == 0xFFFD).count();
+        assertThat(repl).isLessThan(10);
+    }
+
+    @Test
     @DisplayName("UTF-8 BOM → BOM 제거 + 정상 디코딩")
     void extractText_utf8Bom() {
         String html = "<html><body><p>BOM 포함 공시 본문</p></body></html>";
