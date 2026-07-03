@@ -1,13 +1,17 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-03
-updated: 2026-07-03
+updated: 2026-07-04
 ---
 
 # 공시 본문 charset 오디코딩(mojibake) 수정 Spec
 
-> 상태: Draft → **Approved** (2026-07-03, dc-tech-review 승인 + 재수집 24k 우선 확정)
+> 상태: Approved → **Done** (2026-07-04)
+> - 카드1~2 파서: 최초 strict 프로빙(d0c61ad) → 실측서 all-or-nothing 결함 발견 → 치환율 판정 재수정(366f6be). 회귀 테스트 포함.
+> - 부수 수정: DART status 020(할당량) 일시적 처리(f3e6abd) — 재수집 중 할당량 소진분이 영구-빈값으로 굳는 버그.
+> - 카드3~4 재수집: 손상 전량 재-NULL → content 백필 재실행(신규 API 키로 완주). **최종: mojibake 0 / pending 0 / 본문 93,560 / 파일없음(014) 795.**
+> - 검증: 94128 계약금액 33,177,947,138·최근매출액 448,634,709,421 정상 복구("448조원" 환각 원인 = mojibake 확정).
 
 ## 배경 / 목적
 
