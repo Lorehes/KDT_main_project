@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Optional;
+import java.util.Set;
 
 /*
  * [목적] Stage 2 LLM 1차 분석의 단일 진입점 — 공시 1건을 받아 LLM 호출 + 파싱 + 가드 + UPSERT.
@@ -34,6 +35,27 @@ import java.util.Optional;
 public class Stage2Analyzer {
 
     private static final Logger log = LoggerFactory.getLogger(Stage2Analyzer.class);
+
+    /*
+     * [목적] Stage 2 LLM 호출을 건너뛸 공시 타입(타입 게이트 Tier 1) — DisclosureTypeClassifier 룰 결과 기준.
+     * [이유] 94,355건 실측 분포상 아래 행정·정보성 타입이 합계 ~36%인데 호재/악재 신호가 거의 없다.
+     *       LLM 예산·알림 노이즈를 줄이려 명백한 노이즈만 보수적으로 제외(투자자 보호상 allow-list 아닌 deny-list).
+     * [사이드 임팩트] 제외된 공시는 AnalysisResult가 생성되지 않음 → 피드에는 Stage1 룰 분류로 노출되나 LLM 감성/요약 없음.
+     *               EXECUTIVE_SHARE·LARGE_STAKE_CHANGE(대형 내부자매매·경영권 지분변동 신호 가능)는 의도적으로 제외 안 함(Tier 2, size 임계 예외 필요).
+     * [수정 시 고려사항] OTHER(미분류)는 신호 놓침 방지 위해 유지. 목록 변경 시 실측 분포 재확인 후 조정.
+     */
+    static final Set<String> SKIP_TYPES = Set.of(
+            "SHAREHOLDER_MEETING",       // 주총 소집·명부폐쇄 (행정)
+            "PROSPECTUS",                // 투자설명서 (문서)
+            "SECURITIES_ISSUANCE",       // 증권발행실적보고서 (사후 보고)
+            "IR_EVENT",                  // 기업설명회 개최 공지
+            "DERIVATIVE_ISSUANCE",       // 파생결합사채·증권(ELS/DLS) 발행 (루틴)
+            "CONGLOMERATE_DISCLOSURE",   // 대규모기업집단현황 (행정)
+            "AUDIT_REPORT",              // 감사보고서 (정기)
+            "PROXY_SOLICITATION",        // 의결권 대리행사 권유 (행정)
+            "GOVERNANCE_REPORT",         // 기업지배구조보고서 (행정)
+            "ESG_REPORT"                 // 지속가능경영보고서 (행정)
+    );
 
     private final LlmClient llmClient;
     private final Stage2PromptBuilder promptBuilder;
@@ -84,6 +106,13 @@ public class Stage2Analyzer {
             return Optional.empty();
         }
         Disclosure d = dOpt.get();
+
+        // 타입 게이트(Tier 1): 행정·정보성 공시는 LLM 호출 없이 skip — 예산·노이즈 절감(SKIP_TYPES 주석 참조).
+        if (SKIP_TYPES.contains(d.getDisclosureType())) {
+            log.debug("Stage2: skip by type gate disclosureId={} type={} corpName={}",
+                    disclosureId, d.getDisclosureType(), d.getCorpName());
+            return Optional.empty();
+        }
 
         String prompt = promptBuilder.build(d);
 

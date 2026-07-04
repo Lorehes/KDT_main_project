@@ -124,6 +124,28 @@ class Stage2AnalyzerIntegrationTest {
         assertThat(resultRepo.count()).isEqualTo(0);
     }
 
+    @Test
+    @DisplayName("타입 게이트: SKIP_TYPES(IR_EVENT)는 LLM 호출 없이 skip → 빈 Optional + 저장 없음")
+    void typeGateSkipsAdministrativeType() {
+        Disclosure d = saveDisclosure("기업설명회(IR) 개최(안내공시)", "IR_EVENT");
+
+        Optional<AnalysisResult> result = analyzer.analyze(d.getId());
+
+        assertThat(result).isEmpty();
+        assertThat(resultRepo.count()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("타입 게이트: 신호성 타입(TREASURY_STOCK)은 게이트 통과 → 정상 분석")
+    void typeGatePassesSignalType() {
+        Disclosure d = saveDisclosure("자기주식취득결과보고서 호재시나리오", "TREASURY_STOCK");
+
+        Optional<AnalysisResult> result = analyzer.analyze(d.getId());
+
+        assertThat(result).isPresent();
+        assertThat(resultRepo.count()).isEqualTo(1);
+    }
+
     private Disclosure saveDisclosure(String reportNm, String type) {
         return disclosureRepo.save(Disclosure.builder()
                 .rceptNo(String.valueOf(System.nanoTime()).substring(0, 14))

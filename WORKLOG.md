@@ -11,6 +11,28 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | Stage2 타입 게이트 Tier1 — LLM 볼륨 ~36% 절감
+
+**요청**: 무료 LLM 상한(하루 50~1000건) 대비 실제 LLM 호출 볼륨 최적화.
+
+**작업**:
+- `Stage2Analyzer`에 `SKIP_TYPES` Set 상수 추가 (10종 행정·정보성 타입 deny-list)
+- 공시 로드 직후, 프롬프트 빌드 전에 게이트 체크 삽입 → 해당 타입이면 LLM 호출 없이 `Optional.empty()` 반환
+- 통합 테스트 2건 추가 (IR_EVENT skip · TREASURY_STOCK 통과), 7/7 통과
+
+**결정**:
+- 실측 94,355건 분포 기반: 스킵 대상 10타입 합계 ~36% (SHAREHOLDER_MEETING 6.5% · PROSPECTUS 6.0% · SECURITIES_ISSUANCE 5.8% · IR_EVENT 5.6% · DERIVATIVE_ISSUANCE 5.6% · CONGLOMERATE_DISCLOSURE 2.3% · AUDIT_REPORT 1.5% · PROXY_SOLICITATION 1.4% · GOVERNANCE_REPORT 0.6% · ESG_REPORT 0.6%)
+- allow-list 아닌 **보수적 deny-list** 채택 (투자자 보호 — 애매하면 분석하는 쪽)
+- `OTHER`(8%) 유지 — 미분류 신호 놓침 방지
+- `EXECUTIVE_SHARE`(17%) · `LARGE_STAKE_CHANGE`(6.3%) 보류 → Tier 2 (size 임계값 예외 로직 필요)
+
+**미완료**:
+- Tier 2 게이트 (`EXECUTIVE_SHARE` · `LARGE_STAKE_CHANGE` — 금액/비율 임계값 조건부 skip)
+- 서버 데이터 복구 (로컬 561M 덤프 → 서버 scp → restore_db.sh --force)
+- `.env` LLM 교체 (`nvidia/nemotron-3-super-120b-a12b:free`) + backend 재기동
+
+---
+
 ## 2026-07-04 | prerender 에러 Suspense 근본 수정 — /test/concurrent-auth
 
 **요청**: 직전 커밋(force-dynamic)이 서버 빌드에서 여전히 동일 prerender 에러로 실패.

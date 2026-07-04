@@ -130,6 +130,7 @@ updated: 2026-06-02
 | 2026-07-04 | Jin | f5ce48f | fix(frontend): ESLint 에러 5곳 수정 — 빌드 게이트 복구 [7/8 S] | Frontend | 7 | 8 | S | ESLint 에러 5곳 수정 (빌드 차단) |
 | 2026-07-04 | Jin | f669dfb | fix(frontend): SSG prerender 에러 수정 — /test/concurrent-auth force-dynamic [7/8 S] | Frontend | 7 | 8 | S | prerender 에러 수정 (force-dynamic) |
 | 2026-07-04 | Jin | c89e8c5 | fix(frontend): prerender 에러 Suspense 근본 수정 — concurrent-auth [7/9 S] | Frontend | 7 | 9 | S | prerender 에러 Suspense로 근본 수정 |
+| 2026-07-05 | Jin | 93dd520 | feat(analysis): Stage2 타입 게이트 Tier1 — LLM 볼륨 ~36% 절감 [8/9 S] | Analysis (LLM 분석) | 8 | 9 | S | Stage2 타입 게이트 Tier1 구현 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -137,5 +138,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 4 | 23 | 112 | 8.1 | 6.2 |
+| Jin | 1 | 24 | 113 | 8.2 | 6.2 |
 <!-- SUMMARY:END -->
