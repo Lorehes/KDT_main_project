@@ -1,55 +1,138 @@
-# 로컬 개발용 PostgreSQL
-# 사용: docker compose up -d   (Docker 설치 필요)
-# 호스트 포트 5433 매핑 — 다른 프로젝트(5432 점유) 충돌 회피.
-# 백엔드 접속은 .env의 DB_URL=jdbc:postgresql://localhost:5433/dartcommons 사용.
-#
-# [데이터 위치]
-# bind mount: ${PG_DATA_DIR:-~/data/dartcommons-pg}
-# named volume 대신 사용자 홈의 일반 디렉토리를 마운트한다.
-# 2026-06-04 데이터 손실 사고(Docker Desktop "Clean / Purge data" 추정)로
-# named volume 통째 삭제 → 91,965건 소실. bind mount는 Docker 관리 외부라
-# Docker reset/clean 영향을 받지 않는다 (docs/운영가이드.md 참고).
-#
-# 정기 백업: scripts/data_protection/backup_db.sh (crontab 등록 권장)
+# [목적] AWS Lightsail 단독 배포용 완전 컨테이너 스택 — postgres·backend·frontend·nginx·certbot 5서비스.
+#   compose 파일 하나 + .env.prod + 사전 빌드 이미지만 Lightsail에 올리면 HTTPS까지 기동.
+# [이유] 기존 docker-compose.prod.yml(EC2 + GHCR pull + 호스트 레벨 Nginx)과 분리한다.
+#   - 이미지: GHCR pull이 아니라 "직접 업로드"(로컬 build → docker save/load) 전제 → 로컬 태그 참조.
+#   - Nginx/certbot을 호스트 apt 설치가 아니라 컨테이너로 → 호스트 사전 설정 최소화(Docker만 필요).
+#   - backend/frontend는 published 포트 없음 → dartcommons-net 내부에서 nginx만 접근(외부 직접 차단).
+# [사이드 임팩트] 최초 SSL 발급은 scripts/init-letsencrypt.sh 를 1회 실행해야 nginx가 정상 기동한다
+#   (인증서 파일이 없으면 SSL server 블록 로드 실패 → nginx crash. dummy cert로 부트스트랩).
+#   frontend에는 .env.prod(시크릿)를 주입하지 않는다 — NEXT_PUBLIC_* 는 빌드 타임에 이미 번들에 박힘.
+# [수정 시 고려사항] 도메인 변경 시 .env.prod의 DOMAIN + certbot 재발급 + FE 이미지 재빌드(NEXT_PUBLIC_API_URL).
+#   named volume 금지(CLAUDE.md §7, 2026-06-04 데이터 손실 교훈) → 모든 영속 데이터는 호스트 bind mount.
+#   Ollama 온프레미스 LLM 필요 시 하단 주석 해제 + 인스턴스 8GB 이상으로 업그레이드.
+
 services:
+  # ---- PostgreSQL — bind mount(Docker reset/clean 영향 없음) ----
   postgres:
     image: postgres:16-alpine
     container_name: dartcommons-postgres
+    env_file: .env
     environment:
       POSTGRES_DB: ${DB_NAME:-dartcommons}
-      POSTGRES_USER: ${DB_USERNAME:-dartcommons}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-dartcommons}
-    ports:
-      - "5433:5432"
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      # bind mount — Docker Desktop reset/clean의 영향을 받지 않는 호스트 디렉토리.
-      # PG_DATA_DIR 환경변수로 위치 변경 가능. 기본: ~/data/dartcommons-pg
-      - ${PG_DATA_DIR:-${HOME}/data/dartcommons-pg}:/var/lib/postgresql/data
-      # DB 최초 생성 시 실행되는 init 스크립트 (이미 초기화된 데이터 디렉토리에는 재실행 안 됨)
-      - ./scripts/db-init:/docker-entrypoint-initdb.d:ro
+      # Lightsail Ubuntu 기본 경로. PG_DATA_DIR 로 변경 가능(.env.prod).
+      - ${PG_DATA_DIR:-/home/ubuntu/data/dartcommons-pg}:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - dartcommons-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dartcommons -d dartcommons"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # Chroma 벡터 DB — Stage 3 RAG 임베딩 스토어 (analysis-stage3-rag-chroma Spec)
-  # bind mount: ${CHROMA_DATA_DIR:-~/data/dartcommons-chroma}
-  # named volume 금지(2026-06-04 91k건 소실 사고 — CLAUDE.md §7)
-  # IS_PERSISTENT=TRUE: 컨테이너 재시작 후에도 임베딩 유지
-  # ANONYMIZED_TELEMETRY=FALSE: 사용 현황 익명 전송 차단
-  chroma:
-    image: chromadb/chroma:0.5.23
-    container_name: dartcommons-chroma
-    environment:
-      IS_PERSISTENT: "TRUE"
-      ANONYMIZED_TELEMETRY: "FALSE"
-    ports:
-      - "8001:8000"
-    volumes:
-      - ${CHROMA_DATA_DIR:-${HOME}/data/dartcommons-chroma}:/chroma/chroma
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/v1/heartbeat || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dartcommons} -d ${DB_NAME:-dartcommons}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+
+  # ---- Backend (Spring Boot) — 로컬 태그 이미지, published 포트 없음(내부 전용) ----
+  backend:
+    image: ${BACKEND_IMAGE:-dartcommons-backend:latest}
+    container_name: dartcommons-backend
+    env_file: .env
+    expose:
+      - "8080"        # nginx 컨테이너만 dartcommons-net 경유로 접근. 호스트/외부 미노출.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dartcommons-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 512m
+
+  # ---- Frontend (Next.js standalone) — 시크릿 미주입(NEXT_PUBLIC_*는 빌드 타임 번들) ----
+  frontend:
+    image: ${FRONTEND_IMAGE:-dartcommons-frontend:latest}
+    container_name: dartcommons-frontend
+    # env_file 없음 — FE 컨테이너에 DB 비밀번호/JWT/API 키를 노출하지 않는다(보안).
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - dartcommons-net
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
+
+  # ---- Nginx 리버스 프록시 + TLS 종단 (80/443 공개) ----
+  # nginx:alpine 의 템플릿 기능: /etc/nginx/templates/*.template → envsubst → /etc/nginx/conf.d/
+  #   컨테이너 env로 정의된 변수(${DOMAIN})만 치환되고 $host/$remote_addr 등 nginx 변수는 보존된다.
+  # command: 6시간마다 nginx -s reload → certbot 갱신 인증서 무중단 반영.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: dartcommons-nginx
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN 미설정 — .env.prod에 DOMAIN=gangwoncanvas.co.kr 지정}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/dartcommons.conf.template:/etc/nginx/templates/dartcommons.conf.template:ro
+      # certbot과 공유 — 발급 인증서(conf) + ACME challenge webroot(www). named volume 금지 → bind mount.
+      - ${CERTBOT_CONF_DIR:-/home/ubuntu/data/certbot/conf}:/etc/letsencrypt:ro
+      - ${CERTBOT_WWW_DIR:-/home/ubuntu/data/certbot/www}:/var/www/certbot:ro
+    restart: unless-stopped
+    networks:
+      - dartcommons-net
+    command: >
+      /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+
+  # ---- Certbot — 최초 발급은 scripts/init-letsencrypt.sh(1회), 이후 12시간마다 자동 갱신 ----
+  certbot:
+    image: certbot/certbot:latest
+    container_name: dartcommons-certbot
+    volumes:
+      - ${CERTBOT_CONF_DIR:-/home/ubuntu/data/certbot/conf}:/etc/letsencrypt
+      - ${CERTBOT_WWW_DIR:-/home/ubuntu/data/certbot/www}:/var/www/certbot
+    restart: unless-stopped
+    # renew는 최초 발급 시 저장된 renewal 설정(webroot 경로)을 재사용 → 추가 인자 불필요.
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
+
+  # ---- Ollama (선택 — 온프레미스 LLM. Cloud LLM(openrouter) 사용 시 주석 유지) ----
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: dartcommons-ollama
+  #   volumes:
+  #     - /home/ubuntu/data/ollama:/root/.ollama
+  #   expose:
+  #     - "11434"
+  #   restart: unless-stopped
+  #   networks:
+  #     - dartcommons-net
+
+networks:
+  dartcommons-net:
+    driver: bridge

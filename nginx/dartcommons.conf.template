@@ -1,0 +1,89 @@
+# [목적] 컨테이너 Nginx 리버스 프록시 설정 — /api → backend:8080, / → frontend:3000, HTTPS 강제 + ACME.
+#   docker-compose.lightsail.yml 전용. nginx:alpine 템플릿 엔진이 ${DOMAIN}만 envsubst 치환한다.
+# [이유] 컨테이너 스택에서는 upstream을 127.0.0.1이 아니라 compose 서비스명(backend/frontend)으로 지정.
+#   Let's Encrypt HTTP-01(webroot): 80 포트의 /.well-known/acme-challenge/ 를 certbot과 공유하는
+#   /var/www/certbot 로 서빙 → 인증서 발급·갱신이 무중단으로 이뤄진다.
+# [사이드 임팩트] ${DOMAIN} 이외의 nginx 변수($host,$remote_addr 등)는 컨테이너 env가 아니라 치환 안 됨(정상).
+#   SSL server 블록은 /etc/letsencrypt/live/${DOMAIN}/ 인증서를 참조 — 파일 없으면 nginx 기동 실패.
+#   → 최초 1회 scripts/init-letsencrypt.sh 로 dummy cert 부트스트랩 후 실제 발급.
+# [수정 시 고려사항] www 서브도메인 추가 시 server_name·certbot -d 목록에 www.${DOMAIN} 추가(www DNS 필수).
+#   WebSocket 필요 시 location에 proxy_http_version 1.1 + Upgrade/Connection 헤더 추가.
+#   Rate limiting 필요 시 limit_req_zone(공시 API 남용 방지).
+
+upstream dartcommons_backend {
+    server backend:8080;
+    keepalive 16;
+}
+
+upstream dartcommons_frontend {
+    server frontend:3000;
+    keepalive 16;
+}
+
+# ---- HTTP(80) — ACME challenge 서빙 + 나머지는 HTTPS 리다이렉트 ----
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    # Let's Encrypt HTTP-01 challenge (certbot webroot 공유 볼륨)
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ---- HTTPS(443) — 메인 서버 ----
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    # Let's Encrypt 발급 인증서 (certbot과 공유 볼륨 /etc/letsencrypt)
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    # TLS 보안 설정 (certbot options-ssl-nginx 미의존 — 인라인)
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_tickets off;  # PFS — 세션 티켓 키 유출 시 과거 트래픽 복호화 차단
+
+    # HSTS — 브라우저가 1년간 HTTPS만 허용, MITM downgrade 방지
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    client_max_body_size 10m;
+
+    # 공통 프록시 헤더
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # /api/ → Spring Boot Backend
+    location /api/ {
+        proxy_pass http://dartcommons_backend;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 10s;
+    }
+
+    # /actuator/ → 헬스체크(외부 노출 차단 — 내부/모니터링 IP만 허용 권장)
+    # location /actuator/ {
+    #     proxy_pass http://dartcommons_backend;
+    #     allow 10.0.0.0/8;
+    #     deny all;
+    # }
+
+    # / → Next.js Frontend
+    location / {
+        proxy_pass http://dartcommons_frontend;
+        proxy_read_timeout 30s;
+        proxy_connect_timeout 10s;
+    }
+}
