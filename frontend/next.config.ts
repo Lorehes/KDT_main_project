@@ -17,10 +17,12 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 const apiOrigin = apiUrl ? (() => { try { return new URL(apiUrl).origin; } catch { return ""; } })() : "";
 
 // dev: Turbopack이 인라인 스크립트·eval을 대량 사용 → 'unsafe-inline'+'unsafe-eval' 허용.
-// prod: 'unsafe-inline' 제거 → nonce 기반 CSP로 강화 예정.
+// prod: Next.js App Router가 하이드레이션·RSC 스트리밍에 인라인 <script>(self.__next_f.push 등)를 사용 →
+//   'unsafe-inline' 없으면 브라우저가 전부 차단 → 하이드레이션/콘텐츠 주입 실패로 백지 렌더.
+//   'unsafe-eval'은 prod 불필요(빌드 시 컴파일). 향후 nonce 기반 CSP로 'unsafe-inline' 제거해 강화.
 const scriptSrc = isDev
   ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self'";
+  : "script-src 'self' 'unsafe-inline'";
 
 const cspDirectives = [
   "default-src 'self'",

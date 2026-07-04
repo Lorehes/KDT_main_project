@@ -11,6 +11,18 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | CSP script-src unsafe-inline 추가 — 사이트 백지 렌더 수정
+
+**요청**: `https://gangwoncanvas.co.kr` 접속 시 화면이 백지로 뜸.
+
+**원인**: `next.config.ts` 프로덕션 CSP가 `script-src 'self'`(인라인 차단)이라, Next.js App Router가 하이드레이션·RSC 스트리밍에 사용하는 인라인 `<script>`(`self.__next_f.push` 등)가 브라우저에서 전부 차단됨 → 콘텐츠 주입 실패 → 백지. Playwright 헤드리스 브라우저로 CSP 에러 20개·보이는 텍스트 0자 실측 확인 후 수정.
+
+**작업**: 프로덕션 `script-src`에 `'unsafe-inline'` 추가 (`'unsafe-eval'`은 prod 불필요라 제외).
+
+**결정**: `'unsafe-inline'`은 XSS 방어를 약화시키나, Next App Router의 인라인 스크립트를 nonce 없이 차단할 수 없음. 향후 미들웨어 nonce 기반 CSP로 강화 예정(코드 주석에 명시). 서버 재빌드(frontend) 필요.
+
+---
+
 ## 2026-07-05 | mail 헬스 지표 비활성 — backend unhealthy 오탐 수정
 
 **요청**: backend 컨테이너가 계속 unhealthy 상태 → 원인 진단 + 수정.
