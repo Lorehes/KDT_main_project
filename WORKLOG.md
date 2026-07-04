@@ -11,6 +11,20 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | OAuth 콜백 리다이렉트 호스트 수정 — publicOrigin 헬퍼
+
+**요청**: 카카오 로그인 누르니 `0.0.0.0:3000/signup/terms/oauth` — "사이트에 연결할 수 없음" 에러.
+
+**원인**: OAuth 콜백 route handler(`/api/auth/callback/[provider]/route.ts`)가 Node 런타임이라 `req.url`이 컨테이너 내부 바인딩(`0.0.0.0:3000`)으로 해석됨. `new URL(redirectPath, req.url)` → 브라우저가 `0.0.0.0:3000`으로 이동 → 연결 거부. (middleware는 Edge 런타임이라 공개 URL을 봐서 멀쩡 — 이 라우트만 터짐.)
+
+**작업**: `publicOrigin(req)` 헬퍼 추가 — nginx가 전달하는 `x-forwarded-proto`/`host` 헤더로 공개 origin(`https://gangwoncanvas.co.kr`) 구성. 콜백 라우트 내 4곳 `req.url` → `publicOrigin(req)` 일괄 교체.
+
+**결정**: Google/Naver도 동일 라우트(`[provider]`)를 쓰므로 동일 헬퍼로 커버. Google은 `.env` 자격증명 + 콘솔 등록만으로 바로 동작. Naver는 ALLOWED_PROVIDERS 코드 추가 필요(다음 세션 보류).
+
+**미완료**: Kakao 콘솔 redirect_uri 등록 확인 (`https://gangwoncanvas.co.kr/api/auth/callback/kakao`). 프론트 재빌드 후 카카오 로그인 end-to-end 검증.
+
+---
+
 ## 2026-07-05 | nginx /api/v1/ 한정 + NEXT_PUBLIC_API_URL /api/v1 — OAuth/API 라우팅 근본 수정
 
 **요청**: 소셜 로그인이 아무것도 안 됨.

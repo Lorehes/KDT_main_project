@@ -134,6 +134,7 @@ updated: 2026-06-02
 | 2026-07-05 | Jin | b71b844 | fix(infra): mail 헬스 지표 비활성 — backend unhealthy 오탐 수정 [7/8 S] | Backend | 7 | 8 | S | mail 헬스 지표 비활성 (unhealthy 오탐) |
 | 2026-07-05 | Jin | 0b26c03 | fix(frontend): CSP script-src unsafe-inline 추가 — 사이트 백지 렌더 수정 [8/8 S] | Frontend | 8 | 8 | S | CSP unsafe-inline 추가 (백지 렌더 수정) |
 | 2026-07-05 | Jin | 9ca4170 | fix(infra): nginx /api/v1/ 한정 + NEXT_PUBLIC_API_URL /api/v1 추가 — OAuth/API 라우팅 근본 수정 [9/9 S] | Infra | 9 | 9 | S | OAuth/API 라우팅 근본 수정 (/api/v1) |
+| 2026-07-05 | Jin | 20cf2d0 | fix(frontend): OAuth 콜백 리다이렉트 호스트 수정 — publicOrigin 헬퍼 [9/9 S] | Frontend | 9 | 9 | S | OAuth 콜백 리다이렉트 호스트 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -141,5 +142,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 4 | 27 | 116 | 8.3 | 6.4 |
+| Jin | 5 | 28 | 117 | 8.4 | 6.5 |
 <!-- SUMMARY:END -->

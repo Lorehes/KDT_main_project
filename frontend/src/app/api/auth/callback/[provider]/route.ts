@@ -23,6 +23,16 @@ function isAllowedProvider(p: string): p is AllowedProvider {
   return (ALLOWED_PROVIDERS as readonly string[]).includes(p);
 }
 
+// [목적] 리다이렉트 절대 URL의 공개 origin 산출.
+// [이유] Next standalone이 프록시 뒤에서 req.url을 내부 바인딩(0.0.0.0:3000)으로 해석 →
+//   new URL(path, req.url)이 컨테이너 주소를 만들어 브라우저 연결 거부. nginx가 전달하는
+//   Host/X-Forwarded-Proto 헤더로 공개 origin(https://gangwoncanvas.co.kr)을 구성한다.
+function publicOrigin(req: NextRequest): string {
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host = req.headers.get("host") ?? req.nextUrl.host;
+  return `${proto}://${host}`;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ provider: string }> }
@@ -33,7 +43,7 @@ export async function GET(
 
   // code·state 미존재 → CSRF/잘못된 요청 방어
   if (!code || !state || !isAllowedProvider(provider)) {
-    return NextResponse.redirect(new URL("/login?error=oauth_failed", req.url));
+    return NextResponse.redirect(new URL("/login?error=oauth_failed", publicOrigin(req)));
   }
 
   let callbackRes: Response;
@@ -44,11 +54,11 @@ export async function GET(
       body: JSON.stringify({ code, state }),
     });
   } catch {
-    return NextResponse.redirect(new URL("/login?error=oauth_failed", req.url));
+    return NextResponse.redirect(new URL("/login?error=oauth_failed", publicOrigin(req)));
   }
 
   if (!callbackRes.ok) {
-    return NextResponse.redirect(new URL("/login?error=oauth_failed", req.url));
+    return NextResponse.redirect(new URL("/login?error=oauth_failed", publicOrigin(req)));
   }
 
   const tokens: { access_token: string; refresh_token: string; is_new_user: boolean } =
@@ -58,7 +68,7 @@ export async function GET(
   // /signup/terms?oauth=true URL 파라미터 의존 제거(M-S1) — 독립 경로 /signup/terms/oauth 사용
   const isProd = process.env.NODE_ENV === "production";
   const redirectPath = tokens.is_new_user ? "/signup/terms/oauth" : "/dashboard";
-  const redirect = NextResponse.redirect(new URL(redirectPath, req.url));
+  const redirect = NextResponse.redirect(new URL(redirectPath, publicOrigin(req)));
 
   redirect.cookies.set("dr_session", tokens.access_token, {
     httpOnly: true,
