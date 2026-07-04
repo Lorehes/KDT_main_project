@@ -253,6 +253,19 @@ export default function CompletePage() {
 
   const nickname = user?.nickname ?? "투자자";
 
+  const [navigatingToDashboard, setNavigatingToDashboard] = useState(false);
+
+  // [목적] 대시보드 이동 전 JWT 토큰 강제 갱신 후 전체 네비게이션.
+  // [이유] 온보딩 완료(onboarding_completed_at) 후 새 JWT(onboarding_completed=true)가 dr_session 쿠키에
+  //   반영돼야 middleware 온보딩 게이트를 통과한다. 기존 <Link href>는 useEffect refresh가 끝나기 전(프로덕션
+  //   지연 시 수십 초) 클릭하면 구 토큰(onboarding_completed=false)으로 이동해 /signup/terms/oauth로 튕기는
+  //   경쟁 조건이 있었다. 클릭 시점에 refresh를 await → 갱신된 쿠키 확보 후 window.location으로 전체 이동.
+  const goDashboard = async () => {
+    setNavigatingToDashboard(true);
+    await fetch("/api/auth/refresh", { method: "POST" }).catch(() => {});
+    window.location.assign("/dashboard");
+  };
+
   return (
     <>
       <div className="flex min-h-screen items-start justify-center bg-muted/30 px-6 py-12 md:py-20">
@@ -304,12 +317,14 @@ export default function CompletePage() {
 
           {/* 하단 CTA — 종목 등록 완료 후 대시보드로 전환 */}
           {portfolioDone ? (
-            <Link
-              href="/dashboard"
+            <button
+              type="button"
+              onClick={goDashboard}
+              disabled={navigatingToDashboard}
               className={buttonVariants({ size: "lg" }) + " w-full max-w-xs"}
             >
-              대시보드로 이동 →
-            </Link>
+              {navigatingToDashboard ? "이동 중…" : "대시보드로 이동 →"}
+            </button>
           ) : (
             <button
               type="button"
@@ -321,12 +336,14 @@ export default function CompletePage() {
             </button>
           )}
 
-          <Link
-            href="/dashboard"
-            className="text-sm text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          <button
+            type="button"
+            onClick={goDashboard}
+            disabled={navigatingToDashboard}
+            className="text-sm text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
           >
             대시보드로 바로 이동
-          </Link>
+          </button>
         </div>
       </div>
 

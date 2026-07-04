@@ -11,6 +11,20 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | 온보딩 완료 후 대시보드 경쟁 조건 수정 — goDashboard refresh await
+
+**요청**: 가입완료 페이지에서 "대시보드로 이동" 클릭 시 `/signup/terms/oauth`(약관)로 튕김.
+
+**원인**: DB 확인 → `onboarding_completed_at` 정상 설정(김무진 유저). BE refresh → 유저 재조회해 `onboarding_completed=true` JWT 발급 정상. 문제는 `<Link href="/dashboard">`(client-side next/link 이동)가 `useEffect` 내 `completeOnboarding→refresh` 체인보다 먼저 실행 가능해 **구 토큰(`onboarding_completed=false`)으로 이동 → 미들웨어 "온보딩 미완료" 판단 → 약관 리다이렉트** (경쟁 조건). 프로덕션은 지연이 있어 더 자주 발생.
+
+**작업**: "대시보드로 이동" 버튼 2곳(`portfolioDone` CTA·하단 텍스트 링크)을 `<Link>`에서 `goDashboard()` 핸들러로 교체. 클릭 시 `refresh await` → `window.location.assign("/dashboard")` (full navigation = 쿠키 갱신 보장). `navigatingToDashboard` 상태로 중복 클릭 방지 + "이동 중…" UX.
+
+**결정**: `window.location.assign` 사용 이유 — Next `router.push`는 client-side SPA 전환이라 쿠키 갱신 후 미들웨어가 다시 읽을 보장이 없음. full page reload로 미들웨어가 최신 쿠키를 확실히 읽게 함.
+
+**미완료**: `/api/auth/refresh` 라우트가 공개 URL로 BE를 hairpin 호출 중 → 내부 도커 네트워크 URL(`http://dartcommons-backend:8080/api/v1`)로 바꾸면 refresh 지연 단축 + 외부 트래픽 감소 (선택 최적화).
+
+---
+
 ## 2026-07-05 | OAuth 콜백 리다이렉트 호스트 수정 — publicOrigin 헬퍼
 
 **요청**: 카카오 로그인 누르니 `0.0.0.0:3000/signup/terms/oauth` — "사이트에 연결할 수 없음" 에러.
