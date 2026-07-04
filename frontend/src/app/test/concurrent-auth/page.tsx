@@ -9,20 +9,16 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import { AuthBroadcastListener } from "@/components/layout/AuthBroadcastListener";
-
-// 테스트 전용 픽스처 — 정적 prerender 대상에서 제외(useSearchParams가 빌드 타임 SSG를 실패시킴).
-// force-dynamic으로 요청 시 렌더 → 프로덕션에선 아래 가드로 null 반환.
-export const dynamic = "force-dynamic";
 
 interface MeResponse {
   id: number;
 }
 
-export default function ConcurrentAuthTestPage() {
+function ConcurrentAuthTestContent() {
   const [status, setStatus] = useState("pending");
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode");
@@ -47,5 +43,15 @@ export default function ConcurrentAuthTestPage() {
       {mode !== "concurrent" && <AuthBroadcastListener />}
       <div data-testid="status">{status}</div>
     </>
+  );
+}
+
+// useSearchParams는 빌드 타임 정적 생성 시 Suspense 경계를 요구(login/page.tsx와 동일 패턴).
+// 미래에 이 픽스처를 재활용해도 prerender 에러 없이 빌드되도록 여기서 감싼다.
+export default function ConcurrentAuthTestPage() {
+  return (
+    <Suspense>
+      <ConcurrentAuthTestContent />
+    </Suspense>
   );
 }

@@ -11,6 +11,20 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-04 | prerender 에러 Suspense 근본 수정 — /test/concurrent-auth
+
+**요청**: 직전 커밋(force-dynamic)이 서버 빌드에서 여전히 동일 prerender 에러로 실패.
+
+**작업**:
+- `export const dynamic = "force-dynamic"` 제거.
+- `useSearchParams` 사용부를 `ConcurrentAuthTestContent` 내부 컴포넌트로 분리.
+- default export(`ConcurrentAuthTestPage`)에서 `<Suspense>` 로 감쌈 — login/page.tsx와 동일 패턴.
+- 로컬 `pnpm build` 실행 → Generating static pages (30/30) ✓ 검증 후 푸시.
+
+**결정**: `"use client"` 전체 페이지에서는 `force-dynamic`이 prerender bailout을 확실히 막지 못함을 확인. Next 공식 해법(Suspense 래핑)이 유일하게 검증된 방법. 이후 `useSearchParams` 추가 시 반드시 Suspense 패턴 적용.
+
+---
+
 ## 2026-07-04 | SSG prerender 에러 수정 — /test/concurrent-auth
 
 **요청**: docker compose 빌드 재시도 중 `/test/concurrent-auth` 페이지에서 `useSearchParams() should be wrapped in a suspense boundary` prerender 에러로 빌드 실패.
