@@ -2,9 +2,11 @@ package com.dartcommons.analysis.repositories;
 
 import com.dartcommons.analysis.entities.AnalysisResult;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +20,9 @@ import java.util.Optional;
  * [사이드 임팩트] findUnanalyzedDisclosureIds는 LEFT JOIN으로 풀스캔 가능 — id 범위 조건으로 제한 권장.
  *               findByDisclosureIdIn(bulk)은 캐시 미적용 — 목록 피드 경로는 TTL 별도 검토 필요(현재 무캐시).
  * [수정 시 고려사항] Stage 3~5 후속 Spec에서 stage_reached 별 조회 추가 가능(현재 본 Spec=2 한정).
- *                  재분석 기능 도입 시 AnalysisResultCacheService.evict(disclosureId) 추가 필요.
+ *                  재분석 시 AnalysisResultCacheService.evict(disclosureId) 호출 필요 — ReanalysisService 참조.
+ *                  deleteByDisclosureIdIn + feedbacks ON DELETE CASCADE: feedbacks 0인 현 MVP는 무손실.
+ *                  feedbacks 존재하는 프로드 대비 시 접근 B(UPDATE overwrite) 검토 — reanalyze-after-charset-recollection §결정1.
  */
 public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, Long> {
 
@@ -48,6 +52,41 @@ public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, 
             @Param("idTo") Long idTo,
             org.springframework.data.domain.Pageable pageable
     );
+
+    /**
+     * 재분석 대상 공시 id 목록 — content_fetched_at >= since(재수집 시점) ∧ 분석 결과 존재.
+     * reanalyze-after-charset-recollection: 손상 본문 기반 analysis_results를 청크 단위로 선삭제→재분석.
+     * since=2026-07-03T00:00Z 적용 시 실측 7,284건.
+     */
+    @Query("""
+            SELECT ar.disclosureId FROM AnalysisResult ar
+            JOIN Disclosure d ON d.id = ar.disclosureId
+            WHERE d.contentFetchedAt >= :since
+            AND (:watermark IS NULL OR ar.disclosureId >= :watermark)
+            ORDER BY ar.disclosureId ASC
+            """)
+    List<Long> findReanalysisTargetIds(
+            @Param("since") OffsetDateTime since,
+            @Param("watermark") Long watermark,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    /** 재분석 대상 총 건수 — 잡 시작 시 targeted 산출. */
+    @Query("""
+            SELECT COUNT(ar.disclosureId) FROM AnalysisResult ar
+            JOIN Disclosure d ON d.id = ar.disclosureId
+            WHERE d.contentFetchedAt >= :since
+            """)
+    long countReanalysisTargets(@Param("since") OffsetDateTime since);
+
+    /**
+     * 분석 결과 일괄 삭제 — 재분석 전 선삭제(접근 A).
+     * feedbacks.analysis_id ON DELETE CASCADE: feedbacks 0인 MVP는 무손실.
+     * @Modifying + clearAutomatically: 영속성 컨텍스트와 DB 상태 정합.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM AnalysisResult ar WHERE ar.disclosureId IN :ids")
+    void deleteByDisclosureIdIn(@Param("ids") Collection<Long> ids);
 
     /** 대상 공시 총 개수 — start() 시 chunksTotal 산출. */
     @Query("""
