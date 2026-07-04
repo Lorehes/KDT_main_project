@@ -11,6 +11,18 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | mail 헬스 지표 비활성 — backend unhealthy 오탐 수정
+
+**요청**: backend 컨테이너가 계속 unhealthy 상태 → 원인 진단 + 수정.
+
+**원인**: Spring Actuator가 `/actuator/health` 호출마다 모든 헬스 지표를 집계하는데, `mail` 지표가 SMTP 실접속을 시도함. `.env`에 `MAIL_*` 미설정 상태라 SMTP 연결 거부 → mail=DOWN → 전체 health=DOWN → 도커 unhealthy 오탐. 앱 자체(폴링·API·DB)는 완전 정상이었음(API 401 정상 반환).
+
+**작업**: `application.yml`에 `management.health.mail.enabled: false` 추가. 이메일은 선택 채널(미설정 시 비활성)이라 헬스로 체크할 이유 없음.
+
+**결정**: 이메일 미설정 환경(`.env` MAIL_* 주석)에서의 오탐을 영구 수정. MAIL_* 설정해도 mail 지표는 계속 비활성(SMTP는 직접 발송 실패 시 notification 로그로 추적).
+
+---
+
 ## 2026-07-05 | Stage2 타입 게이트 Tier1 — LLM 볼륨 ~36% 절감
 
 **요청**: 무료 LLM 상한(하루 50~1000건) 대비 실제 LLM 호출 볼륨 최적화.

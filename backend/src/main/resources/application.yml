@@ -73,6 +73,11 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # 이메일은 선택 채널(MAIL_* 미설정 시 비활성) — mail 헬스 지표가 매 /actuator/health마다 SMTP 접속을
+    # 시도해 미설정 환경에서 전체 health=DOWN(컨테이너 unhealthy 오탐) 유발. 지표 자체를 비활성화.
+    mail:
+      enabled: false
 
 server:
   port: ${SERVER_PORT:8080}
