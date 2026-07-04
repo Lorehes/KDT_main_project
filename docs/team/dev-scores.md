@@ -126,7 +126,7 @@ updated: 2026-06-02
 | 2026-07-03 | Jin | 09942a0 | feat(analysis,infra): Stage2 프롬프트 본문 투입 + num_ctx 상향 [8/9 M] | Analysis/Infra | 8 | 9 | M | Stage2 본문 발췌 투입 |
 | 2026-07-03 | Jin | 782745e | fix(analysis): PromptGuard 법률용어 오탐 개선 [6/9 S] | Analysis | 6 | 9 | S | 매수/매도 오탐 → 권유맥락 패턴 |
 | 2026-07-03 | Jin | e1eae46 | fix(infra): 공시 본문 charset 프로빙 — mojibake 수정 [7/9 S] | Infra | 7 | 9 | S | UTF-8 우선 strict 프로빙 |
-| 2026-07-04 | Jin | 96b030d | chore(infra): .env 단일화 + Lightsail 배포 스택 정리 [6/8 M] | Infra | 6 | 8 | M | .env 단일 파일 서버 배포화 |
+| 2026-07-04 | Jin | 37a1bb1 | chore(infra): .env 단일화 + Lightsail 배포 스택 정리 [6/8 M] | Infra | 6 | 8 | M | .env 단일 파일 서버 배포화 |
 <!-- SCORES -->
 
 ## 기간별 집계
