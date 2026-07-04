@@ -137,6 +137,7 @@ updated: 2026-06-02
 | 2026-07-05 | Jin | 20cf2d0 | fix(frontend): OAuth 콜백 리다이렉트 호스트 수정 — publicOrigin 헬퍼 [9/9 S] | Frontend | 9 | 9 | S | OAuth 콜백 리다이렉트 호스트 수정 |
 | 2026-07-05 | Jin | dbeb462 | fix(frontend): 온보딩 완료 후 대시보드 경쟁 조건 수정 — goDashboard refresh await [9/9 S] | Frontend | 9 | 9 | S | 온보딩 완료 후 대시보드 경쟁 조건 수정 |
 | 2026-07-05 | Jin | fc3fce0 | chore(specs): Approved 스펙 2개 Done 전환 — stage3-embedding-backfill·reanalyze-after-charset [2/8 S] | Docs | 2 | 8 | S | Approved 스펙 2개 Done 전환 |
+| 2026-07-05 | Jin | 45379be | feat(stocks): 주가 백필 PARTIAL 상태 도입 + 리뷰 4건 수정 [5/9 M] | Backend | 5 | 9 | M | 주가 백필 PARTIAL 상태 + 리뷰 수정 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -144,5 +145,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 7 | 30 | 119 | 8.4 | 6.5 |
+| Jin | 8 | 31 | 120 | 8.4 | 6.5 |
 <!-- SUMMARY:END -->

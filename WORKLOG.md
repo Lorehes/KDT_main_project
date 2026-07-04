@@ -11,6 +11,27 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | 주가 백필 PARTIAL 상태 도입 + 리뷰 4건 수정
+
+**요청**: price-backfill-partial-status 스펙 구현 + dc-review-code 이슈 수정.
+
+**작업**:
+- `PriceBackfillJob.Status`에 `PARTIAL` 추가 + `partial(reason)` 전이메서드
+- `PriceBackfillJobStateService.partialJob()` REQUIRES_NEW 추가
+- `PriceBackfillService` 안전망 분기 — `datesOk>0`→PARTIAL(정상 종료) / `==0`→FAILED(장애)
+- Flyway V29 — `price_backfill_jobs.status` CHECK 5종으로 교체
+- IT 테스트 — PARTIAL 케이스 추가, 5/5 통과
+
+**리뷰 이슈 수정** (dc-review-code A- → A급 보정):
+- M1: `partialJob()` try-catch + `log.error` + rethrow — DB 오류 시 추적 가능
+- M2: `lastSuccessDate` 변수 추가, PARTIAL flush를 빈 응답 날짜 대신 마지막 성공 날짜로 기록 — 재실행 시 20일 낭비 제거
+- L1: `int[] callCount` → `AtomicInteger` (IT 테스트)
+- L2: 주석 "종료 상태 3종" → "생명주기 상태 5종"
+
+**결정**: PARTIAL은 별도 상태(vs `SUCCEEDED+hadGaps` 플래그) — status 한 필드로 운영 모니터링·재실행 판단이 명확하므로 채택(스펙 §권장 구현 방향 그대로).
+
+---
+
 ## 2026-07-05 | Approved 스펙 2개 Done 전환
 
 구현 완료 확인 후 `git mv` (이력 보존)로 Done 이동, frontmatter status·updated·본문 메타 갱신.

@@ -13,7 +13,7 @@ import java.util.UUID;
  *       커서가 날짜(lastProcessedDate)인 점만 상이 — 역순(최근→과거) 처리한 가장 오래된 날짜.
  * [사이드 임팩트] 잡 행 영구 보존(감사). targeted=이번 실행 대상 평일 수. processed=데이터 있던 날짜 수(행 수 아님),
  *               failed=빈 응답 날짜 수. 진행률=(processed+failed)/targeted (완주 시 100%). 적재 행 수는 로그로만.
- * [수정 시 고려사항] status/CHECK와 Status enum 정합 필수(V28 불변). 다중 인스턴스 시 stale 판정 재검토.
+ * [수정 시 고려사항] status/CHECK와 Status enum 정합 필수(V29: CHECK 5종). 다중 인스턴스 시 stale 판정 재검토.
  */
 @Entity
 @Table(name = "price_backfill_jobs")
@@ -23,7 +23,14 @@ import java.util.UUID;
 @Builder
 public class PriceBackfillJob {
 
-    public enum Status { PENDING, RUNNING, SUCCEEDED, FAILED }
+    /*
+     * [목적] 주가 백필 잡의 생명주기 상태 5종 정의.
+     * [이유] PARTIAL 추가(V29) — KRX 무료 소스 이력 경계 도달 시 일부 적재 성공했음에도
+     *       FAILED로 표기되던 오해를 해소. datesOk>0이면 PARTIAL, ==0이면 FAILED(진짜 장애).
+     * [사이드 임팩트] V29 CHECK 제약(5종)과 동기화 필수. PARTIAL 잡은 lastProcessedDate 커서로 재개 가능.
+     * [수정 시 고려사항] 신규 상태 추가 시 V{n} 마이그레이션으로 CHECK 제약 함께 확장.
+     */
+    public enum Status { PENDING, RUNNING, SUCCEEDED, FAILED, PARTIAL }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -98,6 +105,21 @@ public class PriceBackfillJob {
     public void fail(String error) {
         this.status = Status.FAILED;
         this.errorMessage = error == null ? null : (error.length() > 1000 ? error.substring(0, 1000) : error);
+        this.finishedAt = OffsetDateTime.now();
+        this.updatedAt = this.finishedAt;
+    }
+
+    /*
+     * [목적] 연속 빈 응답 안전망 도달 시 일부 적재가 있었으면(datesOk>0) PARTIAL로 종료.
+     * [이유] 무료 KRX/GitHub 소스의 이력 경계에 닿으면 받을 건 다 받은 정상 상태인데
+     *       기존 throw→FAILED로 "실패"로 오해됐음. PARTIAL = "가용 이력 끝 or 소스 중단, 일부 성공".
+     * [사이드 임팩트] lastProcessedDate 커서는 recordProgress가 이미 기록 — partial()은 마킹만.
+     *               재실행 시 커서부터 이어가므로 멱등.
+     * [수정 시 고려사항] reason은 errorMessage에 저장(마스킹 후). succeed()와 동일 구조, status만 PARTIAL.
+     */
+    public void partial(String reason) {
+        this.status = Status.PARTIAL;
+        this.errorMessage = reason == null ? null : (reason.length() > 1000 ? reason.substring(0, 1000) : reason);
         this.finishedAt = OffsetDateTime.now();
         this.updatedAt = this.finishedAt;
     }

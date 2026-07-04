@@ -47,4 +47,15 @@ public class PriceBackfillJobStateService {
     public void failJob(UUID jobId, String error) {
         jobRepository.findByJobId(jobId).ifPresent(j -> { j.fail(error); jobRepository.save(j); });
     }
+
+    /*
+     * [목적] 안전망 도달 시 datesOk>0이면 PARTIAL로 원자 커밋 — 진행 중인 루프 트랜잭션과 격리.
+     * [이유] REQUIRES_NEW 없이 self-invocation하면 트랜잭션 전파가 무효 — failJob와 동일 패턴.
+     * [사이드 임팩트] reason은 errorMessage에 저장(PriceBackfillJob.partial()이 1000자 절삭).
+     * [수정 시 고려사항] PriceBackfillService.doBackfill의 PARTIAL 분기에서만 호출.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void partialJob(UUID jobId, String reason) {
+        jobRepository.findByJobId(jobId).ifPresent(j -> { j.partial(reason); jobRepository.save(j); });
+    }
 }

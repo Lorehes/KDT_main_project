@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -32,12 +33,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 /*
- * [목적] PriceBackfillService(krx-price-timeseries Wave B) 검증 — V28 마이그레이션, LocalDate 커서 영속화,
- *       async doBackfill의 stock_prices 적재·FK 필터·안전망(조기 중단).
+ * [목적] PriceBackfillService(krx-price-timeseries Wave B) 검증 — V28/V29 마이그레이션, LocalDate 커서 영속화,
+ *       async doBackfill의 stock_prices 적재·FK 필터·안전망(조기 중단·PARTIAL·FAILED 분기).
  * [이유] Mock DB 금지(CLAUDE.md §6-6): price_backfill_jobs 컬럼·last_processed_date DATE 커서를 실 DB로 검증.
  *       KrxClient는 @MockitoBean으로 외부 KRX 호출 차단(결정론적 응답 주입).
  * [사이드 임팩트] 공유 stock_prices·price_backfill_jobs에 데이터 삽입 — @BeforeEach 정리.
  * [수정 시 고려사항] doBackfill은 3년 평일 역순 반복 — mock이 데이터를 주면 ~780행 적재. Awaitility로 완료 대기.
+ *                  PARTIAL 케이스: KRX가 처음 N일은 데이터 주다가 EARLY_ABORT_THRESHOLD(20) 연속 빈 응답 → PARTIAL.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -124,6 +126,39 @@ class PriceBackfillJobIT {
 
         Long rows = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stock_prices", Long.class);
         assertThat(rows).isZero();
+    }
+
+    @Test
+    @DisplayName("안전망 PARTIAL — 일부 적재 후 연속 빈 응답 → PARTIAL(이력 끝) / FAILED 아님")
+    void doBackfill_partialData_earlyAbortPartial() {
+        // 최근 5 평일은 데이터 반환, 이후 전건 빈 응답 → datesOk=5 > 0 → PARTIAL
+        final int datadays = 5;
+        AtomicInteger callCount = new AtomicInteger(0);
+        given(krxClient.fetchClosePricesForDate(any())).willAnswer(inv -> {
+            LocalDate d = inv.getArgument(0);
+            if (callCount.incrementAndGet() <= datadays) {
+                return Map.of("005930", new KrxClient.StockCloseInfo(new java.math.BigDecimal("70000"), d));
+            }
+            return Map.of();
+        });
+
+        Optional<PriceBackfillJob> started = priceBackfillService.createAndStartAsync();
+        assertThat(started).isPresent();
+        UUID jobId = started.get().getJobId();
+
+        await().atMost(Duration.ofSeconds(30)).until(() ->
+                priceBackfillService.findByJobId(jobId)
+                        .map(j -> j.getStatus() == PriceBackfillJob.Status.PARTIAL
+                                || j.getStatus() == PriceBackfillJob.Status.FAILED)
+                        .orElse(false));
+
+        PriceBackfillJob result = jobRepository.findByJobId(jobId).orElseThrow();
+        assertThat(result.getStatus()).isEqualTo(PriceBackfillJob.Status.PARTIAL);
+        assertThat(result.getProcessed()).isGreaterThan(0);         // 일부 적재 성공
+        assertThat(result.getErrorMessage()).contains("가용 이력"); // 종료 사유 기록
+        Long rows = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM stock_prices WHERE stock_code = '005930'", Long.class);
+        assertThat(rows).isGreaterThan(0L);                         // stock_prices에 적재된 행 존재
     }
 
     @Test

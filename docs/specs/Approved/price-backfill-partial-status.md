@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Draft
+status: Approved
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-05
 ---
 
 # 주가 백필 PARTIAL 상태 도입 Spec
 
-> 상태: **Draft** (dc-plan 생성)
+> 상태: Draft → **Approved** (2026-07-05, dc-tech-review 승인 — 코드베이스 실측으로 V29·참조파일·안전망 정합 확인, 1 wave)
 
 ## 배경 / 목적
 
@@ -61,4 +61,42 @@ updated: 2026-07-02
 - **Flyway V29**: CHECK 제약을 5종으로 교체. 컬럼/인덱스 무변경.
 - 트레이드오프: PARTIAL을 별도 상태로 둘지 vs SUCCEEDED + `hadGaps` 불리언 플래그. **별도 상태 권장** — 운영 모니터링·재실행 판단이 status 한 필드로 명확(불리언은 조회 시 추가 해석 필요).
 
-<!-- Tech Review 섹션은 /dc-tech-review 가 추가 -->
+## Tech Review (dc-tech-review · 2026-07-05)
+
+### 코드베이스 실측 (검토 근거)
+- 최신 Flyway 마이그레이션 = **V28** → 스펙의 "V29가 다음" 정확.
+- 참조 파일 5개 전부 존재: `PriceBackfillJob`·`PriceBackfillJobStateService`·`PriceBackfillService`·`PriceBackfillJobResponse`·`PriceBackfillJobIT`.
+- `PriceBackfillJob.Status` = `{PENDING, RUNNING, SUCCEEDED, FAILED}` (PARTIAL 부재 — 추가 대상 정확).
+- 안전망: `EARLY_ABORT_THRESHOLD=20` + 루프 내 `datesOk`/`consecutiveEmpty` 누적 + 도달 시 `throw` → 스펙의 분기 삽입 지점과 일치.
+
+### 아키텍처 분해
+- 영향 레이어: **backend(stocks) 단독**. FE 무관 — `PriceBackfillJobResponse.status`가 이미 String이라 PARTIAL 자동 노출.
+- 신규: V29 마이그레이션. 수정: 엔티티 enum+전이메서드 / StateService / Service 안전망 분기 / IT.
+
+### 작업 카드
+| # | 작업 | 레이어 | 담당 | 난이도 | 의존성 |
+|---|------|--------|------|--------|--------|
+| 1 | `Status`에 `PARTIAL` 추가 + `PriceBackfillJob.partial(reason)` 전이(status=PARTIAL·finishedAt·errorMessage 마스킹, succeed 유사) | backend/stocks | BE | 하 | - |
+| 2 | `PriceBackfillJobStateService.partialJob(jobId, reason)` REQUIRES_NEW | backend/stocks | BE | 하 | #1 |
+| 3 | `PriceBackfillService` 안전망 분기 — `consecutiveEmpty>=THRESHOLD` 시 `datesOk>0`→진행률 flush+`partialJob`+정상 return / `datesOk==0`→기존 `throw`(FAILED) | backend/stocks | BE | 중 | #1,#2 |
+| 4 | Flyway **V29** — `price_backfill_jobs.status` CHECK 제약 5종으로 교체(DROP+ADD) | backend/stocks(DB) | BE | 하 | - |
+| 5 | `PriceBackfillJobIT` — PARTIAL 케이스(일부 적재 후 연속 빈응답) 추가 + 기존 `allEmpty→FAILED` 회귀 보존 | backend/test | BE | 중 | #1~4 |
+
+### DB / 마이그레이션 영향
+- 신규 `V29__add_partial_status_to_price_backfill_jobs.sql` (최신 V28 확인 → V29 정확).
+- `ALTER TABLE price_backfill_jobs DROP CONSTRAINT {status_check} , ADD CONSTRAINT ... CHECK (status IN ('PENDING','RUNNING','SUCCEEDED','FAILED','PARTIAL'))`. 컬럼·인덱스 무변경. 적용된 V28 불변.
+
+### 외부 계약 영향
+- 없음. DART/KRX/카카오/LLM 무관. 관리자 API 응답 status 문자열에 PARTIAL만 추가 노출.
+
+### 리스크 & 법적 검토
+- 자본시장법/개인정보 무관(관리자 인프라 상태 머신).
+- **엣지**: `datesOk>0`이나 실제 "중간 전면 장애"일 수 있음 — 이력 끝과 소스 메타 부재로 구분 불가. → PARTIAL 표기 + `lastProcessedDate` 커서 재개 유지(운영자 재실행 시 이어감)로 완화.
+- **회귀**: 기존 FAILED(`datesOk==0`) 경로 보존 — 안전망 장애 감지 유지. IT로 회귀 검증(카드 #5).
+
+### 예상 wave 수
+- **1 wave** — 단일 도메인(stocks), 파일 5개, 작은 변경. 분할 불필요.
+
+### 로컬 실행/검증 가능 여부 (사용자 질의)
+- **구현·테스트: 로컬 완전 가능** ✅ — 참조 파일 전부 존재, V29가 정확한 다음 버전, Testcontainers(로컬 Docker 가동 중)로 IT가 **실제 KRX 없이** "일부 적재 후 빈응답→PARTIAL" 시나리오를 제어된 응답으로 시뮬레이션·검증. 실 KRX/GitHub 소스 접속 불필요.
+- **주의**: 지금 백필을 그냥 실행하면 PARTIAL이 아직 없어 **기존대로 FAILED**(=이 스펙이 고치려는 문제)로 끝남 → 현재 실행은 "문제 재현"이지 "수정 검증"이 아님. 수정 검증은 카드 #1~5 구현 후 IT로.

@@ -129,6 +129,9 @@ public class PriceBackfillService {
         long totalRows = 0;
         // 진행률 flush 배치 — 매 날짜 REQUIRES_NEW 커밋 대신 PROGRESS_FLUSH_EVERY 평일마다 1회(커밋 20배 절감).
         int pendingOk = 0, pendingEmpty = 0;
+        // M2: 마지막 성공 날짜 추적 — PARTIAL flush 시 빈 응답 날짜 대신 정확한 재개 포인트 기록.
+        // 재실행 시 lastSuccessDate 이전부터 이어가 EARLY_ABORT_THRESHOLD 20일을 낭비하지 않음.
+        LocalDate lastSuccessDate = null;
 
         while (!cursor.isBefore(lowerBound)) {
             if (isWeekday(cursor)) {
@@ -144,7 +147,7 @@ public class PriceBackfillService {
                         stockPriceRepository.upsertPrice(e.getKey(), e.getValue().priceAsof(), e.getValue().closePrice());
                         inserted++;
                     }
-                    datesOk++; pendingOk++; consecutiveEmpty = 0;
+                    datesOk++; pendingOk++; consecutiveEmpty = 0; lastSuccessDate = cursor;
                     totalRows += inserted;
                 }
 
@@ -156,10 +159,30 @@ public class PriceBackfillService {
                             attempts, datesOk, datesEmpty, totalRows, cursor);
                 }
 
-                // 안전망 — 연속 20 평일 빈 응답이면 KRX/GitHub 장애로 판정하고 throw.
-                // 시작 시 장애(첫 20일 0건)뿐 아니라 중간 장애(정상 진행 중 소스 다운)도 포착 —
-                // 장 연휴 최대 연속 평일(~6일) << 20이라 정상 휴장은 오탐 안 함.
+                // 안전망 — 연속 20 평일 빈 응답: datesOk>0이면 가용 이력 경계(PARTIAL), ==0이면 소스 장애(FAILED).
+                // [이유] 무료 KRX/GitHub 소스는 과거 특정 시점까지만 데이터를 제공 — 경계 도달은 정상 완료.
+                //        datesOk==0(처음부터 빈 응답)은 진짜 소스 장애. 두 케이스를 구분해 상태 정확성 확보.
+                // [사이드 임팩트] PARTIAL 잡: lastProcessedDate 커서 보존 → 재실행 시 해당 시점부터 이어감(멱등).
                 if (consecutiveEmpty >= EARLY_ABORT_THRESHOLD) {
+                    if (datesOk > 0) {
+                        // M2: flush를 마지막 성공 날짜로 기록 — 빈 응답 구간(cursor)이 아닌 실제 재개 포인트.
+                        // 재실행 시 lastSuccessDate 이전부터 이어가 EARLY_ABORT_THRESHOLD 20일을 낭비하지 않음.
+                        if (pendingOk > 0 || pendingEmpty > 0) {
+                            stateService.recordProgress(jobId, pendingOk, pendingEmpty, lastSuccessDate);
+                            pendingOk = 0; pendingEmpty = 0;
+                        }
+                        String reason = "가용 이력 끝 또는 소스 중단 — 연속 평일 " + EARLY_ABORT_THRESHOLD
+                                + "일 빈 응답(lastSuccess=" + lastSuccessDate + "), 적재 성공 " + datesOk + "일";
+                        // M1: partialJob 실패(DB 오류 등) 시 명시적 로깅 후 rethrow — catch가 FAILED로 덮어쓰더라도 추적 가능.
+                        try {
+                            stateService.partialJob(jobId, reason);
+                        } catch (Exception ex) {
+                            log.error("PriceBackfillService: partialJob 저장 실패 jobId={}", jobId, ex);
+                            throw ex;
+                        }
+                        log.info("PriceBackfillService: PARTIAL jobId={} datesOk={} lastSuccess={}", jobId, datesOk, lastSuccessDate);
+                        return;
+                    }
                     throw new IllegalStateException(
                             "PriceBackfill 조기 중단: 연속 평일 " + EARLY_ABORT_THRESHOLD +
                             "일 종가 0건(cursor=" + cursor + "). KRX/GitHub cache 가동 여부 확인 필요.");
