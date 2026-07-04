@@ -11,6 +11,21 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-04 | SSG prerender 에러 수정 — /test/concurrent-auth
+
+**요청**: docker compose 빌드 재시도 중 `/test/concurrent-auth` 페이지에서 `useSearchParams() should be wrapped in a suspense boundary` prerender 에러로 빌드 실패.
+
+**작업**:
+- `export const dynamic = "force-dynamic"` 한 줄 추가 — 정적 생성 대상에서 제외.
+- Suspense로 감싸는 대신 force-dynamic 선택: 이 페이지는 Playwright E2E 전용 픽스처로 prerender 자체가 불필요. 프로덕션에선 `if (process.env.NODE_ENV === "production") return null` 가드로 null 반환.
+
+**결정**: 빌드 에러 패턴 2종 확인 완료.
+- 1차(지난 세션): ESLint `no-unescaped-entities` / `no-explicit-any` → 수정
+- 2차(이번): SSG prerender + useSearchParams → force-dynamic
+- 두 에러 모두 `next dev`에선 안 보이다가 `next build`(도커)에서 처음 발견되는 구조. 이후 새 페이지 추가 시 useSearchParams 사용 → Suspense 또는 force-dynamic 필수 확인.
+
+---
+
 ## 2026-07-04 | ESLint 에러 5곳 수정 — 빌드 게이트 복구
 
 **요청**: next build(프로덕션)에서 ESLint 에러 5건으로 빌드가 종료되는 문제 해결. next dev에서는 경고로 흘렀으나 CI/Docker 빌드에서 첫 발견.

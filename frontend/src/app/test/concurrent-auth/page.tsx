@@ -14,6 +14,10 @@ import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import { AuthBroadcastListener } from "@/components/layout/AuthBroadcastListener";
 
+// 테스트 전용 픽스처 — 정적 prerender 대상에서 제외(useSearchParams가 빌드 타임 SSG를 실패시킴).
+// force-dynamic으로 요청 시 렌더 → 프로덕션에선 아래 가드로 null 반환.
+export const dynamic = "force-dynamic";
+
 interface MeResponse {
   id: number;
 }

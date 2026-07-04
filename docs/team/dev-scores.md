@@ -128,6 +128,7 @@ updated: 2026-06-02
 | 2026-07-03 | Jin | e1eae46 | fix(infra): 공시 본문 charset 프로빙 — mojibake 수정 [7/9 S] | Infra | 7 | 9 | S | UTF-8 우선 strict 프로빙 |
 | 2026-07-04 | Jin | 37a1bb1 | chore(infra): .env 단일화 + Lightsail 배포 스택 정리 [6/8 M] | Infra | 6 | 8 | M | .env 단일 파일 서버 배포화 |
 | 2026-07-04 | Jin | f5ce48f | fix(frontend): ESLint 에러 5곳 수정 — 빌드 게이트 복구 [7/8 S] | Frontend | 7 | 8 | S | ESLint 에러 5곳 수정 (빌드 차단) |
+| 2026-07-04 | Jin | f669dfb | fix(frontend): SSG prerender 에러 수정 — /test/concurrent-auth force-dynamic [7/8 S] | Frontend | 7 | 8 | S | prerender 에러 수정 (force-dynamic) |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -135,5 +136,5 @@ updated: 2026-06-02
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 2 | 21 | 110 | 8.1 | 6.1 |
+| Jin | 3 | 22 | 111 | 8.1 | 6.1 |
 <!-- SUMMARY:END -->
