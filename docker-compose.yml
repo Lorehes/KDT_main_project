@@ -43,6 +43,9 @@ services:
     image: ${BACKEND_IMAGE:-dartcommons-backend:latest}
     build:
       context: ./backend
+    # pull_policy: build → 기본 정책(missing=pull)을 덮어써 `docker compose up`이 pull 대신 빌드.
+    #   레지스트리(ECR/GHCR) pull로 전환 시 이 줄을 'missing'으로 바꾸거나 제거.
+    pull_policy: build
     container_name: dartcommons-backend
     env_file: .env
     expose:
@@ -75,6 +78,8 @@ services:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://gangwoncanvas.co.kr}
+    # pull_policy: build → `docker compose up`이 레지스트리 pull 대신 소스 빌드.
+    pull_policy: build
     container_name: dartcommons-frontend
     # env_file 없음 — FE 컨테이너에 DB 비밀번호/JWT/API 키를 노출하지 않는다(보안).
     environment:
