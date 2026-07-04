@@ -2,12 +2,39 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-07-03
+updated: 2026-07-04
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-07-04 | charset mojibake 근본수정 + 전체 재수집 완결 + Approved 3건 Done 이동
+
+**요청**: 구현 완료된 Approved 스펙을 Done으로 이동. → charset 스펙은 재수집까지 실제 완결 후 이동.
+
+**Done 이동 (3건)**:
+- `stage2-body-in-prompt` (72ee89d), `promptguard-legal-term-false-positive` (72ee89d) — 코드+30건 재분석 검증 후 이동.
+- `content-text-charset-mojibake` (bbff41c) — 재수집 완결 후 이동. (Approved 잔여: `stage3-embedding-backfill`만)
+
+**근본 결함 2건 발견·수정 (실데이터 검증으로만 드러남)**:
+- **파서 all-or-nothing** (366f6be): 1차 charset 수정(d0c61ad)의 `decodeStrict(UTF-8)`이 문서 내 UTF-8 비적합 바이트 1개에도 문서 전체를 EUC-KR로 폴백 → 재수집분 100% 재손상. 컴파일된 파서 직접 실측으로 확인(clean UTF-8은 OK, +잡바이트 1개는 mojibake). → 치환율 판정(UTF-8 lenient `�`<2%면 UTF-8 유지)으로 수정 + 회귀 테스트. **교훈: 단위 테스트가 완벽 UTF-8만 써서 결함 미검출 — 코드가 아니라 실데이터로 검증해야 함.**
+- **DART 020 영구저장 버그** (f3e6abd): 재수집 중 할당량 소진(status 020)을 `DartApiException`(영구)로 처리 → `content_fetched_at` 마킹+빈값 저장 → 재시도 불가로 21k건 굳음. → 020/800/900을 transient(`RestClientException`)로 분류해 pending 유지.
+
+**재수집 최종 결과**: 손상 전량 재-NULL → content 백필 재실행. **mojibake 0 / pending 0 / 본문 93,560 / 파일없음(014, 메타전용) 795 / 총 94,355.** 94128 계약금액 33,177,947,138·최근매출액 448,634,709,421 정상 복구("448조원" 환각 근본원인 = mojibake 확정).
+
+**테스트**: BE 265/265(Testcontainers) · FE Vitest 58/58 통과.
+
+### 결정 (코드 외)
+- **charset Done 기준 = 콘텐츠 재수집 완결(mojibake 0)까지**. 손상 본문 기반으로 산출됐던 **analysis_results 재분석은 별도 후속**(콘텐츠 정합 ≠ 분석 정합 분리). 즉 94128 등의 **기존 분석 결과는 아직 옛 값**.
+- **DART 대량 재수집 표준**: throttle 500ms(0이면 IP 차단 http=000) + 일 20k/키 한도 → **다중 API 키 or 다일 분할**. 신규 키 발급이 하루 완주에 결정적이었음. → 메모리 `reference_dart_api_quota` 기록.
+
+### 미완료 (다음 세션)
+- **재수집분 재분석**: 본문은 깨끗해졌으나 분석 결과는 손상본 기반 그대로 → 94128 포함 재분석 필요(gemma). 전체 24k 규모 = LLM 시간 소요, stage2 후속과 병합.
+- **배포**: BE/FE 테스트 그린. `dev_MVP → main` PR 머지 시 deploy.yml(EC2) 자동 배포. 사전 확인: GitHub Secrets(EC2_SSH_KEY, NEXT_PUBLIC_API_URL) 등록, EC2 env(프로드 DART 키·DB·ADMIN), 프로드 DB에 손상 데이터 있으면 동일 재수집.
+- **로컬 상태 주의**: 앱이 세션 `bootRun`으로 떠 있음(정식 재기동 필요). `.env` DART 키 신규(`29ec…`)로 교체됨(로컬·미커밋, 이전 키 주석 보존), throttle 500ms.
 
 ---
 
