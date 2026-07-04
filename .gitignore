@@ -8,10 +8,9 @@
 # ----- 시크릿 / 환경변수 (최우선) -----
 .env
 .env.*
-# 예시 템플릿은 커밋 허용
+# 예시 템플릿은 커밋 허용 (단일 .env 규약 — .env.example 로 통합)
 !.env.example
 !.env.review.example
-!.env.prod.example
 *.pem
 *.key
 *.p8

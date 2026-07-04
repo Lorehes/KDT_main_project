@@ -1,13 +1,13 @@
 # [목적] AWS Lightsail 단독 배포용 완전 컨테이너 스택 — postgres·backend·frontend·nginx·certbot 5서비스.
-#   compose 파일 하나 + .env.prod + 사전 빌드 이미지만 Lightsail에 올리면 HTTPS까지 기동.
-# [이유] 기존 docker-compose.prod.yml(EC2 + GHCR pull + 호스트 레벨 Nginx)과 분리한다.
+#   compose 파일 하나 + .env(단일 env 파일) + 사전 빌드 이미지만 Lightsail에 올리면 HTTPS까지 기동.
+# [이유] 런타임 env는 .env 하나만 사용. 템플릿은 .env.example (cp .env.example .env).
 #   - 이미지: GHCR pull이 아니라 "직접 업로드"(로컬 build → docker save/load) 전제 → 로컬 태그 참조.
 #   - Nginx/certbot을 호스트 apt 설치가 아니라 컨테이너로 → 호스트 사전 설정 최소화(Docker만 필요).
 #   - backend/frontend는 published 포트 없음 → dartcommons-net 내부에서 nginx만 접근(외부 직접 차단).
 # [사이드 임팩트] 최초 SSL 발급은 scripts/init-letsencrypt.sh 를 1회 실행해야 nginx가 정상 기동한다
 #   (인증서 파일이 없으면 SSL server 블록 로드 실패 → nginx crash. dummy cert로 부트스트랩).
-#   frontend에는 .env.prod(시크릿)를 주입하지 않는다 — NEXT_PUBLIC_* 는 빌드 타임에 이미 번들에 박힘.
-# [수정 시 고려사항] 도메인 변경 시 .env.prod의 DOMAIN + certbot 재발급 + FE 이미지 재빌드(NEXT_PUBLIC_API_URL).
+#   frontend에는 .env(시크릿)를 주입하지 않는다 — NEXT_PUBLIC_* 는 빌드 타임에 이미 번들에 박힘.
+# [수정 시 고려사항] 도메인 변경 시 .env의 DOMAIN + certbot 재발급 + FE 이미지 재빌드(NEXT_PUBLIC_API_URL).
 #   named volume 금지(CLAUDE.md §7, 2026-06-04 데이터 손실 교훈) → 모든 영속 데이터는 호스트 bind mount.
 #   Ollama 온프레미스 LLM 필요 시 하단 주석 해제 + 인스턴스 8GB 이상으로 업그레이드.
 
@@ -22,7 +22,7 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      # Lightsail Ubuntu 기본 경로. PG_DATA_DIR 로 변경 가능(.env.prod).
+      # Lightsail Ubuntu 기본 경로. PG_DATA_DIR 로 변경 가능(.env).
       - ${PG_DATA_DIR:-/home/ubuntu/data/dartcommons-pg}:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
@@ -94,7 +94,8 @@ services:
       - backend
       - frontend
     environment:
-      DOMAIN: ${DOMAIN:?DOMAIN 미설정 — .env.prod에 DOMAIN=gangwoncanvas.co.kr 지정}
+      # 기본값 = 실도메인. .env 에 DOMAIN 지정 시 그 값이 우선(다른 도메인 전환 대비).
+      DOMAIN: ${DOMAIN:-gangwoncanvas.co.kr}
     ports:
       - "80:80"
       - "443:443"

@@ -11,6 +11,32 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-04 | Lightsail 배포 스택 완성 + .env 단일 파일화
+
+**요청**: docker-compose.yml을 AWS Lightsail에 올려 BE·FE·certbot·Nginx 동작하도록 설정. 이후 "런타임 env는 .env 하나만" + "서버 단일 파일로 동작하도록 .env 수정" 요구.
+
+**작업**:
+- **완전 컨테이너화 스택** (`docker-compose.yml`): postgres·backend·frontend·nginx·certbot 5서비스. BE/FE는 published 포트 없이 내부망(`dartcommons-net`)에서 nginx만 접근. certbot webroot HTTP-01 자동 갱신.
+- **`nginx/dartcommons.conf.template`**: 컨테이너 리버스 프록시 (upstream=서비스명, `/api`→backend, `/`→frontend, HTTPS 강제 + ACME). nginx:alpine 템플릿 엔진으로 `${DOMAIN}`만 envsubst.
+- **`scripts/init-letsencrypt.sh`**: 최초 SSL 부트스트랩 (dummy cert→nginx 기동→실발급→reload).
+- **`.env` 단일 파일화**: backend `application.yml` 실측으로 **기본값 없는 필수 env 5종**(DART/KRX_API_KEY·JWT_SECRET·AES_KEY·ADMIN_PASSWORD) 확인. dev `.env`의 실값 보존하며 서버용으로 정정 — `DB_URL` localhost:5433→postgres:5432, `DARTCOMMONS_ALLOWED_ORIGINS`→도메인, 미사용 var(`KAKAO_ALIMTALK_APP_KEY`/`OLLAMA_*`) 정리.
+- **템플릿 정리**: `.env.prod.example` 삭제 → `.env.example` 한 곳으로 통합(서버 배포 섹션 추가). `.gitignore` 예외 라인 정리.
+
+**결정 (코드에 안 드러남)**:
+- 이미지 배포는 GHCR pull이 아니라 **직접 업로드**(로컬 build→`docker save/load`) 전제 → compose는 로컬 태그(`dartcommons-backend:latest`) 참조.
+- 런타임 env는 **`.env` 하나만** 사용(`.env.prod` 폐기). compose 기본 파일 규약으로 `--env-file` 불필요.
+- `DOMAIN`은 `${DOMAIN:-gangwoncanvas.co.kr}` 기본값 — 로컬 `config` 검증 시 하드실패 방지.
+- 도메인 확정: **gangwoncanvas.co.kr**.
+
+**미완료 (다음 세션)**:
+- **★`.github/workflows/deploy.yml`이 삭제된 `docker-compose.prod.yml`(EC2)을 아직 참조** — main push 시 CI deploy 실패 가능. Lightsail 방식으로 갱신하거나 워크플로 비활성 필요.
+- `.env`의 `CERTBOT_EMAIL` 아직 `CHANGE_ME` — Let's Encrypt 발급 전 입력 필수.
+- **LLM 공급자 미결정**: 옵션 A(ollama, compose ollama 서비스 주석해제 + 8GB↑) vs 옵션 B(openrouter + 키). 현재 `.env`는 A로 설정.
+- Kakao 개발자 콘솔에 `https://gangwoncanvas.co.kr/api/auth/callback/kakao` Redirect URI 등록 필요.
+- 실서버 배포(`init-letsencrypt.sh` 실행) 미수행 — 로컬 `docker compose config` VALID까지만 검증.
+
+---
+
 ## 2026-07-04 | charset mojibake 근본수정 + 전체 재수집 완결 + Approved 3건 Done 이동
 
 **요청**: 구현 완료된 Approved 스펙을 Done으로 이동. → charset 스펙은 재수집까지 실제 완결 후 이동.

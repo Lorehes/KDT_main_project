@@ -6,16 +6,16 @@
 # [사이드 임팩트] CERTBOT_STAGING=1 이면 Let's Encrypt 스테이징(신뢰 안 되는 테스트 인증서)으로 발급 —
 #   레이트리밋 소진 없이 리허설 가능. 실발급은 STAGING=0(기본).
 # [수정 시 고려사항] 도메인/이메일은 .env(DOMAIN, CERTBOT_EMAIL)에서 읽는다.
-#   서버 env 파일은 .env — docker-compose.lightsail.yml 이 env_file: .env / ${} 보간 모두 이 파일을 사용.
+#   서버 env 파일은 .env — docker-compose.yml 이 env_file: .env / ${} 보간 모두 이 파일을 사용.
 #   www 서브도메인 추가 시 아래 CERT_DOMAINS 에 -d www.${DOMAIN} 추가(www DNS 선행 필수).
 #   재발급(도메인 변경 등)은 CERTBOT_CONF_DIR 의 해당 도메인 디렉토리 삭제 후 재실행.
 set -e
 
-COMPOSE="docker compose -f docker-compose.lightsail.yml"
+COMPOSE="docker compose -f docker-compose.yml"
 
 # ----- .env 로드 (compose 기본 env 파일) -----
 if [ ! -f ./.env ]; then
-  echo "ERROR: .env 가 없습니다. 'cp .env.prod.example .env' 후 값을 채우세요." >&2
+  echo "ERROR: .env 가 없습니다. 'cp .env.example .env' 후 값을 채우세요." >&2
   exit 1
 fi
 set -a
