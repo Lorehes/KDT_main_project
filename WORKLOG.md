@@ -2,12 +2,67 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-07-01
+updated: 2026-07-03
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-07-03 | 파이프라인 점검 (읽기 전용, 수정 없음)
+
+**점검 결과**: 데이터 파이프라인(수집→분석) 정상 가동. 인프라 전부 Up.
+
+**실측 (DB now 02:29 KST 기준)**:
+- 공시 94,198건 (24h +163, 최신 02:19) / 분석 19,452건 (24h +3,194, 최신 02:25, 4분 전)
+- 실시간 처리 중: 최근 10분 13건 — 신규공시 자동트리거 정상. 모델 `gemma3:4b`.
+- 인프라: Postgres(5433) healthy · Chroma(8001) v2 200 · Ollama(qwen3:4b/nomic-embed/gemma3:4b 로딩).
+- 감정 분포: NEUTRAL 19,261 / NEGATIVE 157 / POSITIVE 34 (99% 중립), 전부 stage_reached=2. avg_conf 0.712.
+- 미분석 백로그 74,746 (대부분 애초 미타겟).
+
+### 발견 (수정 보류 — 사용자 지시)
+- **health DOWN = mail HealthIndicator 오탐 (파이프라인 무관)**: `spring.mail.host=localhost:1025`(Mailpit) 미기동 → spring-boot-starter-mail 자동등록 mail 인디케이터가 `transport.connect()` 실패로 DOWN → 전체 status DOWN. liveness/readiness는 UP(mail은 probe 그룹 밖)이라 수집·분석엔 영향 없음. 1025 포트 not listening 확인.
+  - 해소안(택1): Mailpit 기동 `docker run -p 1025:1025 -p 8025:8025 axllent/mailpit`, 또는 dev 프로파일 `management.health.mail.enabled: false`.
+- **좀비 배치잡 `b3e82506-...`**: 상태 `RUNNING`인데 `updated_at`이 07-02 06:12에서 20h째 정지 (148/200 청크, analyzed 7,400/targeted 10,000, failed 0). 앱 재시작에 워커가 죽었으나 DB 행 미회수 = 고아 잡. 지금 흐르는 분석은 이 잡이 아니라 자동트리거. 결과: 이 배치 잔여 ~2,600건 미처리.
+  - **반복 패턴**: 7-01 세션에도 "잡이 DB에 RUNNING 스테일로 남아 있음 — 무해" 기록 존재 (Chroma 백필 59k 중단 건). stale-RUNNING 자동 회수 로직 부재가 구조적. `EmbeddingBackfillService`엔 stale RUNNING 재개 로직이 있으나 `analysis_jobs`(Stage2 백필) 경로엔 없는 것으로 보임 — 확인 필요.
+
+### 다음 세션 후보 (미착수)
+- (A) mail 헬스 오탐 정리 — dev 프로파일 1줄. 운영 대시보드 오탐 제거.
+- (B) 좀비 잡 `b3e82506` FAILED 마킹 + `analysis_jobs` 경로 stale-RUNNING 자동 회수 — 별도 Spec 권장 (스케줄러/재기동 로직 접촉).
+- 감정 99% NEUTRAL 편향 — Stage2 분류 품질 점검 여부 판단.
+
+---
+
+## 2026-07-03 | Stage 3 임베딩/RAG 파이프라인 점검 + 컬렉션 고아화 원인 규명 (읽기 전용, 수정 없음)
+
+**결론**: Stage 3 RAG가 **현재 무력화** 상태. 임베딩 67,851개가 Chroma sqlite에 존재하나 고아 세그먼트에 갇혀 조회 불가. 앱 코드에는 삭제 경로가 없어 **외부 조작(수동/스크립트)에 의한 컬렉션 삭제+재생성**으로 결론.
+
+### 실측 (Chroma 0.5.23, DB now 02:29 기준)
+- API 조회 `disclosure_embeddings`(ID `f204a5a0…`, cosine, version 0) → **벡터 count = 0** → `findSimilar()` 무응답 → RAG 증강 실질 정지.
+- sqlite(`~/data/dartcommons-chroma/chroma.sqlite3`, 65MB) 직접 조회:
+  - `embeddings` 총 **67,851개** 존재 (7-01 백필분 그대로) — 소속 `segment_id = 2f39ea48…`
+  - 현재 컬렉션의 segments = `4b15b5e8`(meta)·`d0c6c768`(vector) → **2f39ea48 미포함** = 고아
+  - 디스크 HNSW 폴더 `76bf401b`(mtime 07-01 10:52) = 옛 벡터 세그먼트 잔존물
+- `embedding_backfill_jobs`(Postgres) = **0행** — 7-01 백필 실행 기록이 사라짐(Postgres 본체는 인택트).
+
+### 근본 원인 (코드 규명 결과 — B)
+- **앱 코드에 컬렉션 삭제/reset 경로 없음**:
+  - `ChromaCollectionBootstrapper`(infra): `ApplicationReadyEvent`에서 **create-if-absent만** 수행. 이름 존재 여부만 확인(line 77–83), 삭제 안 함(주석 line 24 "기존 컬렉션 삭제하지 않음" 명시). v1 API(`/api/v1/collections`) 사용, v1/v2 모두 200 정상.
+  - `LangChain4jChromaClient`: `upsert`/`query`만. 삭제 없음.
+  - `ChromaClient` 인터페이스: 메서드 = `upsert`, `query` 2개뿐. **삭제 API 자체가 도메인에 존재하지 않음**.
+  - `scripts/` : `backup_db.sh`는 Postgres만 대상, Chroma 미접촉. git 이력에도 chroma reset 커밋 없음.
+- **따라서 삭제는 앱 외부 발생** (07-01 10:52 ~ 07-03 00:20 사이): 디버깅 중 수동 `curl DELETE`, 또는 localhost:8001을 가리킨 테스트/일회성 조작 추정. 삭제 후 다음 앱 기동 시 부트스트래퍼가 **빈 cosine 컬렉션을 재생성** → 지금의 empty f204a5a0. Chroma 0.5.x 삭제가 `embeddings` 행/HNSW 폴더를 cascade 정리하지 않아 67,851개가 고아로 잔존.
+
+### 설계 갭 (재발 근원)
+- 부트스트래퍼가 **이름 존재만 체크, 벡터 카운트 미검증** → 비워지거나 재생성된 컬렉션도 "정상"으로 통과. 백필 자동 재트리거 없음 → 한 번 비면 계속 빈 채 운영됨(무증상).
+- `embedding_backfill_jobs` 이력 소실과 겹쳐, 임베딩 상태를 앱에서 자기진단할 수단이 없음.
+
+### 다음 세션 후보 (미착수 — 복구는 보류)
+- (D) 부트스트래퍼에 벡터 카운트 검증 추가: 컬렉션 존재해도 count=0 또는 disclosures 대비 현저히 적으면 WARN 로그/헬스 반영.
+- (E) 복구 택1 — ① 재백필(POST /admin/analysis/embedding-backfill, 67k 재연산) vs ② 고아 세그먼트 2f39ea48를 현재 컬렉션에 재연결(sqlite 조작, 위험·비권장). ①이 안전.
+- (F) Chroma 데이터도 pg_dump처럼 정기 백업/무결성 점검 대상에 편입 검토([[feedback_data_protection]]는 현재 Postgres만 커버).
 
 ---
 
