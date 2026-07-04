@@ -1,7 +1,9 @@
 # [목적] AWS Lightsail 단독 배포용 완전 컨테이너 스택 — postgres·backend·frontend·nginx·certbot 5서비스.
-#   compose 파일 하나 + .env(단일 env 파일) + 사전 빌드 이미지만 Lightsail에 올리면 HTTPS까지 기동.
+#   Lightsail에 repo clone 후 `docker compose up -d --build` 하면 소스에서 이미지 빌드→HTTPS까지 기동.
 # [이유] 런타임 env는 .env 하나만 사용. 템플릿은 .env.example (cp .env.example .env).
-#   - 이미지: GHCR pull이 아니라 "직접 업로드"(로컬 build → docker save/load) 전제 → 로컬 태그 참조.
+#   - 이미지: backend/frontend는 build: 컨텍스트로 서버에서 직접 빌드(레지스트리 불필요).
+#     ECR/GHCR 사용 시 BACKEND_IMAGE/FRONTEND_IMAGE 를 레지스트리 URL로 지정 후 pull.
+#   - ★서버 빌드는 RAM 부담(Gradle+Next) — 최소 2GB, 권장 4GB 인스턴스. 소형이면 swap 추가 또는 ECR pull.
 #   - Nginx/certbot을 호스트 apt 설치가 아니라 컨테이너로 → 호스트 사전 설정 최소화(Docker만 필요).
 #   - backend/frontend는 published 포트 없음 → dartcommons-net 내부에서 nginx만 접근(외부 직접 차단).
 # [사이드 임팩트] 최초 SSL 발급은 scripts/init-letsencrypt.sh 를 1회 실행해야 nginx가 정상 기동한다
@@ -34,9 +36,13 @@ services:
       retries: 5
       start_period: 30s
 
-  # ---- Backend (Spring Boot) — 로컬 태그 이미지, published 포트 없음(내부 전용) ----
+  # ---- Backend (Spring Boot) — 소스에서 빌드(build:), published 포트 없음(내부 전용) ----
+  # build: 있으면 이미지가 없을 때 `docker compose up` 이 자동 빌드 → Lightsail에서 레지스트리 없이 기동.
+  #   ECR/GHCR 사용 시: BACKEND_IMAGE 를 레지스트리 URL로 지정 후 `docker compose pull` (build 생략).
   backend:
     image: ${BACKEND_IMAGE:-dartcommons-backend:latest}
+    build:
+      context: ./backend
     container_name: dartcommons-backend
     env_file: .env
     expose:
@@ -60,9 +66,15 @@ services:
         reservations:
           memory: 512m
 
-  # ---- Frontend (Next.js standalone) — 시크릿 미주입(NEXT_PUBLIC_*는 빌드 타임 번들) ----
+  # ---- Frontend (Next.js standalone) — 소스에서 빌드, 시크릿 미주입(NEXT_PUBLIC_*는 빌드 타임 번들) ----
+  # NEXT_PUBLIC_API_URL 은 빌드 타임에 번들에 박히므로 build.args 로 주입(런타임 주입 불가).
+  #   도메인 변경 시 반드시 재빌드: docker compose build frontend
   frontend:
     image: ${FRONTEND_IMAGE:-dartcommons-frontend:latest}
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://gangwoncanvas.co.kr}
     container_name: dartcommons-frontend
     # env_file 없음 — FE 컨테이너에 DB 비밀번호/JWT/API 키를 노출하지 않는다(보안).
     environment:
