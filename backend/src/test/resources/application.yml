@@ -1,0 +1,67 @@
+spring:
+  mail:
+    host: localhost
+    port: 25
+
+# 테스트에서 Swagger 비활성 상태 유지 — securityMatcher 변경으로 admin chain이 처리
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# 테스트 환경 — 신규 필수 프로퍼티 기본값 (실키 사용 금지, 테스트 전용 더미값)
+dartcommons:
+  kakao:
+    alimtalk:
+      base-url: http://localhost
+      api-key: test-kakao-key
+      sender-key: test-sender-key
+      template-code: test-template
+  mail:
+    from: test@dartcommons.com
+  jwt:
+    # R14: Base64(test-jwt-secret-at-least-32-chars-for-hmac256-validation-ok) — 테스트 전용, 61 bytes > 32 bytes ✓
+    secret: "dGVzdC1qd3Qtc2VjcmV0LWF0LWxlYXN0LTMyLWNoYXJzLWZvci1obWFjMjU2LXZhbGlkYXRpb24tb2s="
+    access-ttl-minutes: 30
+    refresh-ttl-days: 14
+  crypto:
+    # base64(32 zero bytes) — 테스트 전용, 실 운영 AES_KEY와 무관
+    aes-key: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  admin:
+    username: admin
+    password: test-admin-password
+  llm:
+    provider: mock
+  dart:
+    api-key: test-key
+    base-url: http://localhost
+  krx:
+    api-key: test-key
+    base-url: http://localhost
+    price-sync:
+      enabled: false   # KrxPriceSyncJob Bean 전역 비활성화 — @Scheduled 실 KRX 호출 차단. KrxPriceSyncJobIntegrationTest만 enabled=true override
+
+pricing:
+  plans:
+    - tier: FREE
+      price: 0
+      currency: KRW
+      features:
+        - "보유 종목 3개"
+      recommended-for: "입문 투자자"
+      monthly-free-quota: 5
+    - tier: PRO
+      price: 9900
+      currency: KRW
+      features:
+        - "무제한 종목 등록"
+      recommended-for: "적극적 투자자"
+      monthly-free-quota: 0
+    - tier: PREMIUM
+      price: 29900
+      currency: KRW
+      features:
+        - "Pro 전체 기능"
+      recommended-for: "장기 투자자"
+      monthly-free-quota: 0

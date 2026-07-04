@@ -1,0 +1,232 @@
+spring:
+  application:
+    name: dartcommons
+
+  mvc:
+    # RFC 7807 ProblemDetail 응답 활성화 — ResponseStatusException, @Valid 오류가 표준 포맷으로 직렬화됨
+    problemdetails:
+      enabled: true
+
+  datasource:
+    # 기본 포트 5433 — docker-compose.yml과 정합 (다른 프로젝트 5432 점유 회피).
+    # .env의 DB_URL이 build.gradle bootRun task로 자동 로드됨.
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/dartcommons}
+    username: ${DB_USERNAME:dartcommons}
+    password: ${DB_PASSWORD:dartcommons}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # CLAUDE.md 6-3: DDL은 Flyway만. validate/none 고정 (create/update 금지)
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        # 백필 대량 적재(DisclosureBackfillService.CHUNK_SIZE=500)와 정렬 — saveAll batch flush 최적화
+        jdbc.batch_size: 500
+        order_inserts: true
+        order_updates: true
+
+  # SMTP 이메일 (notification-dispatcher Spec Wave 1 — 폴백 채널)
+  # 실키는 환경변수 주입. 로컬 개발은 Mailpit(localhost:1025) 또는 placeholder.
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:placeholder}
+    password: ${MAIL_PASSWORD:placeholder}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # 빈 DB에 V1부터 적용. 기존 운영 DB 도입 시에만 baseline 사용
+    baseline-on-migrate: false
+
+  cache:
+    type: caffeine
+    # 캐시별 TTL/maxSize는 CacheConfig.java에서 프로그래밍 방식으로 구성 (per-cache spec 불일치 회피).
+    # portfolioStockCodes: 5m / 1_000 entries, analysisResult: 10m / 10_000 entries
+
+# API 문서 (springdoc-openapi) — 운영 기본 비활성화(R7). 로컬 개발 시 application-local.yml에서 활성화.
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    path: /swagger-ui
+    enabled: ${SWAGGER_ENABLED:false}
+
+# 운영 모니터링 (Actuator) — 최소 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+dartcommons:
+  dart:
+    base-url: https://opendart.fss.or.kr/api
+    api-key: ${DART_API_KEY}
+    timeout-ms: 10000
+    max-retries: 3
+    # document.xml zip 전용 설정 (disclosure-content-text-fetch Spec)
+    document-timeout-ms: ${DART_DOCUMENT_TIMEOUT_MS:30000}
+    content-max-chars: ${CONTENT_MAX_CHARS:50000}
+    content-backfill-throttle-ms: ${CONTENT_BACKFILL_THROTTLE_MS:500}
+    content-backfill-chunk-size: ${CONTENT_BACKFILL_CHUNK_SIZE:100}
+  # KRX OpenAPI — 종목 기본정보 / 일별시세 (stocks-master-seed Spec).
+  # base-url/엔드포인트는 KRX 가이드 실측(카드 #1) 확정 후 갱신.
+  krx:
+    base-url: ${KRX_BASE_URL:https://data.krx.co.kr}
+    api-key: ${KRX_API_KEY}
+    timeout-ms: 10000
+    max-retries: 3
+    price-sync:
+      enabled: true   # false로 설정 시 KrxPriceSyncJob Bean 비활성화 (테스트·로컬 개발용)
+  # /admin/** HTTP Basic 인증 (MVP 단순 가드)
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD}
+  # JWT — access/refresh 토큰 발급 (user-auth-jwt-oauth2 Spec Wave 1)
+  jwt:
+    secret: ${JWT_SECRET}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:30}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:14}
+  # AES-256-GCM — avg_buy_price / quantity / phone_number 암호화 (user-auth Spec Wave 1)
+  crypto:
+    aes-key: ${AES_KEY}
+  # OAuth 2.0 — Kakao / Google / Naver (user-auth-jwt-oauth2 Spec Wave 4)
+  # 실제 키는 환경변수 주입 (CLAUDE.md §7 하드코딩 금지). 기본값은 로컬 개발용 placeholder.
+  oauth:
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:placeholder}
+      client-secret: ${KAKAO_CLIENT_SECRET:placeholder}
+      redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:3000/auth/oauth/kakao/callback}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:placeholder}
+      client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
+      redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:3000/auth/oauth/google/callback}
+    naver:
+      client-id: ${NAVER_CLIENT_ID:placeholder}
+      client-secret: ${NAVER_CLIENT_SECRET:placeholder}
+      redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:3000/auth/oauth/naver/callback}
+  # 카카오 알림톡 (notification-dispatcher Spec Wave 1)
+  # 실제 키는 환경변수 주입 (CLAUDE.md §7 하드코딩 금지).
+  # base-url·endpoint는 카카오 비즈메시지 가이드 확인 후 갱신.
+  kakao:
+    alimtalk:
+      base-url: ${KAKAO_ALIMTALK_BASE_URL:https://alimtalk-api.kakao.com}
+      api-key: ${KAKAO_ALIMTALK_API_KEY:placeholder}
+      sender-key: ${KAKAO_SENDER_KEY:placeholder}
+      template-code: ${KAKAO_ALIMTALK_TEMPLATE_CODE:placeholder}
+      otp-template-code: ${KAKAO_OTP_TEMPLATE_CODE:dc_otp_v1}
+      timeout-ms: ${KAKAO_ALIMTALK_TIMEOUT_MS:10000}
+      max-retries: ${KAKAO_ALIMTALK_MAX_RETRIES:3}
+  # 이메일 발송자 주소 (notification-dispatcher Spec Wave 1 — 폴백 채널)
+  mail:
+    from: ${MAIL_FROM:noreply@dartcommons.com}
+  # LLM provider — analysis Stage 2 (llm-production-switch Spec)
+  # provider=mock: 통합 테스트/로컬 개발용. provider=openrouter: 프로덕션(Cloud LLM).
+  # provider=ollama: 온프레미스(GPU 서버 필요). 기본값 mock — 프로덕션은 LLM_PROVIDER=openrouter 주입 필수.
+  # LLM_BASE_URL 환경변수 예시:
+  #   openrouter → LLM_BASE_URL=https://openrouter.ai/api/v1 (기본값)
+  #   ollama     → LLM_BASE_URL=http://localhost:11434
+  llm:
+    provider: ${LLM_PROVIDER:mock}
+    base-url: ${LLM_BASE_URL:https://openrouter.ai/api/v1}
+    api-key: ${OPENROUTER_API_KEY:}
+    model: ${LLM_MODEL:google/gemma-3-4b-it:free}
+    timeout-ms: ${LLM_TIMEOUT_MS:30000}
+    max-retries: ${LLM_MAX_RETRIES:2}
+    # 결정 2: 0.6 미만 → is_withheld=true (판단 보류).
+    # 운영 조정은 SystemConfig 키 analysis.stage2.confidence_threshold 후속 검토.
+    confidence-threshold: ${LLM_CONFIDENCE_THRESHOLD:0.6}
+    # Stage 2 프롬프트 본문 발췌 상한(글자) — stage2-body-in-prompt Spec. 6000자 ≈ num_ctx 8192 수용.
+    # content-max-chars(5만자, Stage 1 저장)와 별개. 0이면 본문 미투입(메타 전용 폴백).
+    stage2-body-max-chars: ${STAGE2_BODY_MAX_CHARS:6000}
+    # 임베딩 모델 — Stage 3 RAG (analysis-stage3-rag-chroma Spec)
+    # provider=mock: 테스트/로컬(임베딩 불필요). provider=ollama: nomic-embed-text 모델 사용.
+    # EMBEDDING_BASE_URL: Ollama 서버 주소 (기본 http://localhost:11434)
+    embedding:
+      provider: ${EMBEDDING_PROVIDER:mock}
+      base-url: ${EMBEDDING_BASE_URL:http://localhost:11434}
+      model-name: ${EMBEDDING_MODEL:nomic-embed-text}
+      timeout-ms: ${EMBEDDING_TIMEOUT_MS:30000}
+      max-retries: ${EMBEDDING_MAX_RETRIES:2}
+      max-chars: ${EMBEDDING_MAX_CHARS:6000}
+  # Chroma 벡터 DB — Stage 3 RAG 임베딩 스토어 (analysis-stage3-rag-chroma Spec)
+  # enabled=false: mock/개발 환경. enabled=true: Chroma 컨테이너 필요 (docker-compose.yml chroma 서비스).
+  # similarity-threshold: 0.7 미만 결과 제외 — 강제 매칭 방지(환각 가드, R8).
+  chroma:
+    enabled: ${CHROMA_ENABLED:false}
+    base-url: ${CHROMA_BASE_URL:http://localhost:8001}
+    collection-name: ${CHROMA_COLLECTION:disclosure_embeddings}
+    similarity-threshold: ${CHROMA_SIMILARITY_THRESHOLD:0.7}
+    timeout-ms: ${CHROMA_TIMEOUT_MS:10000}
+
+# 요금제 플랜 정보 (PricingProperties — 통합기획서 §8.1 BM 데이터 기반)
+# 가격 변경 시 코드 수정 없이 이 값만 조정 후 재기동. 투자 권유 표현 금지(CLAUDE.md §7).
+pricing:
+  plans:
+    - tier: FREE
+      price: 0
+      currency: KRW
+      features:
+        - "보유 종목 3개"
+        - "호재/중립/악재 분류 + 한 줄 요약"
+        - "일 5건 카카오 알림톡"
+      recommended-for: "공시 입문 투자자"
+      monthly-free-quota: 5
+    - tier: PRO
+      price: 9900
+      currency: KRW
+      features:
+        - "무제한 종목 등록"
+        - "상세 해석 (영향 이유·예상 방향·주의사항)"
+        - "과거 유사 공시 + 주가 반응 차트"
+        - "무제한 알림 + 중요도 필터"
+        - "공시 히스토리 3개월"
+      recommended-for: "적극적 정보 수집을 원하는 투자자"
+      monthly-free-quota: 0
+    - tier: PREMIUM
+      price: 29900
+      currency: KRW
+      features:
+        - "Pro 전체 기능"
+        - "섹터·경쟁사 공시 분석"
+        - "포트폴리오 리스크 스코어"
+        - "텔레그램 봇 / 웹훅 API"
+        - "AI Q&A — 공시 대응 전략 문의"
+      recommended-for: "다수 종목을 보유한 장기 투자자"
+      monthly-free-quota: 0
+
+logging:
+  level:
+    org.flywaydb: INFO
+    com.dartcommons: DEBUG
+
+---
+# prod 프로파일: Swagger UI / API Docs 비활성화 (외부 노출 방지)
+spring:
+  config:
+    activate:
+      on-profile: prod
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

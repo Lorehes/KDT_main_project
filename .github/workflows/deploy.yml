@@ -1,0 +1,159 @@
+# [목적] main 브랜치 push 시 test → GHCR 빌드 → EC2 배포 → 헬스체크 파이프라인.
+# [이유] 수동 배포 오류 제거 + 테스트 통과 보증 후에만 프로덕션 반영.
+#   GHCR(GitHub Container Registry) 사용 — 별도 레지스트리 계정 불필요, GITHUB_TOKEN 자동 주입.
+# [사이드 임팩트] main 브랜치 보호 규칙 + PR 필수 리뷰 설정 권장 (직접 push 방지).
+#   EC2 SSH 키 로테이션 시 GitHub Secrets EC2_SSH_KEY 갱신 필수.
+# [수정 시 고려사항] 멀티 환경(staging/prod) 필요 시 environment: 와 브랜치별 분기 추가.
+#   NEXT_PUBLIC_API_URL 도메인 변경 시 GitHub Secrets NEXT_PUBLIC_API_URL 갱신 + 이미지 재빌드.
+#   백엔드 테스트(Testcontainers)는 Docker 소켓 필요 — ubuntu-latest 지원됨.
+#   EC2 GHCR 자격증명: 서버 측에 사전 구성 필요 (운영가이드 §2-5, 일 1회 설정).
+#
+# 필수 GitHub Secrets 등록 (Settings → Secrets and variables → Actions):
+#   EC2_HOST            : EC2 퍼블릭 IP 또는 도메인
+#   EC2_USER            : ubuntu (Ubuntu 24.04 기본값)
+#   EC2_SSH_KEY         : EC2 접속용 PEM 키 전체 내용 (-----BEGIN RSA PRIVATE KEY----- 포함)
+#   NEXT_PUBLIC_API_URL : https://your-domain.com (FE 빌드 타임 번들에 삽입됨)
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/dartcommons-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/dartcommons-frontend
+
+jobs:
+  # ---- Job 1: 테스트 ----
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Testcontainers가 자체 PostgreSQL 컨테이너를 생성 — services.postgres 불필요
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Run backend tests
+        working-directory: backend
+        run: ./gradlew test --no-daemon
+        env:
+          SPRING_PROFILES_ACTIVE: test
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: pnpm test
+
+  # ---- Job 2: Docker 이미지 빌드 & GHCR 푸시 ----
+  build-and-push:
+    name: Build & Push Images
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---- Job 3: EC2 배포 + 헬스체크 ----
+  deploy:
+    name: Deploy to EC2
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy and health check
+        # appleboy/ssh-action v1.2.5 SHA 핀닝 (supply chain 보안)
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/dartcommons
+
+            # GHCR 자격증명은 EC2 서버에 사전 구성됨 (운영가이드 §2-5 참고)
+            # 서버 측 ~/.docker/config.json — GITHUB_TOKEN을 워크플로 script body에 주입하지 않음
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # 헬스체크 — 최대 60초 대기 (R13)
+            echo "Waiting for backend to be healthy..."
+            for i in $(seq 1 12); do
+              if curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+                echo "Health check passed (attempt $i)"
+                exit 0
+              fi
+              echo "Attempt $i/12 — waiting 5s..."
+              sleep 5
+            done
+
+            # 헬스체크 실패 — 진단 로그 출력 후 CI FAILED 처리 (슬랙/메일 알림 트리거)
+            # :latest 이미지를 이미 pull했으므로 단순 재시작은 같은 버전 — 수동 롤백 필요
+            echo "Health check failed after 60s"
+            echo "=== Container Status ==="
+            docker compose -f docker-compose.prod.yml ps
+            echo "=== Backend Logs (last 50 lines) ==="
+            docker compose -f docker-compose.prod.yml logs --tail=50 backend
+            exit 1
