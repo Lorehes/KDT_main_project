@@ -66,8 +66,10 @@ server {
     proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 
-    # /api/ → Spring Boot Backend
-    location /api/ {
+    # /api/v1/ → Spring Boot Backend (BE 컨트롤러는 전부 /api/v1/*).
+    #   주의: /api/ 로 넓히면 프론트의 Next API 라우트(/api/auth/callback·refresh·logout·session)까지
+    #   백엔드로 빨려가 OAuth 콜백 등이 깨진다 → 반드시 /api/v1/ 로 한정.
+    location /api/v1/ {
         proxy_pass http://dartcommons_backend;
         proxy_read_timeout 60s;
         proxy_connect_timeout 10s;

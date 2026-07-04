@@ -11,6 +11,27 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | nginx /api/v1/ 한정 + NEXT_PUBLIC_API_URL /api/v1 — OAuth/API 라우팅 근본 수정
+
+**요청**: 소셜 로그인이 아무것도 안 됨.
+
+**원인 (버그 2개 겹침)**:
+1. `NEXT_PUBLIC_API_URL=https://gangwoncanvas.co.kr` (`/api/v1` 누락) → FE apiClient가 `/auth/oauth/kakao/url`(v1 없음)을 호출 → nginx `/api/`에 걸려 백엔드로 가지 않고 프론트로 라우팅돼 307→로그인 리다이렉트. BE 컨트롤러 코드 주석에 "기대값은 `.../api/v1`" 명시돼 있었음.
+2. nginx `location /api/`가 너무 넓어 FE의 Next API 라우트(`/api/auth/callback·refresh·logout·session`)까지 백엔드로 뺏김 → OAuth 콜백 401.
+
+Playwright 네트워크 캡처로 FE 실제 호출(`GET .../auth/oauth/kakao/url → 307`)와 올바른 경로(`/api/v1/auth/oauth/kakao/url → 200 + Kakao URL 실값 반환)를 직접 확인.
+
+**작업**:
+- `nginx/dartcommons.conf.template`: `location /api/` → `location /api/v1/` (주석으로 이유 명시)
+- `docker-compose.yml`: FE build arg 기본값 `/api/v1` 추가
+- `.env`: `NEXT_PUBLIC_API_URL=https://gangwoncanvas.co.kr/api/v1` (서버 수동 반영 필요, gitignore)
+
+**결정**: `/api/` 패턴은 FE의 Next API 라우트와 충돌하는 구조적 결함. `/api/v1/`로 한정하는 게 항구적 정답. 추후 FE Next 라우트를 `/api-next/` 같은 별도 prefix로 옮기면 더 명확하지만 현재는 nginx 패턴 좁힘으로 해결.
+
+**미완료**: Kakao 개발자 콘솔 redirect_uri 등록 확인 필요 (`https://gangwoncanvas.co.kr/api/auth/callback/kakao`).
+
+---
+
 ## 2026-07-05 | CSP script-src unsafe-inline 추가 — 사이트 백지 렌더 수정
 
 **요청**: `https://gangwoncanvas.co.kr` 접속 시 화면이 백지로 뜸.
