@@ -108,7 +108,7 @@ function DisclosuresFeedContent() {
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground">공시 피드</h1>
         {q ? (
           <p className="mt-1 text-sm text-muted-foreground">
-            <span className="font-bold text-foreground">'{q}'</span> 검색 결과
+            <span className="font-bold text-foreground">&apos;{q}&apos;</span> 검색 결과
           </p>
         ) : (
           <p className="mt-1 text-sm text-muted-foreground">보유 종목의 공시를 날짜별로 확인하세요.</p>

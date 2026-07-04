@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NextRequest } from "next/server";
 
 // ── next/server mock ──────────────────────────────────────────────────────────
 // middleware.ts는 Edge Runtime 전용 next/server를 사용.
@@ -30,7 +31,7 @@ function makeToken(payload: object): string {
   return `${encode({ alg: "HS256" })}.${encode(payload)}.fake`;
 }
 
-function makeRequest(pathname: string, cookieOverrides: Record<string, string> = {}): any {
+function makeRequest(pathname: string, cookieOverrides: Record<string, string> = {}): NextRequest {
   const url = `http://localhost${pathname}`;
   const cookieMap = new Map(Object.entries(cookieOverrides));
   return {
@@ -39,7 +40,7 @@ function makeRequest(pathname: string, cookieOverrides: Record<string, string> =
     cookies: {
       get: (name: string) => cookieMap.has(name) ? { name, value: cookieMap.get(name)! } : undefined,
     },
-  };
+  } as unknown as NextRequest;
 }
 
 // ── 테스트 케이스 ─────────────────────────────────────────────────────────────

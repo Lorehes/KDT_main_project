@@ -26,9 +26,9 @@ function LoginForm() {
   const oauthError = searchParams.get("error");
   const { mutateAsync, isPending } = useLogin();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, setError, formState: { errors } } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema as any), // Zod v4 ↔ @hookform/resolvers 타입 충돌 억제 (런타임 정상)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod v4 ↔ @hookform/resolvers 타입 충돌 억제 (런타임 정상)
+    resolver: zodResolver(loginSchema as any),
   });
 
   const onSubmit = async (data: LoginFormValues) => {

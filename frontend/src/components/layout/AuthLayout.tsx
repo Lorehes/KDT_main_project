@@ -38,7 +38,7 @@ export function AuthLayout({ heading, subtext, children }: AuthLayoutProps) {
         </div>
 
         <p className="border-t border-white/10 pt-5 text-sm text-blue-300/80">
-          "공시는 떴는데 의미를 모르겠다" — 더 이상 검색하지 마세요. 공시레이더가 호재·악재를 판별해 드립니다.
+          &ldquo;공시는 떴는데 의미를 모르겠다&rdquo; — 더 이상 검색하지 마세요. 공시레이더가 호재·악재를 판별해 드립니다.
         </p>
       </aside>
 

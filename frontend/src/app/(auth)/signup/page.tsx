@@ -25,9 +25,9 @@ export default function SignupPage() {
   const { setEmail, setPassword } = useSignupStore();
   const sendEmailOtp = useSendEmailOtp();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema as any), // Zod v4 ↔ @hookform/resolvers 타입 충돌 억제 (런타임 정상)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod v4 ↔ @hookform/resolvers 타입 충돌 억제 (런타임 정상)
+    resolver: zodResolver(signupSchema as any),
   });
 
   const onSubmit = async (data: SignupFormValues) => {

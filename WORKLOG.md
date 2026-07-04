@@ -11,6 +11,19 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-04 | ESLint 에러 5곳 수정 — 빌드 게이트 복구
+
+**요청**: next build(프로덕션)에서 ESLint 에러 5건으로 빌드가 종료되는 문제 해결. next dev에서는 경고로 흘렀으나 CI/Docker 빌드에서 첫 발견.
+
+**작업**:
+- `no-unescaped-entities`: disclosures/page.tsx `'{q}'` → `&apos;{q}&apos;`, AuthLayout.tsx `"..."` → `&ldquo;...&rdquo;`
+- `no-explicit-any` (disable 위치 오류): login/page.tsx, signup/page.tsx — eslint-disable 지시문을 실제 위반 줄(`resolver=`) 바로 위로 이동. 이전엔 한 줄 어긋나 있어 규칙이 작동 안 했음.
+- `no-explicit-any` (테스트): middleware.test.ts `makeRequest` 반환형 `any` → `NextRequest` + `import type` 추가.
+
+**결정**: login/signup의 `zodResolver(schema as any)` 유지 — Zod v4 ↔ @hookform/resolvers 타입 충돌이 런타임에는 정상이므로 `any` 자체는 정당. disable 지시문 위치만 수정.
+
+---
+
 ## 2026-07-04 | Lightsail 배포 스택 완성 + .env 단일 파일화
 
 **요청**: docker-compose.yml을 AWS Lightsail에 올려 BE·FE·certbot·Nginx 동작하도록 설정. 이후 "런타임 env는 .env 하나만" + "서버 단일 파일로 동작하도록 .env 수정" 요구.
