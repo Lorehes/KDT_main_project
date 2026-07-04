@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-01
-updated: 2026-07-01
+updated: 2026-07-05
 ---
 
 # Stage 3 임베딩 백필 Spec
 
-> 상태: **Approved** (2026-07-01, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-07-05, 구현 완료 — 커밋 0a07004: V26 마이그레이션 + EmbeddingBackfill 서비스/컨트롤러/잡 + OllamaEmbeddingClient 절삭(R1) + maxChars 설정(R2) + EmbeddingBackfillJobIT(R7))
 
 ## 배경 / 목적
 

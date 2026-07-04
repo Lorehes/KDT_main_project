@@ -11,6 +11,14 @@ updated: 2026-07-04
 
 ---
 
+## 2026-07-05 | Approved 스펙 2개 Done 전환
+
+구현 완료 확인 후 `git mv` (이력 보존)로 Done 이동, frontmatter status·updated·본문 메타 갱신.
+- `stage3-embedding-backfill` — 커밋 0a07004 (V26+EmbeddingBackfill+절삭+maxChars+테스트)
+- `reanalyze-after-charset-recollection` — 커밋 64bb08a (ReanalysisService+deleteByDisclosureIdIn+테스트)
+
+---
+
 ## 2026-07-05 | 온보딩 완료 후 대시보드 경쟁 조건 수정 — goDashboard refresh await
 
 **요청**: 가입완료 페이지에서 "대시보드로 이동" 클릭 시 `/signup/terms/oauth`(약관)로 튕김.

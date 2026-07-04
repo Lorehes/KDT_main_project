@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-07-05
 ---
 
 # charset 재수집 후 손상본 기반 분석결과 재분석 Spec
 
-> 상태: Draft → **Approved** (2026-07-04, dc-tech-review 승인 + 결정 4건 확정)
+> 상태: Approved → **Done** (2026-07-05, 구현 완료 — 커밋 64bb08a: ReanalysisService/Controller + AnalysisResultRepository.deleteByDisclosureIdIn + ReanalysisServiceIntegrationTest)
 
 ## 배경 / 목적
 
