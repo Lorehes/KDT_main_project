@@ -143,7 +143,7 @@ class DisclosureControllerTest {
         String token = signupAndGetToken(uniqueEmail());
         addPortfolio(token, "005930");
 
-        // FREE 티어는 오늘 날짜만 반환 — 과거 날짜 삽입 시 0건 (BM 정책, dashboard-real-data R3)
+        // FREE 티어는 최근 5일 창 내 공시만 반환 — 오늘 날짜 삽입으로 창 내 보장 (portfolios-recent-disclosures-5d)
         String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
         insertDisclosure(uniqueRceptNo(), "005930", today);
         insertDisclosure(uniqueRceptNo(), "000660", today);
@@ -240,7 +240,7 @@ class DisclosureControllerTest {
         String token = signupAndGetToken(uniqueEmail());
         addPortfolio(token, "005930");
 
-        // FREE 티어는 오늘 날짜만 반환 — 과거 날짜 삽입 시 0건 (BM 정책, dashboard-real-data R3)
+        // FREE 티어는 최근 5일 창 내 공시만 반환 — 오늘 날짜 삽입으로 창 내 보장 (portfolios-recent-disclosures-5d)
         String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
         String withheldRcept = uniqueRceptNo();
         long withheldId = insertDisclosure(withheldRcept, "005930", today);
@@ -348,7 +348,7 @@ class DisclosureControllerTest {
     void list_rceptDt_basicIsoDate_noHyphens() throws Exception {
         String token = signupAndGetToken(uniqueEmail());
         addPortfolio(token, "005930");
-        // FREE 티어는 오늘 날짜만 반환 — 과거 날짜 삽입 시 0건 (BM 정책, dashboard-real-data R3)
+        // FREE 티어는 최근 5일 창 내 공시만 반환 — 오늘 날짜 삽입으로 창 내 보장 (portfolios-recent-disclosures-5d)
         insertDisclosure(uniqueRceptNo(), "005930", LocalDate.now(ZoneId.of("Asia/Seoul")).toString());
 
         String resp = mockMvc.perform(get("/api/v1/disclosures")

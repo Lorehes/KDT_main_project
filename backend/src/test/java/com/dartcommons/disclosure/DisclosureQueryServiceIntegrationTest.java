@@ -33,15 +33,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /*
  * [목적] DisclosureQueryService FREE/PRO 티어 날짜 정책 + size 클램핑 통합 테스트.
- *       FREE 날짜 강제(오늘만), FREE size 클램핑(≤5) + total_elements 정확성, PRO 과거 날짜 통과를 검증.
- * [이유] 티어별 공시 접근 정책(dashboard-real-data R3)은 비즈니스 핵심 규칙 — Testcontainers PostgreSQL로
- *       실 DB 검증(Mock DB 금지, CLAUDE.md §6-6). 날짜/size 오버라이드는 서비스 레이어에서 발생하므로
- *       HTTP 계층 E2E 테스트가 유일한 통합 검증 경로.
+ *       FREE 5일 경계 클램프(창 내 포함·창 밖 제외·from>to 역전), FREE size 클램핑(≤5) + total_elements 정확성,
+ *       PRO 과거 날짜 통과를 검증.
+ * [이유] 티어별 공시 접근 정책(portfolios-recent-disclosures-5d — dashboard-real-data R3 완화)은
+ *       비즈니스 핵심 규칙 — Testcontainers PostgreSQL로 실 DB 검증(Mock DB 금지, CLAUDE.md §6-6).
+ *       날짜/size 오버라이드는 서비스 레이어에서 발생하므로 HTTP 계층 E2E 테스트가 유일한 통합 검증 경로.
  * [사이드 임팩트] 각 테스트는 고유 이메일 + UUID rcept_no로 데이터 간섭 없음.
  *               V10 seed 종목(005930)을 FK 참조 — 해당 스탁코드가 stocks 테이블에 존재해야 함.
  *               FREE 티어 size 클램핑 테스트는 공시 6건을 삽입하므로 다른 테스트와 날짜 충돌 없음
  *               (고유 이메일 포트폴리오로 격리).
  * [수정 시 고려사항] FREE 티어 일 최대 건수 정책(현재 5) 변경 시 size 클램핑 어서션도 함께 수정.
+ *                  FREE 날짜 창(FREE_WINDOW_DAYS, 현재 5일) 변경 시 창 경계 테스트의 minusDays 값도 동기화.
  *                  PRO 날짜 통과 테스트는 과거 고정 날짜("2025-01-15") 사용 — 해당 날짜 공시가
  *                  다른 테스트와 겹칠 수 있으나 포트폴리오 격리로 안전.
  */
@@ -132,47 +134,85 @@ class DisclosureQueryServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("FREE 티어 날짜 강제 — 어제 공시 삽입 후 from=yesterday 파라미터 전달해도 어제 공시는 응답에 없음")
-    void freeTier_dateForced_yesterdayDisclosureExcluded() throws Exception {
+    @DisplayName("FREE 티어 5일 경계 클램프 — 창 내(어제) 공시 포함, 창 밖(6일 전) 공시 제외")
+    void freeTier_fiveDayWindowClamp_insideIncluded_outsideExcluded() throws Exception {
         String token = signupAndGetToken(uniqueEmail());
-        addPortfolio(token, "005930");
+        // 066570: 본 클래스 전용 종목 — 005930은 타 테스트가 오늘 공시를 다수 삽입해
+        // FREE page=0·size≤5 고정 + 최신순 정렬에서 어제 공시가 첫 페이지 밖으로 밀림(격리 목적)
+        addPortfolio(token, "066570");
 
-        // 어제 날짜 공시 삽입 — 고유 rcept_no로 식별
-        String yesterday = LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1).toString();
-        String yesterdayRceptNo = uniqueRceptNo();
-        insertDisclosure(yesterdayRceptNo, "005930", yesterday);
+        LocalDate seoulToday = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        // 정확한 경계 픽스처로 off-by-one 고정 (5일 창 = [today-4, today]):
+        //   창 내부점: 어제 / 창 시작 경계(포함): today-4 / 창 밖 첫 날(제외): today-5 / 창 밖 내부점: today-6
+        String yesterday   = seoulToday.minusDays(1).toString();
+        String windowStart = seoulToday.minusDays(4).toString();
+        String justOutside = seoulToday.minusDays(5).toString();
+        String sixDaysAgo  = seoulToday.minusDays(6).toString();
+        String insideRceptNo      = uniqueRceptNo();
+        String boundaryRceptNo    = uniqueRceptNo();
+        String justOutsideRceptNo = uniqueRceptNo();
+        String outsideRceptNo     = uniqueRceptNo();
+        insertDisclosure(insideRceptNo,      "066570", yesterday);
+        insertDisclosure(boundaryRceptNo,    "066570", windowStart);
+        insertDisclosure(justOutsideRceptNo, "066570", justOutside);
+        insertDisclosure(outsideRceptNo,     "066570", sixDaysAgo);
 
-        // from=yesterday, to=yesterday 파라미터를 전달해도 FREE 티어는 오늘로 오버라이드됨
+        // from=6일 전을 요청해도 FREE는 창 시작(today-4)으로 당겨짐 — 창 내 2건 통과, 창 밖 2건 제외
         String resp = mockMvc.perform(get("/api/v1/disclosures")
                         .header("Authorization", "Bearer " + token)
-                        .param("from", yesterday)
-                        .param("to",   yesterday))
+                        .param("from", sixDaysAgo)
+                        .param("to",   seoulToday.toString())
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode content = objectMapper.readTree(resp).get("content");
+
+        String windowStartBasic = windowStart.replace("-", "");
+        boolean hasInside = false;
+        boolean hasBoundary = false;
+        for (JsonNode item : content) {
+            String rceptDt = item.get("rcept_dt").asText(); // YYYYMMDD 포맷
+            // content 내 모든 항목은 5일 창 안이어야 함 — 창 밖(today-5 이하) 절대 포함 불가
+            assertThat(rceptDt.compareTo(windowStartBasic))
+                    .withFailMessage("FREE 5일 클램프 실패: 창 밖(%s < %s) 공시가 응답에 포함됨", rceptDt, windowStartBasic)
+                    .isGreaterThanOrEqualTo(0);
+            String rceptNo = item.get("rcept_no").asText();
+            if (rceptNo.equals(insideRceptNo))   hasInside = true;
+            if (rceptNo.equals(boundaryRceptNo)) hasBoundary = true;
+            assertThat(rceptNo)
+                    .as("창 밖 공시(today-5=%s, today-6=%s)가 FREE 응답에 포함되면 안 됨", justOutsideRceptNo, outsideRceptNo)
+                    .isNotIn(justOutsideRceptNo, outsideRceptNo);
+        }
+        // 어제(창 내부점) — 기존 "오늘 강제" 시절에는 제외되던 케이스
+        assertThat(hasInside)
+                .as("어제 공시(rcept_no=%s)는 5일 창 내이므로 FREE 응답에 포함되어야 함", insideRceptNo)
+                .isTrue();
+        // today-4(창 시작 경계, 포함) — FREE_WINDOW_DAYS·minusDays 펜스포스트 회귀를 정확히 고정
+        assertThat(hasBoundary)
+                .as("창 시작 경계 공시(today-4, rcept_no=%s)는 포함되어야 함 — off-by-one 회귀 감지", boundaryRceptNo)
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("FREE 티어 클램프 후 from>to 역전 — 미래 from 요청 시 빈 결과 (오류 아님)")
+    void freeTier_clampedRangeInverted_returnsEmpty() throws Exception {
+        String token = signupAndGetToken(uniqueEmail());
+        addPortfolio(token, "066570"); // 격리용 전용 종목 (위 테스트 주석 참조)
+
+        // 오늘 공시가 존재해도 from=내일이면 [내일, 오늘] 역전 범위 → 0건
+        LocalDate seoulToday = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        insertDisclosure(uniqueRceptNo(), "066570", seoulToday.toString());
+
+        String resp = mockMvc.perform(get("/api/v1/disclosures")
+                        .header("Authorization", "Bearer " + token)
+                        .param("from", seoulToday.plusDays(1).toString()))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         JsonNode page = objectMapper.readTree(resp);
-        JsonNode content = page.get("content");
-
-        // FREE 티어: 어제 공시는 오늘 날짜 강제로 인해 응답에 포함되지 않음
-        String todayBasic = LocalDate.now(ZoneId.of("Asia/Seoul")).toString().replace("-", "");
-        String yesterdayBasic = yesterday.replace("-", "");
-        for (JsonNode item : content) {
-            String rceptDt = item.get("rcept_dt").asText(); // YYYYMMDD 포맷
-            // content 내 모든 항목은 오늘 날짜여야 함 — 어제 날짜 절대 포함 불가
-            assertThat(rceptDt).isNotEqualTo(yesterdayBasic)
-                    .withFailMessage("FREE 티어 날짜 강제 실패: 어제(%s) 공시가 응답에 포함됨", yesterdayBasic);
-            assertThat(rceptDt).isEqualTo(todayBasic);
-        }
-        // 어제 삽입한 공시(yesterdayRceptNo)가 rcept_no 기준으로 응답에 없어야 함
-        boolean hasYesterdayDisclosure = false;
-        for (JsonNode item : content) {
-            if (item.get("rcept_no").asText().equals(yesterdayRceptNo)) {
-                hasYesterdayDisclosure = true;
-            }
-        }
-        assertThat(hasYesterdayDisclosure)
-                .as("어제 삽입한 공시(rcept_no=%s)가 FREE 티어 응답에 포함되면 안 됨", yesterdayRceptNo)
-                .isFalse();
+        assertThat(page.get("content").size()).isZero();
+        assertThat(page.get("page").get("total_elements").asLong()).isZero();
     }
 
     @Test

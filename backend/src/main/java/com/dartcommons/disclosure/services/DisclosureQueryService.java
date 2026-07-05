@@ -34,19 +34,27 @@ import java.util.stream.Collectors;
  * [사이드 임팩트] PortfolioRepository 직접 의존 제거 — UserStockCodesProvider 인터페이스로 격리(R4).
  *               sentiment 필터를 DB 레벨 native query JOIN으로 처리 — totalElements/totalPages 정확도 개선.
  *               scope=all은 Free 사용자 차단 — Pro 이상만 전체 공시 피드 열람 가능.
- *               Free 티어: fromDate/toDate=오늘(Asia/Seoul) + page=0 + size≤5 강제(dashboard-real-data R3).
+ *               Free 티어: fromDate/toDate를 최근 5일(Asia/Seoul, 오늘 포함) 창으로 경계 클램프
+ *               + page=0 + size≤5 강제(portfolios-recent-disclosures-5d — dashboard-real-data R3의 "오늘 강제"에서 완화).
+ *               날짜 미지정 Free 호출(예: disclosures 피드)의 조회 범위가 오늘 → 최근 5일로 넓어짐 — 의도된 완화.
  * [수정 시 고려사항] stock_code 파라미터와 scope=portfolio 동시 지정 시 교집합 필터로 처리.
  *                  stockCodes null 분기(scope=all)는 findAllFilteredWithSentiment, non-null은 findFilteredByStocksWithSentiment.
  *                  ids.isEmpty() 가드: Hibernate가 IN()을 SQL 오류로 변환하므로 빈 컬렉션일 때 DB 호출 생략.
  *                  sentimentStr: Sentiment enum → name() 변환 후 native query에 전달. null → 전체 반환.
  *                  size 이중 방어: 컨트롤러 @Max(100) + 서비스 진입부 Math.min — AOP 우회(직접 호출 등) 방어선.
  *                  Free 강제 블록은 scope=all 403 분기 이후에 위치 — scope=all FREE는 이미 차단됨.
+ *                  Free 클램프는 창 밖 값만 안쪽으로 당기는 방식 — from=to=오늘을 명시 전송하는 dashboard 결과 불변.
+ *                  클램프 후에도 from>to 역전 가능(예: from=미래 날짜) — 빈 결과 반환이 정상 동작(테스트로 고정).
+ *                  FREE_WINDOW_DAYS 변경 시 [[dashboard-recent-3days]]의 3일 창(⊂5일 전제)과 통합 테스트도 함께 검토.
  *                  q 빈 문자열 → null 정규화는 서비스 진입부에서 처리 — 컨트롤러 검증 레이어와 책임 분리.
  *                  q는 Free 티어 날짜·size 강제 이후에도 그대로 전달 — 날짜 범위 내 키워드 검색.
  */
 @Service
 @RequiredArgsConstructor
 public class DisclosureQueryService {
+
+    /** Free 티어 조회 가능 날짜 창(오늘 포함 일수). 건수 제한(일 5건)과 별개의 날짜 축 정책. */
+    private static final int FREE_WINDOW_DAYS = 5;
 
     private final DisclosureRepository      disclosureRepository;
     private final AnalysisResultRepository  analysisResultRepository;
@@ -79,12 +87,15 @@ public class DisclosureQueryService {
                     "scope=all은 Pro 이상 플랜에서 사용 가능합니다.");
         }
 
-        // Free 티어: 오늘(Asia/Seoul) + page=0 + 최대 5건 강제 (BM 정책 일 5건, dashboard-real-data R3)
+        // Free 티어: 최근 5일(Asia/Seoul, 오늘 포함) 경계 클램프 + page=0 + 최대 5건 강제
+        // (portfolios-recent-disclosures-5d — "오늘 강제"에서 완화. 건수 축 BM 정책은 유지)
+        // 창 밖 값만 안쪽으로 당김 — 창 안의 명시 요청(예: dashboard from=to=오늘)은 그대로 통과
         // scope=all FREE는 위 403에서 이미 차단됨 — 여기는 scope=portfolio 또는 stockCode 단건 경로
         if (tier == Tier.FREE) {
             LocalDate seoulToday = LocalDate.now(ZoneId.of("Asia/Seoul"));
-            fromDate = seoulToday;
-            toDate = seoulToday;
+            LocalDate windowStart = seoulToday.minusDays(FREE_WINDOW_DAYS - 1L);
+            fromDate = (fromDate == null || fromDate.isBefore(windowStart)) ? windowStart : fromDate;
+            toDate   = (toDate == null || toDate.isAfter(seoulToday)) ? seoulToday : toDate;
             page = 0;
             size = Math.min(size, 5);
         }

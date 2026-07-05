@@ -4,22 +4,32 @@
 // [이유] /portfolios 를 단순 종목 등록 페이지에서 대시보드로 개편 (종목 등록은 /portfolios/new 로 이동).
 //   상단 카드는 GET /portfolios/summary 서버 집계(대시보드와 동일 소스), 테이블 행은 목록 응답의
 //   close_price(공개 시세)로 클라이언트 계산 — 별도 API 추가 없이 기존 응답 재사용.
-// [사이드 임팩트] usePortfolios·usePortfolioSummary·useDisclosures(scope:"portfolio") 사용.
+// [사이드 임팩트] usePortfolios·usePortfolioSummary·useDisclosures(scope:"portfolio")·useTodaySeoul 사용.
 //   행 정렬 = 평가손익 내림차순(계산 불가 행은 뒤로) — 헤더 "평가손익순" 라벨과 정합.
+//   종목별 최근 공시 쿼리는 최근 5일(Asia/Seoul, 오늘 포함) from/to 필터 — 패널과 테이블 "최근 공시" 배지가
+//   같은 응답을 공유하므로 배지도 5일 창 기준(창 밖이면 "—"). Free 티어는 BE가 5일 창 + 5건으로 클램프.
 // [수정 시 고려사항] close_price는 KrxPriceSyncJob 일배치(18:00 KST) 기준 — 미수집(null) 시 해당 셀 "—" 폴백.
 //   수익률/평가금액은 avg_buy_price·quantity가 null이면 계산 불가 → "—" (엣지: 선택 입력 항목).
 //   매수가·수량 console.log 절대 금지 (금융 개인정보, CLAUDE.md §7). 손익은 사실 표시만 — 투자 권유 표현 금지(§11.1).
+//   RECENT_DISCLOSURE_DAYS 변경 시 패널 "최근 5일" 라벨·빈 상태 문구도 동기화.
+//   BE FREE_WINDOW_DAYS(5일)보다 크게 잡으면 Free는 라벨-실데이터 불일치 발생(DisclosureQueryService 참조).
+//   getWeekRange()는 로컬 TZ 기준(이번 주 카드 전용) — 최근 N일 계산에 복사 금지, shiftDateStr+useTodaySeoul 사용.
 
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePortfolios, usePortfolioSummary, type Portfolio } from "@/lib/api/portfolios";
 import { useDisclosures, type Sentiment } from "@/lib/api/disclosures";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
+import { useTodaySeoul } from "@/lib/hooks/useTodaySeoul";
+import { shiftDateStr } from "@/lib/date/shiftDateStr";
 import { StatCard, PnlStatCard, formatKrwCompact } from "@/components/domain/StatCards";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+/** 종목별 최근 공시 조회 창(오늘 포함 일수). BE Free 클램프 창(FREE_WINDOW_DAYS=5)과 동기 — 초과 금지. */
+const RECENT_DISCLOSURE_DAYS = 5;
 
 function getWeekRange() {
   const now = new Date();
@@ -67,9 +77,14 @@ export default function PortfoliosDashboardPage() {
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
   const { data: summary } = usePortfolioSummary();
   const { from, to } = useMemo(() => getWeekRange(), []);
+  // 최근 5일 창 — useTodaySeoul 파생이라 자정 경과 시 자동 갱신(쿼리 키 변경 → 리페치)
+  const today = useTodaySeoul();
+  const recentFrom = useMemo(() => shiftDateStr(today, -(RECENT_DISCLOSURE_DAYS - 1)), [today]);
 
   const { data: allPortfolioDisclosures, isLoading: disclosuresLoading } = useDisclosures({
     scope: "portfolio",
+    from: recentFrom,
+    to: today,
     size: 50,
     sort: "rcept_dt,desc",
   });
@@ -304,7 +319,10 @@ export default function PortfoliosDashboardPage() {
           {/* 종목별 최근 공시 */}
           <div className="rounded-2xl border border-border bg-card shadow-sm">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <p className="font-extrabold text-foreground">🔔 종목별 최근 공시</p>
+              <p className="font-extrabold text-foreground">
+                🔔 종목별 최근 공시{" "}
+                <span className="text-xs font-semibold text-muted-foreground">최근 {RECENT_DISCLOSURE_DAYS}일</span>
+              </p>
               <Link
                 href="/disclosures?scope=portfolio"
                 className="text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -324,7 +342,9 @@ export default function PortfoliosDashboardPage() {
                   </div>
                 ))
               ) : !recentList.length ? (
-                <p className="px-5 py-6 text-center text-sm text-muted-foreground">아직 공시가 없습니다.</p>
+                <p className="px-5 py-6 text-center text-sm text-muted-foreground">
+                  최근 {RECENT_DISCLOSURE_DAYS}일 내 공시가 없습니다.
+                </p>
               ) : (
                 recentList.slice(0, 5).map((d) => (
                   <Link

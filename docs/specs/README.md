@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-07-05 (price-backfill-partial-status Done)
+updated: 2026-07-05 (portfolios-recent-disclosures-5d·dashboard-recent-3days Done 전환)
 ---
 
 # Specs MOC
@@ -35,6 +35,8 @@ docs/specs/
 ### Approved
 
 ### Done
+- [[portfolios-recent-disclosures-5d]] — /portfolios 종목별 최근 공시 최근 5일: BE Free 클램프 5일 경계 완화 + FE from/to·라벨, 경계 픽스처 IT (2026-07-05 Done)
+- [[dashboard-recent-3days]] — /dashboard 공시 피드 최근 3일 확장: from=오늘-2·size 20·문구 4곳, Playwright 실캡처 검증 (2026-07-05 Done)
 - [[price-backfill-partial-status]] — 주가 백필 PARTIAL 상태: Status enum 5종 + 안전망 분기(datesOk>0→PARTIAL/==0→FAILED) + Flyway V29, IT 5/5 (2026-07-05 Done)
 - [[analysis-stage3-rag-chroma]] — Stage 3 RAG: Chroma 벡터 DB + Ollama 임베딩 + 이중 쿼리 파티셔닝, Pro+ 유사 공시 조회 (2026-06-30 Done)
 - [[topbar-global-search]] — TopBar 글로벌 검색: Enter → /disclosures?q= 라우팅, BE ILIKE 4쿼리 추가 (2026-06-26 Done)
