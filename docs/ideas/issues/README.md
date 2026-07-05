@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-06-23
-updated: 2026-07-05
+updated: 2026-07-06
 ---
 
 # 이슈 (Issues)
@@ -14,6 +14,7 @@ updated: 2026-07-05
 
 | 이슈 | 상태 | 발견일 | 우선순위 |
 |------|------|--------|----------|
+| [[promptguard-negation-evasion]] — PromptGuard 부정문·우회 표현 미탐 (정규식 한계, 다층 방어로 커버) | **Open** | 2026-07-06 | P3 |
 | [[e2e-portfolio-keyboard-nav-failing]] — E2E 종목검색 키보드 네비 (a)(b) 실패 (HEAD 기존 결함) | **Open** | 2026-07-05 | P2 |
 | [[week-disclosure-count-color-only]] — /portfolios "이번 주 공시" 3/2/0 색상 단독 구분 (§6-5) | **Closed (→ Spec: week-sentiment-count-a11y)** | 2026-07-05 | P2 |
 | [[disclosure-card-raw-rcept-dt-format]] — DisclosureCard 날짜 원시 포맷(YYYYMMDD) 노출 | **Closed (→ Spec: disclosure-date-format-unify)** | 2026-07-05 | P3 |

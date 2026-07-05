@@ -11,6 +11,29 @@ updated: 2026-07-06
 
 ---
 
+## 2026-07-06 | Stage 4 LLM 최종 판단 — expected_reaction·rationale 산출 (Wave 1+2)
+
+### 완료
+- **Stage4Output** record + **LlmClient.classifyStage4**(Ollama/OpenRouter/Mock 3종) + **PromptGuard.isRationaleViolation** 추가.
+- **Stage4PromptBuilder**: Stage2결과 + 유사공시(최대 10건) + D+1~D+5 실측 주가반응 조립. 실측 수치 그대로 주입, "제공된 수치만 사용" 강제.
+- **Stage4Analyzer**: 유사표본0/withheld/already-stage4 skip + LLM호출(@Retryable 단일 위임) + PromptGuard + `AnalysisResult.applyStage4()` UPDATE. confidence는 Stage2 값 보존.
+- **AnalysisOrchestrator**: Stage3 → Stage4 트리거(실패 격리). 신규 공시 즉시 파이프라인 적용.
+- **Stage4BackfillService**: 연속 LLM 예외 30건(성공 리셋) 조기중단 + stage=2 필터 기반 멱등 재개. **Stage4BackfillController**: `POST /admin/analysis/stage4-backfill` + 진행률 GET.
+- **테스트**: Stage4AnalyzerTest 5건 + AnalysisResponseTest PRO stage4 분기. analysis 72/72 통과.
+- **dc-review-code P0~P1 반영**: (S-1) @Retryable+callWithSingleRetry 이중재시도→최대 6회 수정 → @Retryable 3회 단일. (C-1) skip/fail 미분리 조기중단 재설계 — 연속 예외 30건(성공 리셋). (C-2) 커서 재개 주석 정합(커서 미영속, stage=2 필터 멱등). (C-3) @Transactional 제거(Chroma HTTP 커넥션 홀드 방지).
+- **이슈 등록**: `docs/ideas/issues/promptguard-negation-evasion.md` (Open, P3) — 재검토 트리거 명시(LLM교체/운영실측/Stage5).
+
+### 결정
+- **예산 전략 (C)**: 유사 공시 표본 0이면 Stage 4 skip(Stage 2 종결).
+- **confidence 보존**: Stage 4는 expected_reaction·rationale·stageReached만 UPDATE.
+- **재시도 단일 레이어**: callWithSingleRetry 패턴 비채택 — Stage4는 @Retryable(3회) 단일 위임.
+- **백필 = 서버 야간 분할**: 연속 LLM 예외 30건 중단 후 다음날 POST 재호출(멱등).
+
+### 미완료 → 다음 세션
+- **Stage 4 백필 실행**: `POST /admin/analysis/stage4-backfill` — 기존 stage_reached=2 대상 ~19,609건. 서버 야간 분할.
+- **Pro 계정 실데이터 확인**: 브라우저에서 expected_reaction·rationale 렌더 확인.
+- **Stage 5** (재무/업황): 별도 Spec. AnalysisStage 상수화 이 때 함께.
+
 ## 2026-07-06 | Stage 3 임베딩 백필 완료 + 프로덕션 이관 — RAG 가동 (운영)
 
 ### 완료

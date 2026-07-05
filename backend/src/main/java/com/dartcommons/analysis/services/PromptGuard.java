@@ -53,6 +53,16 @@ public class PromptGuard {
     );
 
     /**
+     * Stage 4 rationale 단독 가드 — 자본시장법 금지 표현 차단(§11.1).
+     *
+     * @return true이면 위반 — Stage4Analyzer가 해당 건을 skip(Optional.empty)하고 stage_reached 2 유지.
+     *         rationale 저장·노출 자체가 일어나지 않음(빈 문자열 대체 아님).
+     */
+    public boolean isRationaleViolation(String rationale) {
+        return containsForbidden(rationale);
+    }
+
+    /**
      * LLM 원응답에 가드 적용 — sanitize된 새 Stage2Output 반환.
      * 원본은 변경하지 않음(record 불변).
      *

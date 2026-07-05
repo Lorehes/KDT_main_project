@@ -101,4 +101,25 @@ public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, 
             @Param("idFrom") Long idFrom,
             @Param("idTo") Long idTo
     );
+
+    /**
+     * Stage 4 백필 대상 — stage_reached=2이고 withheld=false인 분석 결과 id 목록(커서 페이지네이션).
+     * Stage 4 skip 조건(withheld, 유사표본 없음)은 Stage4Analyzer 내부에서 처리.
+     * analysis-stage4-llm-final Spec 결정 (C): 유사표본 없는 건은 Analyzer skip — 여기서 미리 필터링 안 함.
+     */
+    @Query("""
+            SELECT ar.disclosureId FROM AnalysisResult ar
+            WHERE ar.stageReached = 2
+            AND ar.withheld = false
+            AND (:lastId IS NULL OR ar.disclosureId > :lastId)
+            ORDER BY ar.disclosureId ASC
+            """)
+    List<Long> findStage4BackfillTargets(
+            @Param("lastId") Long lastId,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    /** Stage 4 백필 대상 총 건수 (근사치, safetyCap 산출용). */
+    @Query("SELECT COUNT(ar) FROM AnalysisResult ar WHERE ar.stageReached = 2 AND ar.withheld = false")
+    long countStage4BackfillTargets();
 }

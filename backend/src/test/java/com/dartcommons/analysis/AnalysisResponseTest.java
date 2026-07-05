@@ -67,8 +67,31 @@ class AnalysisResponseTest {
         assertThat(resp.expectedReaction()).isEqualTo(AnalysisResult.ExpectedReaction.UP);
         assertThat(resp.rationale()).isEqualTo("과거 유사 공시 분석 근거");
         assertThat(resp.disclaimer()).isEqualTo(AnalysisResponse.DISCLAIMER);
-        // Stage 5 미구현
         assertThat(resp.financialContext()).isNull();
+    }
+
+    @Test
+    @DisplayName("PRO 티어 — Stage 4 UPDATE 후(stage_reached=4) expected_reaction·rationale 비null 보장")
+    void from_proTier_stage4Updated() {
+        // Stage4Analyzer.applyStage4() 호출 시뮬레이션 — stage_reached=4로 변경된 엔티티
+        AnalysisResult stage4Ar = AnalysisResult.builder()
+                .disclosureId(999L)
+                .sentiment(Sentiment.POSITIVE)
+                .confidence(new BigDecimal("0.820"))
+                .withheld(false)
+                .summary("Stage 4 업데이트 케이스 요약")
+                .expectedReaction(AnalysisResult.ExpectedReaction.UP)
+                .rationale("과거 3건 유사 공시에서 D+1~D+3 평균 +2.1% 상승 경향. 참고용 정보입니다.")
+                .stageReached((short) 4)
+                .createdAt(java.time.OffsetDateTime.now())
+                .build();
+
+        AnalysisResponse resp = AnalysisResponse.from(stage4Ar, Tier.PRO);
+
+        assertThat(resp.stageReached()).isEqualTo((short) 4);
+        assertThat(resp.expectedReaction()).isEqualTo(AnalysisResult.ExpectedReaction.UP);
+        assertThat(resp.rationale()).contains("참고용 정보");
+        assertThat(resp.disclaimer()).isNotBlank();
     }
 
     @Test

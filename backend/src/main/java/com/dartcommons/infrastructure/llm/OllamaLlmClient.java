@@ -1,6 +1,8 @@
 package com.dartcommons.infrastructure.llm;
 
 import com.dartcommons.analysis.dto.Stage2Output;
+import com.dartcommons.analysis.dto.Stage4Output;
+import com.dartcommons.analysis.entities.AnalysisResult.ExpectedReaction;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.shared.util.HostWhitelist;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -117,6 +119,50 @@ public class OllamaLlmClient implements LlmClient {
     }
 
     /*
+     * Stage 4: Stage2와 동일한 Ollama /api/generate 호출 — 프롬프트만 다름(Stage4PromptBuilder 생성).
+     * expected_reaction·rationale·confidence 3필드 파싱. confidence는 가드용으로만 사용(저장 안 함).
+     */
+    @Override
+    @Retryable(
+            retryFor = RestClientException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 8_000)
+    )
+    public Stage4Output classifyStage4(String prompt) {
+        Map<String, Object> body = Map.of(
+                "model", props.model(),
+                "prompt", prompt,
+                "format", "json",
+                "stream", false,
+                "think", false,
+                "options", Map.of(
+                        "temperature", 0.2,
+                        "num_predict", 400,
+                        "num_ctx", 8192
+                )
+        );
+
+        OllamaGenerateResponse res = restClient.post()
+                .uri("/api/generate")
+                .body(body)
+                .retrieve()
+                .body(OllamaGenerateResponse.class);
+
+        if (res == null || res.response() == null || res.response().isBlank()) {
+            throw new RestClientException("Ollama Stage4 빈 응답");
+        }
+
+        try {
+            Stage4OutputRaw raw = MAPPER.readValue(res.response(), Stage4OutputRaw.class);
+            return raw.toStage4Output();
+        } catch (Exception e) {
+            String preview = res.response().length() > 500 ? res.response().substring(0, 500) + "…" : res.response();
+            log.warn("Ollama Stage4 JSON 파싱 실패 — raw={}, error={}", preview, e.getMessage());
+            throw new RestClientException("Ollama Stage4 JSON 파싱 실패: " + e.getMessage());
+        }
+    }
+
+    /*
      * Ollama /api/generate 응답 — format=json 시 response 필드가 JSON 문자열.
      * eval_count/total_duration은 토큰 추적(input/output_tokens 영속화는 후속).
      */
@@ -129,6 +175,33 @@ public class OllamaLlmClient implements LlmClient {
             @JsonProperty("eval_count") Integer evalCount,
             @JsonProperty("prompt_eval_count") Integer promptEvalCount
     ) {
+    }
+
+    private record Stage4OutputRaw(
+            @JsonProperty("expected_reaction") String expectedReaction,
+            String rationale,
+            BigDecimal confidence
+    ) {
+        Stage4Output toStage4Output() {
+            ExpectedReaction er = parseReaction(expectedReaction);
+            String r = rationale == null ? "" : rationale.trim();
+            BigDecimal c = clampConfidence(confidence);
+            return new Stage4Output(er, r, c);
+        }
+
+        private static ExpectedReaction parseReaction(String raw) {
+            if (raw == null) throw new IllegalArgumentException("expected_reaction is null");
+            return ExpectedReaction.valueOf(raw.trim().toUpperCase());
+        }
+
+        // null → 0.500 기본값: Stage2와 달리 IAE 미발생 — Stage4 confidence는 저장하지 않고(Spec 결정 2)
+        // 파싱 가드용으로만 쓰이므로 누락을 관대하게 처리(재호출 예산 절약). OpenRouter 구현과 동일 정책.
+        private static BigDecimal clampConfidence(BigDecimal raw) {
+            if (raw == null) return new BigDecimal("0.500");
+            if (raw.compareTo(BigDecimal.ZERO) < 0) return BigDecimal.ZERO;
+            if (raw.compareTo(BigDecimal.ONE) > 0) return BigDecimal.ONE;
+            return raw.setScale(3, java.math.RoundingMode.HALF_UP);
+        }
     }
 
     /*

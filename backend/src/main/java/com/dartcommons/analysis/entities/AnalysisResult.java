@@ -86,4 +86,14 @@ public class AnalysisResult {
     private void prePersist() {
         if (createdAt == null) createdAt = OffsetDateTime.now();
     }
+
+    /**
+     * Stage 4 최종 판단 결과를 기존 레코드에 덮어씀.
+     * confidence는 Stage 2 값을 보존 — stage_reached·expected_reaction·rationale만 갱신(Spec 결정 2).
+     */
+    public void applyStage4(ExpectedReaction reaction, String rationale) {
+        this.expectedReaction = reaction;
+        this.rationale = rationale;
+        this.stageReached = 4;
+    }
 }
