@@ -196,6 +196,7 @@ pricing:
         - "일 5건 카카오 알림톡"
       recommended-for: "공시 입문 투자자"
       monthly-free-quota: 5
+      recent-window-days: 5   # Free 조회 가능 최근 N일(날짜 축). DisclosureQueryService 클램프 + FE 표시 창의 단일 소스
     - tier: PRO
       price: 9900
       currency: KRW
@@ -207,6 +208,7 @@ pricing:
         - "공시 히스토리 3개월"
       recommended-for: "적극적 정보 수집을 원하는 투자자"
       monthly-free-quota: 0
+      recent-window-days: 0   # 0 = 날짜 클램프 없음(Pro는 전체 히스토리 조회)
     - tier: PREMIUM
       price: 29900
       currency: KRW
@@ -218,6 +220,7 @@ pricing:
         - "AI Q&A — 공시 대응 전략 문의"
       recommended-for: "다수 종목을 보유한 장기 투자자"
       monthly-free-quota: 0
+      recent-window-days: 0   # 0 = 날짜 클램프 없음(Premium은 전체 히스토리 조회)
 
 logging:
   level:

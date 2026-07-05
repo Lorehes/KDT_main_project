@@ -51,6 +51,7 @@ pricing:
         - "보유 종목 3개"
       recommended-for: "입문 투자자"
       monthly-free-quota: 5
+      recent-window-days: 5   # 운영 정책과 동기 — DisclosureQueryService 클램프·PricingIntegrationTest 검증 대상
     - tier: PRO
       price: 9900
       currency: KRW
@@ -58,6 +59,7 @@ pricing:
         - "무제한 종목 등록"
       recommended-for: "적극적 투자자"
       monthly-free-quota: 0
+      recent-window-days: 0
     - tier: PREMIUM
       price: 29900
       currency: KRW
@@ -65,3 +67,4 @@ pricing:
         - "Pro 전체 기능"
       recommended-for: "장기 투자자"
       monthly-free-quota: 0
+      recent-window-days: 0

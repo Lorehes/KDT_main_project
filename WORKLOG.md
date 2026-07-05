@@ -11,6 +11,32 @@ updated: 2026-07-05
 
 ---
 
+## 2026-07-05 | 날짜 표기 통일 + 감성 카운트 a11y + 티어 정책 단일 소스화 (dc-triage 승격 3건)
+
+**흐름**: 직전 세션의 dc-review-frontend/code에서 나온 findings를 /dc-triage로 이슈 4건 등록(파일 기반 `docs/ideas/issues/`, gh 미설치) → 3건 Spec 승격(dc-plan 없이 컨텍스트 보유로 직접 작성) → dc-tech-review → dc-spec-move Approved → dc-implement 3건 연속 → 5페르소나 리뷰 → 실앱 검증 → Done.
+
+**구현 3건**:
+- **disclosure-date-format-unify** (시연 크리티컬): DisclosureCard가 `20260705` 원시 노출 → `formatDisclosureDate`/`toIsoDate` 공용 유틸(KST 자정 앵커·7일 초과 절대날짜 폴백·now 주입)로 통일. portfolios 로컬 formatRelativeTime 승격, disclosures groupByDate를 Asia/Seoul + ISO 라벨로(UTC 오분류 버그 동시 해소). `<time dateTime>`은 ISO 유지.
+- **week-sentiment-count-a11y**: "이번 주 공시" `3/2/0` 색상 단독 → 색+단축 라벨(호/중/악) + 그룹 aria-label. 화살표 대신 문자(등락 오독 방지 §11.1), weekNeutral의 보류 포함을 aria에 명시.
+- **tier-policy-config-api** (Phase 1+2): `PricingProperties.Plan.recentWindowDays`(FREE=5) → `/pricing/plans` 노출 → `DisclosureQueryService`가 상수 대신 config 파생(누락 시 DEFAULT 5 폴백). FE `lib/config/tierWindow` + portfolios가 API에서 창 파생, dashboard는 Free-aware `min(3, FREE창)`.
+
+**리뷰(5페르소나 high)**: P0/P1 0. 수정한 실이슈 — (P2 적대적) dashboard가 API 미파생이라 FREE 창<3 시 라벨 과장 → min() 자가치유. (P2 유지보수) 테스트에 삭제된 FREE_WINDOW_DAYS 심볼 잔존 → config 소스로 갱신. (P3 정확성) KST 오전 당일 공시 절대날짜 튐 → KST 자정 앵커.
+
+**실앱 검증**: 기본 config(FREE=5) 클램프 5일 창 정확(창내 5/창밖 2 제외), dashboard "최근 3일"·portfolios "최근 5일" + 상대시간 렌더 확인(원시 날짜 완전 제거). **단일소스 동적 증명**: `--pricing.plans[0].recent-window-days=2` 오버라이드만으로(코드 무변경) /pricing/plans 노출값·클램프가 함께 2일 창으로 이동. 폴백 안전망도 확인(tier 유실→DEFAULT 5).
+
+**결정**:
+- 이슈 트래킹은 `gh` 미설치라 파일 기반(`docs/ideas/issues/*.md`)이 실질 SSOT — 이 관례 준수.
+- Spec 승격 시 dc-plan 재리서치 생략하고 직접 작성(코드 검증 컨텍스트 보유) — 환각 없이 정확도 확보 위해 각 항목 코드 재확인 후 작성.
+- tier-policy는 Phase 1(회귀 어서션)+Phase 2(API 파생) 한 사이클 진행(옵션 b, 사용자 확정). 크로스-런타임(BE Java↔FE TS) 강제는 불가 — Phase 2 API 파생이 최종 해소책, Phase 1은 FE 내부 불변식만.
+- 날짜 상대시간은 KST 달력일 앵커로 확정(한국 시장 앱 정합). 7일 초과 절대날짜 임계값 채택.
+
+**미완료 / 후속**:
+- 이슈 [[e2e-portfolio-keyboard-nav-failing]] Open — main HEAD에서도 실패하는 기존 결함(이번 변경 무관), 실 UI 동작 여부 확인 선행 필요.
+- Draft [[payment-pg-integration]] dc-tech-review 미수행(이전 세션부터 대기).
+- tier-policy 잔여 P3: BE DEFAULT_FREE_WINDOW_DAYS와 FE FREE_RECENT_WINDOW_DAYS 폴백 상수 결합은 문서화만(강제 없음) — 우연히 둘 다 5.
+
+---
+
 ## 2026-07-05 | /portfolios 시세 실데이터 연결
 
 **요청**: 스크린샷 제보 — "/portfolios 총 평가금액·평가 손익이 '시세 연동 준비 중'인데 KRX API 있으니 표시 가능하지 않냐?"

@@ -5,6 +5,7 @@ import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import com.dartcommons.disclosure.dto.DisclosureListItemResponse;
 import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
+import com.dartcommons.shared.config.PricingProperties;
 import com.dartcommons.shared.dto.PageResponse;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.shared.enums.Tier;
@@ -45,7 +46,9 @@ import java.util.stream.Collectors;
  *                  Free 강제 블록은 scope=all 403 분기 이후에 위치 — scope=all FREE는 이미 차단됨.
  *                  Free 클램프는 창 밖 값만 안쪽으로 당기는 방식 — from=to=오늘을 명시 전송하는 dashboard 결과 불변.
  *                  클램프 후에도 from>to 역전 가능(예: from=미래 날짜) — 빈 결과 반환이 정상 동작(테스트로 고정).
- *                  FREE_WINDOW_DAYS 변경 시 [[dashboard-recent-3days]]의 3일 창(⊂5일 전제)과 통합 테스트도 함께 검토.
+ *                  Free 창 일수는 PricingProperties(FREE plan recentWindowDays, yml=5)에서 파생 — 티어 날짜 정책
+ *                  단일 소스(tier-policy-config-api). config 누락/0이면 DEFAULT_FREE_WINDOW_DAYS로 안전 폴백.
+ *                  창 값 변경 시 [[dashboard-recent-3days]]의 3일 창(⊂Free창 전제)과 통합 테스트도 함께 검토.
  *                  q 빈 문자열 → null 정규화는 서비스 진입부에서 처리 — 컨트롤러 검증 레이어와 책임 분리.
  *                  q는 Free 티어 날짜·size 강제 이후에도 그대로 전달 — 날짜 범위 내 키워드 검색.
  */
@@ -53,12 +56,23 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DisclosureQueryService {
 
-    /** Free 티어 조회 가능 날짜 창(오늘 포함 일수). 건수 제한(일 5건)과 별개의 날짜 축 정책. */
-    private static final int FREE_WINDOW_DAYS = 5;
+    /** Free 창 config 누락/0 시 안전 폴백(오늘 포함 일수). PricingProperties FREE plan이 정상이면 미사용. */
+    private static final int DEFAULT_FREE_WINDOW_DAYS = 5;
 
     private final DisclosureRepository      disclosureRepository;
     private final AnalysisResultRepository  analysisResultRepository;
     private final UserStockCodesPort        userStockCodesProvider;
+    private final PricingProperties         pricingProperties;
+
+    /** FREE plan의 recentWindowDays(날짜 축 정책)를 반환. config 누락/0이면 안전 폴백. */
+    private int freeWindowDays() {
+        return pricingProperties.plans().stream()
+                .filter(p -> "FREE".equalsIgnoreCase(p.tier()))
+                .map(PricingProperties.Plan::recentWindowDays)
+                .filter(d -> d > 0)
+                .findFirst()
+                .orElse(DEFAULT_FREE_WINDOW_DAYS);
+    }
 
     @Transactional(readOnly = true)
     public PageResponse<DisclosureListItemResponse> list(
@@ -93,7 +107,7 @@ public class DisclosureQueryService {
         // scope=all FREE는 위 403에서 이미 차단됨 — 여기는 scope=portfolio 또는 stockCode 단건 경로
         if (tier == Tier.FREE) {
             LocalDate seoulToday = LocalDate.now(ZoneId.of("Asia/Seoul"));
-            LocalDate windowStart = seoulToday.minusDays(FREE_WINDOW_DAYS - 1L);
+            LocalDate windowStart = seoulToday.minusDays(freeWindowDays() - 1L);
             fromDate = (fromDate == null || fromDate.isBefore(windowStart)) ? windowStart : fromDate;
             toDate   = (toDate == null || toDate.isAfter(seoulToday)) ? seoulToday : toDate;
             page = 0;

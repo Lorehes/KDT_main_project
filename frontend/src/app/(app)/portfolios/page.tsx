@@ -4,32 +4,35 @@
 // [이유] /portfolios 를 단순 종목 등록 페이지에서 대시보드로 개편 (종목 등록은 /portfolios/new 로 이동).
 //   상단 카드는 GET /portfolios/summary 서버 집계(대시보드와 동일 소스), 테이블 행은 목록 응답의
 //   close_price(공개 시세)로 클라이언트 계산 — 별도 API 추가 없이 기존 응답 재사용.
-// [사이드 임팩트] usePortfolios·usePortfolioSummary·useDisclosures(scope:"portfolio")·useTodaySeoul 사용.
+// [사이드 임팩트] usePortfolios·usePortfolioSummary·useDisclosures(scope:"portfolio")·usePricingPlans·useTodaySeoul 사용.
 //   행 정렬 = 평가손익 내림차순(계산 불가 행은 뒤로) — 헤더 "평가손익순" 라벨과 정합.
-//   종목별 최근 공시 쿼리는 최근 5일(Asia/Seoul, 오늘 포함) from/to 필터 — 패널과 테이블 "최근 공시" 배지가
-//   같은 응답을 공유하므로 배지도 5일 창 기준(창 밖이면 "—"). Free 티어는 BE가 5일 창 + 5건으로 클램프.
+//   종목별 최근 공시 쿼리는 최근 N일(recentDays, Asia/Seoul 오늘 포함) from/to 필터 — 패널과 테이블 "최근 공시" 배지가
+//   같은 응답을 공유하므로 배지도 같은 창 기준(창 밖이면 "—"). Free 티어는 BE가 동일 창 + 5건으로 클램프.
+//   공시 상대시간은 공용 formatDisclosureDate(대시보드·공시 피드와 표기 통일). "이번 주 공시" 감성 카운트는
+//   색+단축 라벨(호/중/악) 병기 — 색 단독 금지(§6-5), 화살표 대신 문자로 등락 오독 방지(§11.1).
 // [수정 시 고려사항] close_price는 KrxPriceSyncJob 일배치(18:00 KST) 기준 — 미수집(null) 시 해당 셀 "—" 폴백.
+//   "이번 주 공시"의 weekNeutral은 보류(is_withheld)를 포함(집계 정의) — aria-label에 "중립·보류"로 명시.
 //   수익률/평가금액은 avg_buy_price·quantity가 null이면 계산 불가 → "—" (엣지: 선택 입력 항목).
 //   매수가·수량 console.log 절대 금지 (금융 개인정보, CLAUDE.md §7). 손익은 사실 표시만 — 투자 권유 표현 금지(§11.1).
-//   RECENT_DISCLOSURE_DAYS 변경 시 패널 "최근 5일" 라벨·빈 상태 문구도 동기화.
-//   BE FREE_WINDOW_DAYS(5일)보다 크게 잡으면 Free는 라벨-실데이터 불일치 발생(DisclosureQueryService 참조).
+//   종목별 최근 공시 창(recentDays)은 BE /pricing/plans FREE recent_window_days에서 파생(단일 소스).
+//   API 로드 전에는 FREE_RECENT_WINDOW_DAYS 폴백. 라벨("최근 N일")·빈 상태 문구도 이 값으로 파생 — 라벨-데이터 자동 정합.
 //   getWeekRange()는 로컬 TZ 기준(이번 주 카드 전용) — 최근 N일 계산에 복사 금지, shiftDateStr+useTodaySeoul 사용.
 
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePortfolios, usePortfolioSummary, type Portfolio } from "@/lib/api/portfolios";
 import { useDisclosures, type Sentiment } from "@/lib/api/disclosures";
+import { usePricingPlans } from "@/lib/api/pricing";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { useTodaySeoul } from "@/lib/hooks/useTodaySeoul";
 import { shiftDateStr } from "@/lib/date/shiftDateStr";
+import { formatDisclosureDate } from "@/lib/date/formatDisclosureDate";
+import { FREE_RECENT_WINDOW_DAYS } from "@/lib/config/tierWindow";
 import { StatCard, PnlStatCard, formatKrwCompact } from "@/components/domain/StatCards";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-/** 종목별 최근 공시 조회 창(오늘 포함 일수). BE Free 클램프 창(FREE_WINDOW_DAYS=5)과 동기 — 초과 금지. */
-const RECENT_DISCLOSURE_DAYS = 5;
 
 function getWeekRange() {
   const now = new Date();
@@ -59,27 +62,17 @@ function computeRowEval(p: Portfolio): { evalAmount: number | null; pnl: number 
   return { evalAmount, pnl, pnlRate };
 }
 
-function formatRelativeTime(dateStr: string): string {
-  // DART rcept_dt 형식: "20260622" (YYYYMMDD) 또는 ISO 문자열 처리
-  const normalized = /^\d{8}$/.test(dateStr)
-    ? `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
-    : dateStr;
-  const diffMs = Date.now() - new Date(normalized).getTime();
-  const min = Math.floor(diffMs / 60_000);
-  if (min < 1) return "방금 전";
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  return `${Math.floor(hr / 24)}일 전`;
-}
-
 export default function PortfoliosDashboardPage() {
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
   const { data: summary } = usePortfolioSummary();
   const { from, to } = useMemo(() => getWeekRange(), []);
-  // 최근 5일 창 — useTodaySeoul 파생이라 자정 경과 시 자동 갱신(쿼리 키 변경 → 리페치)
+  // 최근 공시 창 = BE FREE plan recent_window_days(단일 소스). API 로드 전엔 폴백 상수.
+  const { data: pricingPlans } = usePricingPlans();
+  const recentDays =
+    pricingPlans?.find((p) => p.tier === "FREE")?.recent_window_days || FREE_RECENT_WINDOW_DAYS;
+  // useTodaySeoul 파생이라 자정 경과 시 자동 갱신(쿼리 키 변경 → 리페치)
   const today = useTodaySeoul();
-  const recentFrom = useMemo(() => shiftDateStr(today, -(RECENT_DISCLOSURE_DAYS - 1)), [today]);
+  const recentFrom = useMemo(() => shiftDateStr(today, -(recentDays - 1)), [today, recentDays]);
 
   const { data: allPortfolioDisclosures, isLoading: disclosuresLoading } = useDisclosures({
     scope: "portfolio",
@@ -182,11 +175,23 @@ export default function PortfoliosDashboardPage() {
             <span className="text-3xl font-extrabold text-foreground">{weekTotal}</span>
             <span className="text-sm font-semibold text-muted-foreground">건</span>
             {weekTotal > 0 && (
-              <span className="ml-0.5 text-sm font-bold">
-                ·{" "}
-                <span className="text-[color:var(--color-sentiment-positive)]">{weekPositive}</span>
-                <span className="text-muted-foreground">/{weekNeutral}/</span>
-                <span className="text-[color:var(--color-sentiment-negative)]">{weekNegative}</span>
+              // 색 단독 금지(§6-5) — 색 + 단축 라벨(호/중/악) 병기 + 그룹 aria-label로 색맹·시니어 배려.
+              // 라벨은 화살표(▲/▼) 대신 문자 사용: 투자 앱에서 등락으로 오독 방지(§11.1). "중"에는 보류 포함(집계 정의).
+              <span
+                className="ml-0.5 flex items-baseline gap-1.5 text-sm font-bold"
+                aria-label={`호재 ${weekPositive}건, 중립·보류 ${weekNeutral}건, 악재 ${weekNegative}건`}
+              >
+                <span aria-hidden className="text-muted-foreground">·</span>
+                {[
+                  { label: "호", value: weekPositive, tone: "text-[color:var(--color-sentiment-positive)]" },
+                  { label: "중", value: weekNeutral, tone: "text-[color:var(--color-sentiment-neutral)]" },
+                  { label: "악", value: weekNegative, tone: "text-[color:var(--color-sentiment-negative)]" },
+                ].map(({ label, value, tone }) => (
+                  <span key={label} className={tone}>
+                    <span aria-hidden className="text-[11px] font-semibold">{label}</span>
+                    {value}
+                  </span>
+                ))}
               </span>
             )}
           </div>
@@ -321,7 +326,7 @@ export default function PortfoliosDashboardPage() {
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <p className="font-extrabold text-foreground">
                 🔔 종목별 최근 공시{" "}
-                <span className="text-xs font-semibold text-muted-foreground">최근 {RECENT_DISCLOSURE_DAYS}일</span>
+                <span className="text-xs font-semibold text-muted-foreground">최근 {recentDays}일</span>
               </p>
               <Link
                 href="/disclosures?scope=portfolio"
@@ -343,7 +348,7 @@ export default function PortfoliosDashboardPage() {
                 ))
               ) : !recentList.length ? (
                 <p className="px-5 py-6 text-center text-sm text-muted-foreground">
-                  최근 {RECENT_DISCLOSURE_DAYS}일 내 공시가 없습니다.
+                  최근 {recentDays}일 내 공시가 없습니다.
                 </p>
               ) : (
                 recentList.slice(0, 5).map((d) => (
@@ -365,7 +370,7 @@ export default function PortfoliosDashboardPage() {
                         />
                       )}
                       <span className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatRelativeTime(d.rcept_dt)}
+                        {formatDisclosureDate(d.rcept_dt)}
                       </span>
                     </div>
                   </Link>

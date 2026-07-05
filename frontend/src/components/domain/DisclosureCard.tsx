@@ -2,9 +2,11 @@
 
 // [목적] 공시 피드 카드 — Progressive Disclosure(펼치기/접기) 패턴
 // [이유] 대시보드·공시 피드에서 많은 공시를 스캔 가능하게. 초기 접힌 상태 → 클릭 시 요약·근거 노출
-// [사이드 임팩트] SentimentBadge·DisclaimerNotice와 조합. 카드 클릭 시 /disclosures/[id]로 이동
+// [사이드 임팩트] SentimentBadge·DisclaimerNotice와 조합. 카드 클릭 시 /disclosures/[id]로 이동.
+//   날짜는 formatDisclosureDate(공용)로 표시 — 대시보드·포트폴리오와 표기 통일(원시 YYYYMMDD 노출 제거).
 // [수정 시 고려사항] open 상태는 완전 펼침(인라인 요약). 더 깊은 분석은 상세 페이지로 이동.
-//   모바일에서 카드 너비는 100%. 웹에서는 테이블 행 스타일로도 사용
+//   모바일에서 카드 너비는 100%. 웹에서는 테이블 행 스타일로도 사용.
+//   <time dateTime>은 toIsoDate로 ISO 유지(기계 판독/접근성) — 표시 텍스트만 사람이 읽는 포맷.
 
 import { useState } from "react";
 import Link from "next/link";
@@ -13,6 +15,7 @@ import { SentimentBadge } from "./SentimentBadge";
 import { ConfidenceMeter } from "./ConfidenceMeter";
 import { DisclaimerNotice } from "./DisclaimerNotice";
 import { cn } from "@/lib/utils";
+import { formatDisclosureDate, toIsoDate } from "@/lib/date/formatDisclosureDate";
 import type { Disclosure } from "@/lib/api/disclosures";
 
 interface DisclosureCardProps {
@@ -66,8 +69,8 @@ export function DisclosureCard({ disclosure, className }: DisclosureCardProps) {
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <time className="text-xs text-muted-foreground" dateTime={disclosure.rcept_dt}>
-            {disclosure.rcept_dt}
+          <time className="text-xs text-muted-foreground" dateTime={toIsoDate(disclosure.rcept_dt)}>
+            {formatDisclosureDate(disclosure.rcept_dt)}
           </time>
           <div
             className={cn(

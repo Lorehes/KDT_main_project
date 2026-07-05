@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-07-05 (portfolios-recent-disclosures-5d·dashboard-recent-3days Done 전환)
+updated: 2026-07-05 (dc-triage 승격 3건 구현 완료 Done 전환)
 ---
 
 # Specs MOC
@@ -35,6 +35,9 @@ docs/specs/
 ### Approved
 
 ### Done
+- [[disclosure-date-format-unify]] — 공시 날짜 표기 통일: formatDisclosureDate/toIsoDate 유틸(KST 앵커·7일 폴백) + DisclosureCard·portfolios·disclosures groupByDate 적용 (2026-07-05 Done)
+- [[week-sentiment-count-a11y]] — "이번 주 공시" 색상 단독 3/2/0 → 색+라벨(호/중/악) + aria-label (§6-5, 2026-07-05 Done)
+- [[tier-policy-config-api]] — 티어 날짜 창 단일 소스화: PricingProperties.recentWindowDays + /pricing/plans 노출 + DisclosureQueryService config 파생 + FE 파생 (Phase 1+2, 2026-07-05 Done)
 - [[portfolios-recent-disclosures-5d]] — /portfolios 종목별 최근 공시 최근 5일: BE Free 클램프 5일 경계 완화 + FE from/to·라벨, 경계 픽스처 IT (2026-07-05 Done)
 - [[dashboard-recent-3days]] — /dashboard 공시 피드 최근 3일 확장: from=오늘-2·size 20·문구 4곳, Playwright 실캡처 검증 (2026-07-05 Done)
 - [[price-backfill-partial-status]] — 주가 백필 PARTIAL 상태: Status enum 5종 + 안전망 분기(datesOk>0→PARTIAL/==0→FAILED) + Flyway V29, IT 5/5 (2026-07-05 Done)

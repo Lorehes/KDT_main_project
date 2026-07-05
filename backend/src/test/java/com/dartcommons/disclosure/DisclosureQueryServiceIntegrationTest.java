@@ -43,7 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *               FREE 티어 size 클램핑 테스트는 공시 6건을 삽입하므로 다른 테스트와 날짜 충돌 없음
  *               (고유 이메일 포트폴리오로 격리).
  * [수정 시 고려사항] FREE 티어 일 최대 건수 정책(현재 5) 변경 시 size 클램핑 어서션도 함께 수정.
- *                  FREE 날짜 창(FREE_WINDOW_DAYS, 현재 5일) 변경 시 창 경계 테스트의 minusDays 값도 동기화.
+ *                  FREE 날짜 창(yml pricing.plans FREE recent-window-days, 현재 5일; config 누락 시 폴백
+ *                  DEFAULT_FREE_WINDOW_DAYS) 변경 시 창 경계 테스트의 minusDays 값도 동기화.
  *                  PRO 날짜 통과 테스트는 과거 고정 날짜("2025-01-15") 사용 — 해당 날짜 공시가
  *                  다른 테스트와 겹칠 수 있으나 포트폴리오 격리로 안전.
  */
@@ -188,7 +189,7 @@ class DisclosureQueryServiceIntegrationTest {
         assertThat(hasInside)
                 .as("어제 공시(rcept_no=%s)는 5일 창 내이므로 FREE 응답에 포함되어야 함", insideRceptNo)
                 .isTrue();
-        // today-4(창 시작 경계, 포함) — FREE_WINDOW_DAYS·minusDays 펜스포스트 회귀를 정확히 고정
+        // today-4(창 시작 경계, 포함) — freeWindowDays()(yml FREE recent-window-days=5)·minusDays 펜스포스트 회귀를 정확히 고정
         assertThat(hasBoundary)
                 .as("창 시작 경계 공시(today-4, rcept_no=%s)는 포함되어야 함 — off-by-one 회귀 감지", boundaryRceptNo)
                 .isTrue();

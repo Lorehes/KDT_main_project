@@ -73,7 +73,7 @@ class PricingIntegrationTest {
     }
 
     @Test
-    @DisplayName("각 요금제 필수 필드 포함 — tier·price·currency·features·recommended_for·monthly_free_quota")
+    @DisplayName("각 요금제 필수 필드 포함 — tier·price·currency·features·recommended_for·monthly_free_quota·recent_window_days")
     void getPlans_eachPlanHasRequiredFields() throws Exception {
         String resp = mockMvc.perform(get("/api/v1/pricing/plans"))
                 .andExpect(status().isOk())
@@ -99,7 +99,35 @@ class PricingIntegrationTest {
 
             assertThat(plan.has("monthly_free_quota")).isTrue();
             assertThat(plan.get("monthly_free_quota").asInt()).isGreaterThanOrEqualTo(0);
+
+            // 날짜 축 정책(tier-policy-config-api) — 0=무제한, 양수=최근 N일 클램프
+            assertThat(plan.has("recent_window_days")).isTrue();
+            assertThat(plan.get("recent_window_days").asInt()).isGreaterThanOrEqualTo(0);
         }
+    }
+
+    @Test
+    @DisplayName("티어 날짜 창 단일 소스 — FREE recent_window_days=5(클램프와 일치), PRO/PREMIUM=0(무제한)")
+    void getPlans_recentWindowDays_freeIsClampSource() throws Exception {
+        // 단일 소스 검증: DisclosureQueryService Free 클램프(5일)와 /pricing/plans FREE 창이 같은 yml 값에서 파생.
+        // DisclosureQueryServiceIntegrationTest의 5일 경계 테스트와 짝을 이뤄 BE↔노출값 정합을 양방향 고정.
+        String resp = mockMvc.perform(get("/api/v1/pricing/plans"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode plans = objectMapper.readTree(resp);
+        int freeWindow = -1, proWindow = -1, premiumWindow = -1;
+        for (JsonNode plan : plans) {
+            switch (plan.get("tier").asText()) {
+                case "FREE"    -> freeWindow    = plan.get("recent_window_days").asInt();
+                case "PRO"     -> proWindow     = plan.get("recent_window_days").asInt();
+                case "PREMIUM" -> premiumWindow = plan.get("recent_window_days").asInt();
+                default -> { /* 알 수 없는 티어 무시 */ }
+            }
+        }
+        assertThat(freeWindow).as("FREE 창은 클램프 정책(5일)과 일치해야 함").isEqualTo(5);
+        assertThat(proWindow).as("PRO는 날짜 클램프 없음").isZero();
+        assertThat(premiumWindow).as("PREMIUM은 날짜 클램프 없음").isZero();
     }
 
     @Test

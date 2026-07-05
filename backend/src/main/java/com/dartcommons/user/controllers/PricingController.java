@@ -13,8 +13,11 @@ import java.util.List;
  * [이유] 비로그인 사용자도 요금제 페이지에서 플랜을 조회할 수 있어야 함.
  *       PricingProperties(yml 바인딩)는 애플리케이션 시작 시 메모리에 올라와 있어 별도 캐시 불필요.
  * [사이드 임팩트] yml pricing.plans 변경 + 재기동 → 즉시 반영. FE는 staleTime: 60_000 권장.
+ *               recent_window_days 노출로 FE(portfolios 표시 창)가 상수 하드코딩 대신 이 응답에서 파생
+ *               — 티어 날짜 정책 단일 소스화(tier-policy-config-api).
  * [수정 시 고려사항] 투자 권유 표현 금지(CLAUDE.md §7) — features·recommended_for 문구 검토.
  *                  가격 변경 빈도 높아지면 Admin API + DB 방식으로 이관.
+ *                  PlanResponse 필드 추가는 하위호환(additive) — 기존 소비처(/pricing 페이지) 무영향.
  */
 @RestController
 @RequestMapping("/api/v1/pricing")
@@ -35,7 +38,8 @@ public class PricingController {
                         plan.currency(),
                         plan.features(),
                         plan.recommendedFor(),
-                        plan.monthlyFreeQuota()))
+                        plan.monthlyFreeQuota(),
+                        plan.recentWindowDays()))
                 .toList();
     }
 
@@ -45,6 +49,7 @@ public class PricingController {
             String currency,
             List<String> features,
             @JsonProperty("recommended_for")     String recommendedFor,
-            @JsonProperty("monthly_free_quota")  int monthlyFreeQuota
+            @JsonProperty("monthly_free_quota")  int monthlyFreeQuota,
+            @JsonProperty("recent_window_days")  int recentWindowDays
     ) {}
 }

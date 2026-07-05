@@ -3,7 +3,9 @@
 // [목적] 공시 피드 페이지(D15/m23) — 전체 공시를 필터·날짜 그룹으로 탐색, 페이지 누적 "더 보기"
 // [이유] 대시보드는 보유 종목 공시만 표시. 이 페이지는 전체 공시 탐색 + 감성 필터 제공
 // [사이드 임팩트] useDisclosures 쿼리를 sentiment·scope·page 파라미터로 제어. 단일 컬럼 피드(우측 패널 없음)
-// [수정 시 고려사항] 날짜 그룹(오늘·어제·이번주)은 클라이언트에서 rcept_dt 파싱.
+// [수정 시 고려사항] 날짜 그룹(오늘·어제·그 외)은 클라이언트에서 rcept_dt 파싱.
+//   오늘/어제 판정은 Asia/Seoul 기준(toIsoDate/shiftDateStr) — 과거 UTC 기준은 KST 자정~오전에 하루 어긋남 버그였음.
+//   그 외 그룹 헤더는 toIsoDate로 YYYY-MM-DD 표시(원시 YYYYMMDD 노출 제거, disclosure-date-format-unify 카드 #5).
 //   R4 hasMore 가드: content.length < SIZE → 서버 데이터 고갈 → "더 보기" 숨김. R3(BE JOIN) 완료 후에도 유지 가능.
 //   필터 상태는 URL searchParams로 관리 권장(현재 로컬 state).
 //   useSearchParams()는 Next.js App Router에서 Suspense 경계 필요 — 상위 (app)/layout에 없어 로컬 Suspense 래핑.
@@ -17,6 +19,8 @@ import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { DisclosureCard } from "@/components/domain/DisclosureCard";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { shiftDateStr } from "@/lib/date/shiftDateStr";
+import { toIsoDate } from "@/lib/date/formatDisclosureDate";
 
 type FilterType = "ALL" | Sentiment | "WITHHELD";
 
@@ -28,15 +32,17 @@ const FILTERS: { value: FilterType; label: string }[] = [
   { value: "WITHHELD", label: "보류" },
 ];
 
-// Map 사용 필수: 날짜 라벨("20260609")이 정수형 문자열 키라 plain object면 Object.entries가
-// 숫자 오름차순으로 재정렬 → BE의 rcept_dt DESC(최신순)가 뒤집힘. Map은 삽입 순서를 보존해 최신순 유지.
+// Map 사용 필수: 날짜 라벨이 삽입 순서를 보존해야 BE의 rcept_dt DESC(최신순)가 유지됨. plain object면
+// 날짜형 문자열 키가 재정렬될 수 있어(과거 "20260609" 정수형 키 사례) 최신순이 뒤집힘 — Map은 삽입 순서 보존.
+// 오늘/어제 판정은 Asia/Seoul 기준(rcept_dt가 YYYYMMDD이므로 하이픈 제거해 비교), 그 외는 YYYY-MM-DD로 표시.
 function groupByDate(disclosures: Disclosure[]) {
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10).replace(/-/g, "");
+  const seoulTodayIso = new Intl.DateTimeFormat("sv", { timeZone: "Asia/Seoul" }).format(new Date());
+  const today = seoulTodayIso.replace(/-/g, "");
+  const yesterday = shiftDateStr(seoulTodayIso, -1).replace(/-/g, "");
 
   const groups = new Map<string, Disclosure[]>();
   disclosures.forEach((d) => {
-    const label = d.rcept_dt === today ? "오늘" : d.rcept_dt === yesterday ? "어제" : d.rcept_dt;
+    const label = d.rcept_dt === today ? "오늘" : d.rcept_dt === yesterday ? "어제" : toIsoDate(d.rcept_dt);
     if (!groups.has(label)) groups.set(label, []);
     groups.get(label)!.push(d);
   });

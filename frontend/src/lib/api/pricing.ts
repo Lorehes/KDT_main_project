@@ -14,6 +14,8 @@ export interface PricingPlan {
   features: string[];
   recommended_for: string;
   monthly_free_quota: number;
+  /** 조회 가능 최근 N일(날짜 축 정책). 0=무제한(Pro/Premium). FE 표시 창의 단일 소스(tier-policy-config-api). */
+  recent_window_days: number;
 }
 
 export function usePricingPlans() {
