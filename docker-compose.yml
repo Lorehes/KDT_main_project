@@ -11,7 +11,7 @@
 #   frontend에는 .env(시크릿)를 주입하지 않는다 — NEXT_PUBLIC_* 는 빌드 타임에 이미 번들에 박힘.
 # [수정 시 고려사항] 도메인 변경 시 .env의 DOMAIN + certbot 재발급 + FE 이미지 재빌드(NEXT_PUBLIC_API_URL).
 #   named volume 금지(CLAUDE.md §7, 2026-06-04 데이터 손실 교훈) → 모든 영속 데이터는 호스트 bind mount.
-#   Ollama 온프레미스 LLM 필요 시 하단 주석 해제 + 인스턴스 8GB 이상으로 업그레이드.
+#   Ollama는 임베딩 전용(nomic-embed-text) — 챗 LLM까지 온프레미스로 돌리려면 인스턴스 8GB 이상 필요.
 
 services:
   # ---- PostgreSQL — bind mount(Docker reset/clean 영향 없음) ----
@@ -145,17 +145,54 @@ services:
     entrypoint: >
       /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
 
-  # ---- Ollama (선택 — 온프레미스 LLM. Cloud LLM(openrouter) 사용 시 주석 유지) ----
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: dartcommons-ollama
-  #   volumes:
-  #     - /home/ubuntu/data/ollama:/root/.ollama
-  #   expose:
-  #     - "11434"
-  #   restart: unless-stopped
-  #   networks:
-  #     - dartcommons-net
+  # ---- Chroma 벡터 DB — Stage 3 RAG (유사 공시 검색) ----
+  # [목적] disclosure_embeddings 컬렉션 저장소. 백엔드는 dartcommons-net 내부 http://chroma:8000 접근.
+  # [이유] 호스트 포트는 127.0.0.1 한정 publish — 공개 서버에서 무인증 Chroma 외부 노출 차단,
+  #   로컬 개발(호스트에서 gradlew bootRun)은 localhost:8001로 접근 가능 (기존 로컬 관례 유지).
+  # [수정 시 고려사항] 이미지 버전은 로컬과 동일하게 고정(0.5.23) — 데이터 디렉터리 호환성.
+  #   named volume 금지 → bind mount (CLAUDE.md §7).
+  chroma:
+    image: chromadb/chroma:0.5.23
+    container_name: dartcommons-chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    ports:
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - ${CHROMA_DATA_DIR:-/home/ubuntu/data/dartcommons-chroma}:/chroma/chroma
+    restart: unless-stopped
+    networks:
+      - dartcommons-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/v1/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # ---- Ollama — Stage 3 임베딩 전용 (nomic-embed-text, ~274MB, CPU 충분) ----
+  # [목적] EmbeddingClient(OllamaEmbeddingClient) 백엔드. 챗 LLM은 Cloud(OpenRouter) 유지 — 이 컨테이너는 임베딩만.
+  # [사이드 임팩트] 최초 기동 후 모델 1회 pull 필요: docker exec dartcommons-ollama ollama pull nomic-embed-text
+  # [수정 시 고려사항] 로컬 Mac은 네이티브 Ollama(11434)와 포트 충돌 → 로컬에서는 이 서비스 기동 금지
+  #   (로컬은 선택 기동 관례: docker compose up -d postgres chroma).
+  ollama:
+    image: ollama/ollama:latest
+    container_name: dartcommons-ollama
+    volumes:
+      - ${OLLAMA_DATA_DIR:-/home/ubuntu/data/ollama}:/root/.ollama
+    expose:
+      - "11434"
+    restart: unless-stopped
+    networks:
+      - dartcommons-net
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
 
 networks:
   dartcommons-net:

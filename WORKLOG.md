@@ -11,6 +11,24 @@ updated: 2026-07-05
 
 ---
 
+## 2026-07-05 | Stage 3 서버 스택 복원 — chroma·ollama 컨테이너 + 백필 런북
+
+### 완료
+- docker-compose.yml: `chroma`(0.5.23 로컬 동일 버전, **127.0.0.1:8001 한정 publish**, bind mount, 512m 제한) + `ollama`(임베딩 전용 nomic-embed-text, 1536m 제한) 서비스 추가 — Lightsail 스택 정리(37a1bb1) 때 빠진 chroma 복원. `docker compose config` 검증 통과.
+- .env.example 서버 값 안내 추가 + 운영가이드 **§9 "Stage 3 RAG 활성화 & 임베딩 백필"** 신설(기동→.env→백필 API→검증→메모리 주의). 기존 §9·§10 → §10·§11 리넘버.
+- 서버 .env Stage 3 값 4종 점검 완료 — `CHROMA_BASE_URL=http://chroma:8000`·`EMBEDDING_BASE_URL=http://ollama:11434`(서비스명 기준) 정확, 나머지는 application.yml 기본값으로 충족.
+- 서버(Lightsail 4GB/2vCPU) swap 2G 추가 완료(사용자 실행, fstab 등록).
+
+### 결정
+- **OpenRouter `:free` 임베딩 비채택** (nvidia/llama-nemotron-embed-vl-1b-v2:free 검토) — 20 RPM·일 1,000건 제한으로 68k 백필 비현실적 + Stage 2 챗 LLM(:free)과 쿼터 경합 + `:free` 철수 시 코퍼스 전면 재임베딩 리스크(임베딩은 모델 영구 고정 필요). 로컬 Ollama nomic-embed-text 유지, 검색 품질 미흡 시 유료 임베딩(~$5 수준) 전면 재임베딩 후속 검토.
+- **Chroma 호스트 포트 127.0.0.1 바인드** — 공개 서버에서 무인증 Chroma 외부 노출 차단, 로컬 개발(호스트 gradlew) 접근은 유지.
+- Ollama는 임베딩 전용이라 4GB 인스턴스 가동 가능(8GB 요건은 챗 LLM 기준) — 단 로컬 Mac은 네이티브 Ollama 포트 충돌로 ollama 서비스 기동 금지.
+
+### 미완료 → 다음 세션 (운영)
+- 서버: `git pull` → `docker compose up -d chroma ollama` → `ollama pull nomic-embed-text` → backend 재기동(ChromaBootstrap cosine 확인) → 백필 API 실행. 대상 ~68k건, 2vCPU 기준 4~7시간, `last_processed_id` 커서 재개 지원. **백필 중 compose build 금지**(RAM).
+- 백필 완료 후 Chroma count 검증(127.0.0.1:8001) + Pro+ 응답 `similar_disclosures` 실데이터 확인.
+- FE 유사 공시 노출(과거 유사 공시 + 주가 반응 차트)은 별도 Spec 후보.
+
 ## 2026-07-05 | 날짜 표기 통일 + 감성 카운트 a11y + 티어 정책 단일 소스화 (dc-triage 승격 3건)
 
 **흐름**: 직전 세션의 dc-review-frontend/code에서 나온 findings를 /dc-triage로 이슈 4건 등록(파일 기반 `docs/ideas/issues/`, gh 미설치) → 3건 Spec 승격(dc-plan 없이 컨텍스트 보유로 직접 작성) → dc-tech-review → dc-spec-move Approved → dc-implement 3건 연속 → 5페르소나 리뷰 → 실앱 검증 → Done.
