@@ -144,7 +144,7 @@ updated: 2026-07-05
 | 2026-07-05 | Jin | 6b3c0c2 | feat(disclosure): 공시 조회 날짜 창 도입 — portfolios 5일·dashboard 3일 + Free 클램프 완화 [6/9 M] | Disclosure/Frontend | 6 | 9 | M | 공시 조회 최근 3·5일 창 적용 |
 | 2026-07-05 | Jin | c17d850 | feat(disclosure): 날짜 표기 통일 + 감성 카운트 a11y + 티어 정책 단일 소스화 [6/9 L] | Disclosure/Shared/Frontend | 6 | 9 | L | 날짜통일·감성a11y·티어창단일화 |
 | 2026-07-05 | Jin | 06fbb72 | feat(infra): Stage 3 서버 스택 복원 — chroma·ollama 컨테이너 + 백필 런북 [6/8 M] | Infra/Docs | 6 | 8 | M | Stage3 서버 chroma·ollama 복원 |
-| 2026-07-06 | Jin | pending | docs(ops): Stage 3 임베딩 백필 93,560건 완료 + 프로덕션 이관 기록 [3/8 S] | Docs | 3 | 8 | S | Stage3 백필·이관 완료 기록 |
+| 2026-07-06 | Jin | 6466246 | docs(ops): Stage 3 임베딩 백필 93,560건 완료 + 프로덕션 이관 기록 [3/8 S] | Docs | 3 | 8 | S | Stage3 백필·이관 완료 기록 |
 <!-- SCORES -->
 
 ## 기간별 집계
