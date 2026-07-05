@@ -54,6 +54,24 @@ type PnlStatCardProps = {
 };
 
 /**
+ * 한국 금융 앱 표준 컴팩트 금액 표기: 만 단위(10,000원 이상)·억 단위(1억 이상).
+ * 좁은 2열 카드에서 "1,234,000원"처럼 긴 숫자가 줄바꿈되는 문제 방지.
+ * 부호는 버림(절대값) — 방향 표시는 호출부가 아이콘/부호로 병기(WCAG 색 단독 금지).
+ */
+export const formatKrwCompact = (amount: number): { value: string; unit: string } => {
+  const abs = Math.abs(amount);
+  if (abs >= 100_000_000) {
+    const eok = abs / 100_000_000;
+    return { value: eok % 1 === 0 ? eok.toFixed(0) : eok.toFixed(1), unit: "억원" };
+  }
+  if (abs >= 10_000) {
+    const man = abs / 10_000;
+    return { value: man % 1 === 0 ? man.toFixed(0) : man.toFixed(1), unit: "만원" };
+  }
+  return { value: new Intl.NumberFormat("ko-KR").format(Math.round(abs)), unit: "원" };
+};
+
+/**
  * 평가 손익 카드 — 한국 시장 컨벤션(상승=빨강 ▲, 하락=파랑 ▼).
  * 색상 단독 표현 금지 → 색 + 방향 아이콘 + 부호 텍스트 병기(WCAG 2.1 AA, CLAUDE.md §6-5).
  * 투자 권유 표현 없음 — 수치와 방향만 표시(자본시장법, CLAUDE.md §7).
@@ -71,22 +89,7 @@ export function PnlStatCard({ pnl, pnlRate, asOf, unpricedCount }: PnlStatCardPr
 
   const icon = isProfit ? "▲" : isLoss ? "▼" : null;
 
-  // 한국 금융 앱 표준: 만 단위(10,000원 이상)·억 단위(1억 이상)로 컴팩트 표기
-  // — 좁은 2열 카드에서 "1,234,000원"처럼 긴 숫자가 줄바꿈되는 문제 방지
-  const formatPnlCompact = (amount: number): { value: string; unit: string } => {
-    const abs = Math.abs(amount);
-    if (abs >= 100_000_000) {
-      const eok = abs / 100_000_000;
-      return { value: eok % 1 === 0 ? eok.toFixed(0) : eok.toFixed(1), unit: "억원" };
-    }
-    if (abs >= 10_000) {
-      const man = abs / 10_000;
-      return { value: man % 1 === 0 ? man.toFixed(0) : man.toFixed(1), unit: "만원" };
-    }
-    return { value: new Intl.NumberFormat("ko-KR").format(Math.round(abs)), unit: "원" };
-  };
-
-  const formattedPnl = hasData ? formatPnlCompact(pnl) : null;
+  const formattedPnl = hasData ? formatKrwCompact(pnl) : null;
 
   const formattedRate = pnlRate !== null
     ? `${pnlRate > 0 ? "+" : ""}${pnlRate.toFixed(2)}%`

@@ -11,6 +11,26 @@ updated: 2026-07-05
 
 ---
 
+## 2026-07-05 | /portfolios 시세 실데이터 연결
+
+**요청**: 스크린샷 제보 — "/portfolios 총 평가금액·평가 손익이 '시세 연동 준비 중'인데 KRX API 있으니 표시 가능하지 않냐?"
+
+**진단**: 데이터 부재가 아니라 **연결 누락**. dashboard-eval-pnl(Done)로 `GET /portfolios/summary`·목록 응답 `close_price`·KrxPriceSyncJob 일배치 전부 가동 중 — 대시보드 홈은 이미 실데이터 표시, /portfolios만 placeholder로 방치.
+
+**작업** (BE 무변경, FE 2파일):
+- 상단 카드: `usePortfolioSummary()` 연결 — 총 평가금액(만/억 컴팩트 + as_of·미수집 캡션), 평가 손익은 대시보드와 동일 `PnlStatCard` 재사용
+- 테이블 행: `computeRowEval()` — 현재가=`close_price`, 평가금액=종가×수량, 수익률=(종가−평단)/평단. null 항목별 "—" 폴백
+- 정렬: 헤더 "평가손익순" 라벨에 맞게 pnl 내림차순 실적용(계산 불가 행은 pnlRate 보조 정렬 후 뒤로)
+- `StatCards.tsx`: `formatPnlCompact` → `formatKrwCompact` 모듈 레벨 추출·export (동작 무변경)
+
+**검증**: 리뷰 Green(P0/P1 0, P3 3건 즉시 반영 — JSDoc 위치·계산 1회화·보조 정렬). tsc·eslint·`next build` 통과.
+
+**결정**: 행 단위 지표는 별도 API 없이 목록 응답 재사용(클라이언트 계산) — close_price가 이미 내려오고 있어 서버 확장 불필요. 색상은 sentiment 토큰만, 색+부호/아이콘 병기(WCAG §6-5), 면책 문구 기존 유지.
+
+**미완료**: payment-pg-integration Draft의 dc-tech-review는 사용자 중단으로 미수행(다음 세션 후보).
+
+---
+
 ## 2026-07-05 | dc-doc-sync — Vault 무결성 점검·갱신
 
 **요청**: /dc-doc-sync 전체 점검.

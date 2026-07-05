@@ -1,18 +1,21 @@
 "use client";
 
-// [목적] 내 포트폴리오 대시보드 — 총 평가금액·보유 종목 테이블·종목별 최근 공시 한눈에 표시
-// [이유] /portfolios 를 단순 종목 등록 페이지에서 대시보드로 개편 (종목 등록은 /portfolios/new 로 이동)
-// [사이드 임팩트] usePortfolios·useDisclosures(scope:"portfolio") 사용.
-//   평가금액·손익·현재가는 시세 연동 전 "—" 표시 (StatCard muted 옵션).
-// [수정 시 고려사항] 시세 API 연동 시 avg_buy_price·quantity 기반 손익 계산 추가 필요.
-//   매수가·수량 console.log 절대 금지 (금융 개인정보, CLAUDE.md §7).
+// [목적] 내 포트폴리오 대시보드 — 총 평가금액·평가 손익(KRX 종가 기반)·보유 종목 테이블·종목별 최근 공시 표시
+// [이유] /portfolios 를 단순 종목 등록 페이지에서 대시보드로 개편 (종목 등록은 /portfolios/new 로 이동).
+//   상단 카드는 GET /portfolios/summary 서버 집계(대시보드와 동일 소스), 테이블 행은 목록 응답의
+//   close_price(공개 시세)로 클라이언트 계산 — 별도 API 추가 없이 기존 응답 재사용.
+// [사이드 임팩트] usePortfolios·usePortfolioSummary·useDisclosures(scope:"portfolio") 사용.
+//   행 정렬 = 평가손익 내림차순(계산 불가 행은 뒤로) — 헤더 "평가손익순" 라벨과 정합.
+// [수정 시 고려사항] close_price는 KrxPriceSyncJob 일배치(18:00 KST) 기준 — 미수집(null) 시 해당 셀 "—" 폴백.
+//   수익률/평가금액은 avg_buy_price·quantity가 null이면 계산 불가 → "—" (엣지: 선택 입력 항목).
+//   매수가·수량 console.log 절대 금지 (금융 개인정보, CLAUDE.md §7). 손익은 사실 표시만 — 투자 권유 표현 금지(§11.1).
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { usePortfolios } from "@/lib/api/portfolios";
+import { usePortfolios, usePortfolioSummary, type Portfolio } from "@/lib/api/portfolios";
 import { useDisclosures, type Sentiment } from "@/lib/api/disclosures";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
-import { StatCard } from "@/components/domain/StatCards";
+import { StatCard, PnlStatCard, formatKrwCompact } from "@/components/domain/StatCards";
 import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
@@ -31,6 +34,21 @@ function getWeekRange() {
   return { from: fmt(monday), to: fmt(sunday) };
 }
 
+/** 행 단위 평가 지표 — close_price(공개 시세) × 사용자 입력값으로 클라이언트 계산. null = 계산 불가("—" 표시). */
+function computeRowEval(p: Portfolio): { evalAmount: number | null; pnl: number | null; pnlRate: number | null } {
+  const { close_price, avg_buy_price, quantity } = p;
+  const evalAmount = close_price != null && quantity != null ? close_price * quantity : null;
+  const pnl =
+    close_price != null && avg_buy_price != null && quantity != null
+      ? (close_price - avg_buy_price) * quantity
+      : null;
+  const pnlRate =
+    close_price != null && avg_buy_price != null && avg_buy_price > 0
+      ? ((close_price - avg_buy_price) / avg_buy_price) * 100
+      : null;
+  return { evalAmount, pnl, pnlRate };
+}
+
 function formatRelativeTime(dateStr: string): string {
   // DART rcept_dt 형식: "20260622" (YYYYMMDD) 또는 ISO 문자열 처리
   const normalized = /^\d{8}$/.test(dateStr)
@@ -47,6 +65,7 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function PortfoliosDashboardPage() {
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
+  const { data: summary } = usePortfolioSummary();
   const { from, to } = useMemo(() => getWeekRange(), []);
 
   const { data: allPortfolioDisclosures, isLoading: disclosuresLoading } = useDisclosures({
@@ -84,6 +103,27 @@ export default function PortfoliosDashboardPage() {
     return map;
   }, [recentList]);
 
+  // 행 평가 지표 1회 계산 + 평가손익 내림차순 정렬 — 헤더 "평가손익순" 라벨과 정합.
+  // pnl 계산 불가(수량 미입력 등) 행은 뒤로 보내되, 그 안에서는 pnlRate 내림차순 보조 정렬(수익률만 보이는 행 배려).
+  const sortedRows = useMemo(() => {
+    if (!portfolios?.length) return [];
+    return portfolios
+      .map((p) => ({ p, ev: computeRowEval(p) }))
+      .sort((a, b) => {
+        if (a.ev.pnl !== null && b.ev.pnl !== null) return b.ev.pnl - a.ev.pnl;
+        if (a.ev.pnl !== null) return -1;
+        if (b.ev.pnl !== null) return 1;
+        return (b.ev.pnlRate ?? -Infinity) - (a.ev.pnlRate ?? -Infinity);
+      });
+  }, [portfolios]);
+
+  // 총 평가금액 카드 — 서버 집계(summary). priced_count 0이면 미수집 상태로 placeholder 유지.
+  const hasEval = (summary?.priced_count ?? 0) > 0;
+  const evalCompact = hasEval ? formatKrwCompact(summary!.total_eval_amount) : null;
+  const evalNote = hasEval
+    ? `${summary!.as_of} 종가 기준${summary!.unpriced_count > 0 ? ` · ${summary!.unpriced_count}개 미수집` : ""}`
+    : "종가 수집 중";
+
   return (
     <div className="flex flex-col gap-6">
       {/* 헤더 */}
@@ -99,8 +139,17 @@ export default function PortfoliosDashboardPage() {
 
       {/* 통계 카드 */}
       <ul className="m-0 grid list-none gap-4 p-0 grid-cols-2 lg:grid-cols-4">
-        <StatCard label="총 평가금액" value="—" note="시세 연동 준비 중" muted />
-        <StatCard label="평가 손익" value="—" note="시세 연동 준비 중" muted />
+        {evalCompact ? (
+          <StatCard label="총 평가금액" value={evalCompact.value} unit={evalCompact.unit} note={evalNote} />
+        ) : (
+          <StatCard label="총 평가금액" value="—" note={evalNote} muted />
+        )}
+        <PnlStatCard
+          pnl={hasEval ? summary!.total_pnl : null}
+          pnlRate={summary?.pnl_rate ?? null}
+          asOf={summary?.as_of ?? null}
+          unpricedCount={summary?.unpriced_count ?? 0}
+        />
         <li className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-xs font-semibold text-muted-foreground">보유 종목</p>
           {showSkeleton ? (
@@ -170,8 +219,15 @@ export default function PortfoliosDashboardPage() {
                 <span className="text-right">최근 공시</span>
               </div>
               <div className="divide-y divide-border">
-                {portfolios.map((p) => {
+                {sortedRows.map(({ p, ev: { evalAmount, pnlRate } }) => {
                   const latest = latestByStock.get(p.stock_code);
+                  const isProfit = pnlRate !== null && pnlRate > 0;
+                  const isLoss = pnlRate !== null && pnlRate < 0;
+                  const rateColorClass = isProfit
+                    ? "text-[color:var(--color-sentiment-positive)]"
+                    : isLoss
+                      ? "text-[color:var(--color-sentiment-negative)]"
+                      : "text-foreground";
                   return (
                     <div
                       key={p.id}
@@ -199,12 +255,27 @@ export default function PortfoliosDashboardPage() {
                           {p.quantity != null ? `${p.quantity}주` : "—"}
                         </p>
                       </div>
-                      {/* 현재가 (시세 연동 전 placeholder) */}
-                      <p className="hidden text-right tabular-nums text-sm text-muted-foreground sm:block">—</p>
-                      {/* 수익률 (시세 연동 전 placeholder) */}
-                      <p className="hidden text-right text-sm text-muted-foreground sm:block">—</p>
-                      {/* 평가금액 (시세 연동 전 placeholder) */}
-                      <p className="hidden text-right tabular-nums text-sm text-muted-foreground sm:block">—</p>
+                      {/* 현재가 — KRX 일배치 종가. 미수집 시 "—" */}
+                      <p className="hidden text-right tabular-nums text-sm text-foreground sm:block">
+                        {p.close_price != null ? p.close_price.toLocaleString() : <span className="text-muted-foreground">—</span>}
+                      </p>
+                      {/* 수익률 — 색 단독 금지: 색 + 부호/아이콘 병기 (WCAG §6-5) */}
+                      <p className={`hidden text-right text-sm font-semibold sm:block ${rateColorClass}`}>
+                        {pnlRate !== null ? (
+                          <>
+                            {isProfit && <span aria-hidden>▲</span>}
+                            {isLoss && <span aria-hidden>▼</span>}
+                            {pnlRate > 0 ? "+" : ""}
+                            {pnlRate.toFixed(2)}%
+                          </>
+                        ) : (
+                          <span className="font-normal text-muted-foreground">—</span>
+                        )}
+                      </p>
+                      {/* 평가금액 = 종가 × 수량. 수량 미입력/종가 미수집 시 "—" */}
+                      <p className="hidden text-right tabular-nums text-sm text-foreground sm:block">
+                        {evalAmount !== null ? Math.round(evalAmount).toLocaleString() : <span className="text-muted-foreground">—</span>}
+                      </p>
                       {/* 최근 공시 badge */}
                       <div className="hidden justify-end sm:flex">
                         {latest?.sentiment ? (
