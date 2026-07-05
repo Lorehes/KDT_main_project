@@ -142,6 +142,7 @@ updated: 2026-07-05
 | 2026-07-05 | Jin | 9e622c2 | docs(vault): dc-doc-sync — HOME 이슈 링크 6건 경로 수정 + 기획서 frontmatter [2/8 S] | Docs | 2 | 8 | S | Vault 링크·frontmatter 정합 |
 | 2026-07-05 | Jin | 9073998 | feat(frontend): /portfolios 시세 실데이터 연결 — 평가금액·손익 카드/행 표시 [5/9 S] | Frontend | 5 | 9 | S | 포트폴리오 시세 실데이터 연결 |
 | 2026-07-05 | Jin | 6b3c0c2 | feat(disclosure): 공시 조회 날짜 창 도입 — portfolios 5일·dashboard 3일 + Free 클램프 완화 [6/9 M] | Disclosure/Frontend | 6 | 9 | M | 공시 조회 최근 3·5일 창 적용 |
+| 2026-07-05 | Jin | c17d850 | feat(disclosure): 날짜 표기 통일 + 감성 카운트 a11y + 티어 정책 단일 소스화 [6/9 L] | Disclosure/Shared/Frontend | 6 | 9 | L | 날짜통일·감성a11y·티어창단일화 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -149,5 +150,5 @@ updated: 2026-07-05
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 12 | 35 | 123 | 8.2 | 6.1 |
+| Jin | 13 | 36 | 124 | 8.2 | 6.1 |
 <!-- SUMMARY:END -->
