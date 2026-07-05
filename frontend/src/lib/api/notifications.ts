@@ -40,6 +40,8 @@ export interface NotificationSettings {
   frequency: NotifFrequency;
   type_filter: NotifTypeFilter;
   off_hours_allowed: boolean;
+  /** 텔레그램 chat_id 연동 여부 파생값 — 원값(chat_id)은 BE가 노출하지 않음. */
+  telegram_linked: boolean;
 }
 
 export interface NotificationListParams {
@@ -92,6 +94,33 @@ export function useUpdateNotificationSettings() {
     },
     onError: (err) =>
       toast.error(err instanceof ApiException ? err.body.message : "설정 저장에 실패했습니다."),
+  });
+}
+
+/** 텔레그램 연동 딥링크 발급 — POST /notifications/telegram/link.
+ *  연동 완료 자체는 봇 /start 후 BE 폴링 잡이 수행 — 사용자가 이 탭에 돌아오면
+ *  useNotificationSettings의 refetchOnWindowFocus가 telegram_linked를 갱신한다. */
+export function useTelegramLink() {
+  return useMutation({
+    mutationFn: () =>
+      apiClient<{ deep_link: string }>("/notifications/telegram/link", { method: "POST" }),
+    onError: (err) =>
+      toast.error(err instanceof ApiException ? err.body.message : "연동 링크 발급에 실패했습니다."),
+  });
+}
+
+/** 텔레그램 연동 해제 — DELETE /notifications/telegram/link. */
+export function useTelegramUnlink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient<void>("/notifications/telegram/link", { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notification-settings"] });
+      toast.success("텔레그램 연동이 해제됐습니다.");
+    },
+    onError: (err) =>
+      toast.error(err instanceof ApiException ? err.body.message : "연동 해제에 실패했습니다."),
   });
 }
 

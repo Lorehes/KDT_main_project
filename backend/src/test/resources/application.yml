@@ -20,6 +20,11 @@ dartcommons:
       template-code: test-template
   mail:
     from: test@dartcommons.com
+  telegram:
+    # placeholder = dev 모드 — TelegramClient 실 API 호출 차단(테스트는 MockitoBean 사용)
+    bot-token: placeholder
+    bot-username: test_bot
+    front-base-url: http://localhost:3000
   jwt:
     # R14: Base64(test-jwt-secret-at-least-32-chars-for-hmac256-validation-ok) — 테스트 전용, 61 bytes > 32 bytes ✓
     secret: "dGVzdC1qd3Qtc2VjcmV0LWF0LWxlYXN0LTMyLWNoYXJzLWZvci1obWFjMjU2LXZhbGlkYXRpb24tb2s="

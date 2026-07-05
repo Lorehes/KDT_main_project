@@ -145,6 +145,7 @@ updated: 2026-07-05
 | 2026-07-05 | Jin | c17d850 | feat(disclosure): 날짜 표기 통일 + 감성 카운트 a11y + 티어 정책 단일 소스화 [6/9 L] | Disclosure/Shared/Frontend | 6 | 9 | L | 날짜통일·감성a11y·티어창단일화 |
 | 2026-07-05 | Jin | 06fbb72 | feat(infra): Stage 3 서버 스택 복원 — chroma·ollama 컨테이너 + 백필 런북 [6/8 M] | Infra/Docs | 6 | 8 | M | Stage3 서버 chroma·ollama 복원 |
 | 2026-07-06 | Jin | 6466246 | docs(ops): Stage 3 임베딩 백필 93,560건 완료 + 프로덕션 이관 기록 [3/8 S] | Docs | 3 | 8 | S | Stage3 백필·이관 완료 기록 |
+| 2026-07-06 | Jin | b0366d4 | feat(notification,infra): 텔레그램 알림 채널 실발송+계정연동 [8/9 L] | Notification/Infra/User/Shared/Frontend | 8 | 9 | L | 텔레그램 실발송+딥링크연동+리뷰P0 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -152,5 +153,5 @@ updated: 2026-07-05
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 1 | 38 | 126 | 8.2 | 6.1 |
+| Jin | 2 | 39 | 127 | 8.2 | 6.1 |
 <!-- SUMMARY:END -->

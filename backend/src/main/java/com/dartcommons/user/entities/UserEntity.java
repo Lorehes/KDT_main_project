@@ -136,6 +136,15 @@ public class UserEntity {
     @Column(name = "preferred_time", length = 10)
     private PreferredTime preferredTime;
 
+    /**
+     * V30. 텔레그램 봇 1:1 대화방 ID. 딥링크 /start 토큰 연동으로만 취득(수동 입력 경로 없음).
+     * NULL=미연동. API 응답에는 telegram_linked 불리언만 노출 — 원값 미노출, 로그 마스킹 필수.
+     * @JsonIgnore: 엔티티가 직렬화 경로에 노출되더라도 원값 유출을 코드 수준에서 차단(Spec R7 강제 지점).
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Column(name = "telegram_chat_id", length = 32)
+    private String telegramChatId;
+
     @PrePersist
     private void prePersist() {
         OffsetDateTime now = OffsetDateTime.now();
@@ -179,6 +188,20 @@ public class UserEntity {
     public void updateProfile(InvestmentExperience experience, PreferredTime time) {
         if (experience != null) this.investmentExperience = experience;
         if (time       != null) this.preferredTime        = time;
+    }
+
+    /** 텔레그램 연동 완료 — TelegramLinkPollingJob이 /start 토큰 매칭 후 호출. 재연동 시 덮어씀(멱등). */
+    public void linkTelegram(String chatId) {
+        this.telegramChatId = chatId;
+    }
+
+    /** 텔레그램 연동 해제 — 사용자 요청 또는 봇 차단(403) 감지 시. 해제 후 발송은 TELEGRAM_NOT_LINKED로 FAILED. */
+    public void unlinkTelegram() {
+        this.telegramChatId = null;
+    }
+
+    public boolean isTelegramLinked() {
+        return telegramChatId != null;
     }
 
     public void softDelete() {

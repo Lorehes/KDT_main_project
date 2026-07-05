@@ -144,6 +144,15 @@ dartcommons:
   # 이메일 발송자 주소 (notification-dispatcher Spec Wave 1 — 폴백 채널)
   mail:
     from: ${MAIL_FROM:noreply@dartcommons.com}
+  # 텔레그램 알림 (telegram-notification-channel Spec — 전 티어 무료)
+  # 토큰은 환경변수 주입(CLAUDE.md §7). placeholder → dev 모드(실 API 미호출).
+  # 폴링(getUpdates) 방식 — 봇에 webhook 설정 금지(상호 배타).
+  telegram:
+    bot-token: ${TELEGRAM_BOT_TOKEN:placeholder}
+    bot-username: ${TELEGRAM_BOT_USERNAME:placeholder_bot}
+    front-base-url: ${FRONT_BASE_URL:http://localhost:3000}
+    timeout-ms: ${TELEGRAM_TIMEOUT_MS:10000}
+    max-retries: ${TELEGRAM_MAX_RETRIES:3}
   # LLM provider — analysis Stage 2 (llm-production-switch Spec)
   # provider=mock: 통합 테스트/로컬 개발용. provider=openrouter: 프로덕션(Cloud LLM).
   # provider=ollama: 온프레미스(GPU 서버 필요). 기본값 mock — 프로덕션은 LLM_PROVIDER=openrouter 주입 필수.

@@ -6,6 +6,7 @@ import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
 import com.dartcommons.infrastructure.kakao.KakaoAlimtalkClient;
 import com.dartcommons.infrastructure.mail.MailNotificationClient;
+import com.dartcommons.infrastructure.telegram.TelegramClient;
 import com.dartcommons.notification.entities.NotificationEntity;
 import com.dartcommons.notification.repositories.NotificationRepository;
 import com.dartcommons.shared.crypto.AesGcmEncryptor;
@@ -50,6 +51,7 @@ public class NotificationHistoryService {
     private final UserRepository           userRepository;
     private final KakaoAlimtalkClient      kakaoAlimtalkClient;
     private final MailNotificationClient   mailNotificationClient;
+    private final TelegramClient           telegramClient;
     private final AesGcmEncryptor          aesGcmEncryptor;
 
     private static final String TEST_MESSAGE =
@@ -129,8 +131,26 @@ public class NotificationHistoryService {
         switch (user.getNotifyChannel()) {
             case EMAIL    -> mailNotificationClient.send(user.getEmail(), "[DartCommons] 알림 테스트", TEST_MESSAGE);
             case KAKAO    -> sendTestKakao(user);
-            case TELEGRAM -> throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY, "텔레그램 채널은 MVP에서 미지원입니다.");
+            case TELEGRAM -> sendTestTelegram(user);
+        }
+    }
+
+    /**
+     * 텔레그램 테스트 발송 — 미연동이면 422 (연동 유도). TEST_MESSAGE는 HTML 특수문자 없음 → 이스케이프 불필요.
+     * 봇 차단(403)이면 실제 알림 경로(ChannelSender)와 동일하게 chat_id 해제 후 422 — 500 노출 방지.
+     */
+    private void sendTestTelegram(UserEntity user) {
+        if (!user.isTelegramLinked()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "텔레그램 연동을 먼저 완료해주세요.");
+        }
+        try {
+            telegramClient.send(user.getTelegramChatId(), TEST_MESSAGE);
+        } catch (TelegramClient.TelegramForbiddenException e) {
+            user.unlinkTelegram();
+            userRepository.save(user);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "텔레그램 봇이 차단되어 있어요. 연동을 다시 해주세요.");
         }
     }
 

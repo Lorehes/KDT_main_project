@@ -1,16 +1,22 @@
 "use client";
 
-// [목적] 알림 설정 페이지(D14/m06) + 카카오 알림톡 미리보기(D25/m08) — 채널·유형·야간 설정
-// [이유] 사용자가 언제·어떤 채널로·어떤 유형의 공시 알림을 받을지 제어하는 핵심 설정 화면
-// [사이드 임팩트] PUT /notifications/settings 성공 후 ["notification-settings"] 쿼리 무효화
+// [목적] 알림 설정 페이지(D14/m06) + 카카오 알림톡 미리보기(D25/m08) + 텔레그램 연동 — 채널·유형·야간 설정
+// [이유] 사용자가 언제·어떤 채널로·어떤 유형의 공시 알림을 받을지 제어하는 핵심 설정 화면.
+//   텔레그램은 딥링크(/start 토큰) 연동 필수 — 미연동 상태 발송은 BE가 FAILED 처리하므로 연동 유도 UI 제공.
+// [사이드 임팩트] PUT /notifications/settings 성공 후 ["notification-settings"] 쿼리 무효화.
+//   텔레그램 연동 완료 감지는 refetchOnWindowFocus 의존 — 봇에서 돌아오면 telegram_linked 자동 갱신.
 // [수정 시 고려사항] 알림 채널 enum: KAKAO|TELEGRAM|EMAIL. 빈도: INSTANT|DAILY_1|DAILY_2|WEEKLY.
-//   off_hours_allowed는 거래시간외(22시~8시) 알림 허용 여부. 미리보기는 정적 mockup
+//   off_hours_allowed는 거래시간외(22시~8시) 알림 허용 여부. 미리보기는 정적 mockup.
+//   연동 버튼은 팝업 차단 회피를 위해 창을 먼저 열고 딥링크를 주입(handleTelegramLink).
 
 import { useEffect, useState } from "react";
-import { MessageSquare, Mail, Smartphone, Clock } from "lucide-react";
+import { toast } from "sonner";
+import { MessageSquare, Mail, Smartphone, Clock, Check } from "lucide-react";
 import {
   useNotificationSettings,
   useUpdateNotificationSettings,
+  useTelegramLink,
+  useTelegramUnlink,
   type NotifChannel,
   type NotifFrequency,
   type NotifTypeFilter,
@@ -19,11 +25,10 @@ import { SentimentBadge } from "@/components/domain/SentimentBadge";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-// comingSoon: 채널 선택은 가능하나 BE 발송 미구현(MVP) — '곧 지원 예정' 배지로 오인 방지(텔레그램 Bot API 연동 후속).
-const CHANNELS: { value: NotifChannel; label: string; icon: React.ElementType; desc: string; comingSoon?: boolean }[] = [
+const CHANNELS: { value: NotifChannel; label: string; icon: React.ElementType; desc: string }[] = [
   { value: "KAKAO",    label: "카카오 알림톡", icon: MessageSquare, desc: "즉시 발송" },
   { value: "EMAIL",    label: "이메일",         icon: Mail,          desc: "수신함에서 확인" },
-  { value: "TELEGRAM", label: "텔레그램",       icon: Smartphone,    desc: "텔레그램 봇으로 수신", comingSoon: true },
+  { value: "TELEGRAM", label: "텔레그램",       icon: Smartphone,    desc: "텔레그램 봇으로 수신" },
 ];
 
 const FREQUENCIES: { value: NotifFrequency; label: string }[] = [
@@ -42,6 +47,8 @@ const TYPE_FILTERS: { value: NotifTypeFilter; label: string }[] = [
 export default function NotificationSettingsPage() {
   const { data: settings, isLoading } = useNotificationSettings();
   const { mutate: updateSettings, isPending } = useUpdateNotificationSettings();
+  const { mutateAsync: issueTelegramLink, isPending: isLinking } = useTelegramLink();
+  const { mutate: unlinkTelegram, isPending: isUnlinking } = useTelegramUnlink();
 
   const [channel, setChannel]   = useState<NotifChannel>("KAKAO");
   const [frequency, setFreq]    = useState<NotifFrequency>("INSTANT");
@@ -62,6 +69,30 @@ export default function NotificationSettingsPage() {
     updateSettings({ channel, frequency, type_filter: typeFilter, off_hours_allowed: offHours });
   };
 
+  // 팝업 차단 회피: 클릭 제스처 안에서 창을 먼저 열고, 딥링크 수신 후 주소를 주입.
+  // deep_link는 t.me 접두사 검증 — 응답 변조 시 임의 URL 오픈 차단(dc-review-code ADV P1).
+  const handleTelegramLink = async () => {
+    const win = window.open("", "_blank");
+    try {
+      const { deep_link } = await issueTelegramLink();
+      if (!deep_link.startsWith("https://t.me/")) {
+        win?.close();
+        toast.error("잘못된 연동 링크입니다. 다시 시도해주세요.");
+        return;
+      }
+      if (win) {
+        win.location.href = deep_link;
+      } else {
+        // 팝업 차단 — 현재 페이지 이탈 대신 사용자 클릭으로 열도록 안내
+        toast.info("팝업이 차단되었습니다. 버튼을 눌러 텔레그램을 열어주세요.", {
+          action: { label: "텔레그램 열기", onClick: () => window.open(deep_link, "_blank") },
+        });
+      }
+    } catch {
+      win?.close();
+    }
+  };
+
   if (isLoading) {
     return <div className="py-12 text-center text-sm text-muted-foreground" role="status">설정을 불러오는 중...</div>;
   }
@@ -77,7 +108,7 @@ export default function NotificationSettingsPage() {
       <section aria-labelledby="channel-heading" className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <h2 id="channel-heading" className="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-primary">알림 채널</h2>
         <div className="flex flex-col gap-2" role="radiogroup" aria-labelledby="channel-heading">
-          {CHANNELS.map(({ value, label, icon: Icon, desc, comingSoon }) => (
+          {CHANNELS.map(({ value, label, icon: Icon, desc }) => (
             <button
               key={value}
               type="button"
@@ -95,9 +126,10 @@ export default function NotificationSettingsPage() {
               <div className="flex-1">
                 <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                   {label}
-                  {comingSoon && (
-                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                      곧 지원 예정
+                  {value === "TELEGRAM" && settings?.telegram_linked && (
+                    <span className="flex items-center gap-0.5 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                      <Check className="size-3" aria-hidden />
+                      연동됨
                     </span>
                   )}
                 </p>
@@ -109,6 +141,45 @@ export default function NotificationSettingsPage() {
             </button>
           ))}
         </div>
+
+        {/* 텔레그램 연동 — 딥링크로 봇 /start → BE 폴링 잡이 chat_id 저장 → 창 복귀 시 refetchOnWindowFocus로 갱신 */}
+        {channel === "TELEGRAM" && (
+          <div className="mt-3 rounded-xl border border-border bg-muted/40 p-4">
+            {settings?.telegram_linked ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  텔레그램 봇과 연동되어 있어요. 알림이 봇 대화방으로 발송됩니다.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => unlinkTelegram()}
+                  disabled={isUnlinking}
+                  className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  연동 해제
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs text-muted-foreground" role="alert">
+                  아직 텔레그램이 연동되지 않았어요. 연동 완료 전에는 알림이 발송되지 않습니다.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleTelegramLink}
+                  disabled={isLinking}
+                  className="w-full rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  {isLinking ? "링크 생성 중..." : "텔레그램 연동하기"}
+                </button>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  버튼을 누르면 텔레그램이 열립니다. 봇 대화방에서 <b>시작</b>을 누른 뒤 이 화면으로
+                  돌아오면 연동 상태가 자동으로 갱신돼요.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {channel === "KAKAO" && (
           <button

@@ -22,7 +22,8 @@ public final class HostWhitelist {
             "opendart.fss.or.kr",           // DART OpenAPI
             "data.krx.co.kr",              // KRX 정보데이터시스템
             "alimtalk-api.kakao.com",       // 카카오 비즈메시지 알림톡
-            "openrouter.ai"                 // OpenRouter Cloud LLM API (llm-production-switch Spec)
+            "openrouter.ai",                // OpenRouter Cloud LLM API (llm-production-switch Spec)
+            "api.telegram.org"              // 텔레그램 Bot API (telegram-notification-channel Spec)
     );
 
     private static final Set<String> TEST_ALLOWED = Set.of(

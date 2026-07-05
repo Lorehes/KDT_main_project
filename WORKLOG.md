@@ -2,7 +2,7 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-07-05
+updated: 2026-07-06
 ---
 
 # WORKLOG
@@ -2753,6 +2753,35 @@ curl -u admin:<password> \
 - **카드 #6 재분석 실행**: (1) 본문포함 smoke로 gemma vs qwen 품질 실측 → LLM_MODEL 확정, (2) 소수 육안 검증, (3) 최근 공시 idFrom/idTo 배치 재분석. **이걸 해야 목업 요인/해설이 실제로 채워짐**(현재 코드만 배포, 데이터 미갱신).
 - 재분석은 실 LLM(Ollama/OpenRouter) 필요 — 앱 재기동(현재 gemma/chroma로 떠있던 것 → .env 원복됨) 후 실행.
 - 미커밋 Draft: `price-backfill-partial-status`(안전망 PARTIAL) — 이번 커밋에 포함.
+
+## 2026-07-06 | telegram-notification-channel — 텔레그램 알림 채널 실발송 + 계정 연동
+
+### 완료
+- **Flyway V30**: `users.telegram_chat_id VARCHAR(32)` 추가
+- **TelegramClient**: RestClient + @Retryable(지수 백오프) + HostWhitelist + dev placeholder 모드. 봇 차단(403) → `TelegramForbiddenException`(재시도 무의미 분리)
+- **NotificationMessageBuilder**: 텔레그램 HTML 본문 — 🔴호재/🔵악재/⚪중립 배지(색+텍스트, 한국 증시 색 관례), 판단보류(is_withheld), 3줄 요약, 신뢰도%, 상세 링크, 면책 전문(§11.2), 4096자 캡. 모든 외부 필드 HTML 이스케이프.
+- **NotificationDispatcher**: 채널별 본문 확정(TELEGRAM→buildTelegramBody, 나머지→buildBody). analysis 1회 조회로 summary 취득.
+- **ChannelSender**: TELEGRAM 실발송. 미연동 → `FAILED(TELEGRAM_NOT_LINKED)`. 봇 차단 → `TelegramBotBlockedEvent` 발행 + `FAILED(TELEGRAM_BLOCKED_BY_USER)`.
+- **TelegramLinkService**: userId 1슬롯 Caffeine + token 역인덱스 ConcurrentHashMap(원자 `remove()`). `completeLink`: get-and-remove 원자 소비(동시 /start 이중 연동 차단).
+- **TelegramLinkPollingJob**: 5초 getUpdates 폴링, 대기 토큰 없으면 skip, 32자 토큰 사전 검증, 봇 응답 LINK_SUCCESS/LINK_EXPIRED 발송.
+- **POST/DELETE /api/v1/notifications/telegram/link**: `Cache-Control: no-store`.
+- **NotificationSettingsResponse**: `telegram_linked` 불리언 추가.
+- **FE**: `comingSoon` 배지 제거, 연동 카드(딥링크 버튼·연동 상태·해제), `deep_link` `t.me` 접두사 검증, 팝업 차단 toast 폴백.
+- **테스트**: TelegramNotificationIntegrationTest 6/6(Testcontainers), NotificationMessageBuilderTest 6/6.
+- **dc-review-code(5 페르소나) P0·P1/P2 10건 수정 후 재검증 통과**: BE 286/286, FE Vitest 78/78.
+
+### 결정 (코드에 드러나지 않는 것)
+- **텔레그램 전 티어 무료 영구 확정** — 기획서 §8.1은 Premium 항목으로 명시했으나 2026-07-06 사용자 결정. 이유: 카카오 알림톡 심사 전 유일한 실시간 무료 채널, tier 게이트 불필요.
+- **chat_id 평문 VARCHAR(32) 저장** — AES-256 암호화 불필요(봇 토큰 없이 단독 악용 불가, 봇 차단·토큰 revoke 이중 킬스위치). API 응답에는 `telegram_linked` 불리언만 노출.
+- **폴링(getUpdates) 방식 채택, webhook 배제** — 연동은 1회성 이벤트라 5초 폴링 지연 무해, inbound 보안 면적 추가 없음. 봇에 webhook 설정 시 폴링 409로 실패(운영가이드 명시 필요).
+- **캐시 구조**: userId→token 1슬롯(Caffeine) + token→userId 역인덱스(ConcurrentHashMap). 폭주 시 자기 슬롯만 교체, 타인 대기 토큰 LRU 방출 차단(P0 DoS 대응).
+- **ChannelSender → TelegramBotBlockedEvent 이벤트 경유** — notification이 user.UserRepository를 직접 write하면 §3-2 위반. shared 이벤트로 결합도 제거.
+
+### 미완료 → 다음 세션
+- **운영 배포**: Lightsail 서버 `.env`에 `TELEGRAM_BOT_TOKEN`·`TELEGRAM_BOT_USERNAME` 주입 필요 (로컬 `.env`는 기입 완료).
+- **운영가이드 갱신**: webhook 미설정 주의(getUpdates와 상호 배타), `logging.level.org.springframework.web.client=WARN` 강제(DEBUG 시 봇 토큰 URL 노출).
+- **후속 이슈(보류)**: 디스패처 직렬 발송 + 유저 N+1 (카카오와 동일한 기존 구조 — 발송 큐 스로틀 도입 시 함께), `maxRetries` dead property 전 클라이언트 일괄 정리.
+- **다음 기능**: `/dc-implement analysis-stage4-llm-final` (Stage 4 Approved 상태 대기 중).
 
 ## 2026-07-03 | promptguard-legal-term-false-positive (카드 1~2) — 오탐 개선
 

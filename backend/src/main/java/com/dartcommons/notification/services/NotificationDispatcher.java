@@ -1,5 +1,7 @@
 package com.dartcommons.notification.services;
 
+import com.dartcommons.analysis.entities.AnalysisResult;
+import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.disclosure.entities.Disclosure;
 import com.dartcommons.disclosure.repositories.DisclosureRepository;
@@ -31,9 +33,9 @@ import java.util.Set;
  *       알림 발송 실패가 분석 TX에 전파되지 않도록 AFTER_COMMIT + @Async("notificationExecutor") 격리.
  * [이유] feature_structure §2: analysis→notification 결합도 해소는 shared 이벤트 경유.
  *       발송 예외를 user 단위 try-catch로 격리해 1명 실패가 전체 발송을 막지 않도록.
- * [사이드 임팩트] disclosure·user 도메인 직접 참조 — MVP 한시 허용. Sentiment·Disclosure 공유 이관 후 제거 대상.
+ * [사이드 임팩트] disclosure·analysis·user 도메인 직접 참조 — MVP 한시 허용. Sentiment·Disclosure 공유 이관 후 제거 대상.
  *               PortfolioRepository.findByStockCode 대량 조회 가능 — 추후 페이지네이션 고려.
- *               TELEGRAM은 MVP 미지원으로 FAILED 기록 후 종료.
+ *               본문은 채널별로 여기서 확정되어 message_body 저장 — TELEGRAM은 HTML 본문(+3줄 요약 1회 조회).
  *               채널 발송은 ChannelSender로 위임 — Dispatcher 직접 발송 로직 제거.
  * [수정 시 고려사항] notifyFrequency != INSTANT 사용자는 DigestDispatchJob(Wave 3+) 담당 — 여기선 skip.
  *                  dedup 위반(DataIntegrityViolationException)은 catch-skip 패턴 — 별도 TX 롤백이므로 caller TX 무결.
@@ -46,6 +48,7 @@ public class NotificationDispatcher {
     private static final Logger log = LoggerFactory.getLogger(NotificationDispatcher.class);
 
     private final DisclosureRepository       disclosureRepository;
+    private final AnalysisResultRepository   analysisResultRepository;
     private final PortfolioRepository        portfolioRepository;
     private final UserRepository             userRepository;
     private final NotificationRepository     notificationRepository;
@@ -78,12 +81,16 @@ public class NotificationDispatcher {
         List<PortfolioEntity> portfolios = portfolioRepository.findByStockCode(disclosure.getStockCode());
         if (portfolios.isEmpty()) return;
 
+        // 텔레그램 본문에만 3줄 요약 포함(Spec R6) — 이벤트 페이로드에 없어 분석 결과에서 1회 조회
+        String summary = analysisResultRepository.findById(event.analysisId())
+                .map(AnalysisResult::getSummary).orElse(null);
+
         Set<Long> dispatched = new HashSet<>();
         for (PortfolioEntity portfolio : portfolios) {
             Long userId = portfolio.getUserId();
             if (!dispatched.add(userId)) continue;
             try {
-                dispatchForUser(userId, disclosure, event.sentiment(), event.confidence());
+                dispatchForUser(userId, disclosure, event.sentiment(), event.confidence(), summary);
             } catch (Exception e) {
                 log.error("Notification dispatch error for user {}, disclosure {}: {}",
                         userId, event.disclosureId(), e.getMessage(), e);
@@ -95,7 +102,8 @@ public class NotificationDispatcher {
      * 단일 사용자에 대한 4단계 필터 + 채널 발송.
      * record 생성 시 body/subject 저장 → RetryJob 재발송 시 재조회 불필요.
      */
-    private void dispatchForUser(Long userId, Disclosure disclosure, Sentiment sentiment, BigDecimal confidence) {
+    private void dispatchForUser(Long userId, Disclosure disclosure, Sentiment sentiment,
+                                 BigDecimal confidence, String summary) {
         Optional<UserEntity> userOpt = userRepository.findByIdAndDeletedAtIsNull(userId);
         if (userOpt.isEmpty()) return;
         UserEntity user = userOpt.get();
@@ -112,7 +120,10 @@ public class NotificationDispatcher {
         // 4단계: INSTANT 빈도만 즉시 발송 (DAILY_*/WEEKLY는 DigestDispatchJob 담당)
         if (user.getNotifyFrequency() != UserEntity.NotifyFrequency.INSTANT) return;
 
-        String body    = messageBuilder.buildBody(disclosure, sentiment, confidence);
+        // 본문은 여기서 채널별로 확정되어 message_body에 저장 — RetryJob이 그대로 재발송(Tech Review §1)
+        String body = user.getNotifyChannel() == UserEntity.NotifyChannel.TELEGRAM
+                ? messageBuilder.buildTelegramBody(disclosure, sentiment, confidence, summary)
+                : messageBuilder.buildBody(disclosure, sentiment, confidence);
         String subject = messageBuilder.buildSubject(disclosure, sentiment);
 
         NotificationEntity.Channel channel = NotificationEntity.Channel.valueOf(user.getNotifyChannel().name());
