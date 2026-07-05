@@ -2,12 +2,34 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-07-04
+updated: 2026-07-05
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-07-05 | PARTIAL 2차 리뷰 P2 수정 + 스펙 Done 전환
+
+**요청**: price-backfill-partial-status 구현 상태 확인(dc-review-code) → 완료 시 Done 전환(dc-spec-move).
+
+**리뷰**: 커밋 4a988ad에 4-페르소나 병렬 리뷰(security·correctness·maintainability·performance, risk=medium) — P0/P1 0건, P2 4건, P3 4건, 종합 A-. IT 5/5는 직접 실행으로 검증(최초 실패는 Docker 미가동 탓 — Docker Desktop 기동 후 통과).
+
+**수정** (사용자 선택: 핵심 P2 수정 후 Done):
+- P2-1: PARTIAL 분기 flush의 pending 가드 제거 — `PROGRESS_FLUSH_EVERY(20)==EARLY_ABORT_THRESHOLD(20)` 경계 정렬 시 커서가 빈 응답 날짜로 남던 엣지 해소(델타 0이어도 `lastSuccessDate` 무조건 보정)
+- P2-2: "재실행 시 커서부터 이어감" 주석 6곳 정정 — `resolveResumePoint`는 stale RUNNING만 재개, PARTIAL 커서는 운영 확인용(재실행은 어제부터, 멱등)
+- P2-4: IT에 `getLastProcessedDate()==마지막 성공 날짜` 단언 추가(AtomicReference 캡처) + `dataDays` 네이밍·BigDecimal import 정리
+- 수정 후 IT 재실행 5/5 통과
+
+**결정**: PARTIAL 잡 자동 재개 미구현은 의도된 설계로 확정 — 커서에서 과거로 이어가면 빈 응답 구간 재진입 → datesOk==0 → FAILED 오판. 재실행은 어제부터가 운영상 정답(주석으로 명문화).
+
+**미완료** (follow-up, dev-log에 기록):
+- P2-3: `doBackfill` 메서드 추출 리팩터링(~95줄, flush 패턴 3곳 중복)
+- P3: errorMessage 1000자 절삭 헬퍼 추출, PARTIAL 재개 구현 시 failed 이중 집계 유의
+
+**스펙**: price-backfill-partial-status Approved → Done (`git mv`, frontmatter·체크리스트·README MOC 갱신).
 
 ---
 

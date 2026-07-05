@@ -27,7 +27,7 @@ public class PriceBackfillJob {
      * [목적] 주가 백필 잡의 생명주기 상태 5종 정의.
      * [이유] PARTIAL 추가(V29) — KRX 무료 소스 이력 경계 도달 시 일부 적재 성공했음에도
      *       FAILED로 표기되던 오해를 해소. datesOk>0이면 PARTIAL, ==0이면 FAILED(진짜 장애).
-     * [사이드 임팩트] V29 CHECK 제약(5종)과 동기화 필수. PARTIAL 잡은 lastProcessedDate 커서로 재개 가능.
+     * [사이드 임팩트] V29 CHECK 제약(5종)과 동기화 필수. PARTIAL 잡의 lastProcessedDate=마지막 성공 날짜(운영 확인용 — 자동 재개 대상 아님).
      * [수정 시 고려사항] 신규 상태 추가 시 V{n} 마이그레이션으로 CHECK 제약 함께 확장.
      */
     public enum Status { PENDING, RUNNING, SUCCEEDED, FAILED, PARTIAL }
@@ -113,8 +113,8 @@ public class PriceBackfillJob {
      * [목적] 연속 빈 응답 안전망 도달 시 일부 적재가 있었으면(datesOk>0) PARTIAL로 종료.
      * [이유] 무료 KRX/GitHub 소스의 이력 경계에 닿으면 받을 건 다 받은 정상 상태인데
      *       기존 throw→FAILED로 "실패"로 오해됐음. PARTIAL = "가용 이력 끝 or 소스 중단, 일부 성공".
-     * [사이드 임팩트] lastProcessedDate 커서는 recordProgress가 이미 기록 — partial()은 마킹만.
-     *               재실행 시 커서부터 이어가므로 멱등.
+     * [사이드 임팩트] lastProcessedDate는 PARTIAL 분기의 recordProgress가 마지막 성공 날짜로 기록 — partial()은 마킹만.
+     *               PARTIAL 잡은 자동 재개 대상 아님(stale RUNNING만 재개) — 재실행은 어제부터, upsert 멱등이라 안전.
      * [수정 시 고려사항] reason은 errorMessage에 저장(마스킹 후). succeed()와 동일 구조, status만 PARTIAL.
      */
     public void partial(String reason) {

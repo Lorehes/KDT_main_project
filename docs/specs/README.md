@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-30 (analysis-stage3-rag-chroma Done)
+updated: 2026-07-05 (price-backfill-partial-status Done)
 ---
 
 # Specs MOC
@@ -35,6 +35,7 @@ docs/specs/
 ### Approved
 
 ### Done
+- [[price-backfill-partial-status]] — 주가 백필 PARTIAL 상태: Status enum 5종 + 안전망 분기(datesOk>0→PARTIAL/==0→FAILED) + Flyway V29, IT 5/5 (2026-07-05 Done)
 - [[analysis-stage3-rag-chroma]] — Stage 3 RAG: Chroma 벡터 DB + Ollama 임베딩 + 이중 쿼리 파티셔닝, Pro+ 유사 공시 조회 (2026-06-30 Done)
 - [[topbar-global-search]] — TopBar 글로벌 검색: Enter → /disclosures?q= 라우팅, BE ILIKE 4쿼리 추가 (2026-06-26 Done)
 - [[portfolio-csv-bulk-import]] — 포트폴리오 CSV 일괄 등록: POST /portfolios/import 벌크 엔드포인트, FE N루프 → 단일 호출 (2026-06-26 Done)

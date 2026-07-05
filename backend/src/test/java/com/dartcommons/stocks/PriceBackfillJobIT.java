@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -132,12 +133,15 @@ class PriceBackfillJobIT {
     @DisplayName("안전망 PARTIAL — 일부 적재 후 연속 빈 응답 → PARTIAL(이력 끝) / FAILED 아님")
     void doBackfill_partialData_earlyAbortPartial() {
         // 최근 5 평일은 데이터 반환, 이후 전건 빈 응답 → datesOk=5 > 0 → PARTIAL
-        final int datadays = 5;
+        final int dataDays = 5;
         AtomicInteger callCount = new AtomicInteger(0);
+        // M2 검증용 — 마지막으로 데이터를 반환한 날짜(=기대 lastProcessedDate) 캡처
+        AtomicReference<LocalDate> lastSuccessDate = new AtomicReference<>();
         given(krxClient.fetchClosePricesForDate(any())).willAnswer(inv -> {
             LocalDate d = inv.getArgument(0);
-            if (callCount.incrementAndGet() <= datadays) {
-                return Map.of("005930", new KrxClient.StockCloseInfo(new java.math.BigDecimal("70000"), d));
+            if (callCount.incrementAndGet() <= dataDays) {
+                lastSuccessDate.set(d);
+                return Map.of("005930", new KrxClient.StockCloseInfo(new BigDecimal("70000"), d));
             }
             return Map.of();
         });
@@ -156,6 +160,8 @@ class PriceBackfillJobIT {
         assertThat(result.getStatus()).isEqualTo(PriceBackfillJob.Status.PARTIAL);
         assertThat(result.getProcessed()).isGreaterThan(0);         // 일부 적재 성공
         assertThat(result.getErrorMessage()).contains("가용 이력"); // 종료 사유 기록
+        // M2 핵심 — 커서가 빈 응답 날짜가 아닌 마지막 성공 날짜로 기록(flush 경계 정렬 회귀 방지)
+        assertThat(result.getLastProcessedDate()).isEqualTo(lastSuccessDate.get());
         Long rows = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM stock_prices WHERE stock_code = '005930'", Long.class);
         assertThat(rows).isGreaterThan(0L);                         // stock_prices에 적재된 행 존재

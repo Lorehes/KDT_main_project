@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  *               필터 없이 upsert 시 FK 위반. StockPriceRepository.upsertPrice는 ON CONFLICT DO NOTHING(멱등).
  *               비거래일(공휴일)은 fetchClosePricesForDate가 빈 Map → failedDate로 카운트(정상, 오류 아님).
  * [수정 시 고려사항] BACKFILL_YEARS(3)·EARLY_ABORT_THRESHOLD(20) 상수 조정 시 여기만.
- *                  안전망: 최근 평일 20일 시도 후 성공 0건이면 KRX/GitHub 미가동 판정 → throw(대부분 거래일이라 0=소스 장애).
+ *                  안전망: 연속 평일 20일 빈 응답 시 datesOk>0이면 PARTIAL 정상 종료(가용 이력 끝), ==0이면 소스 장애 throw(FAILED).
  *                  단일 인스턴스 배포 불변식 유지 — 수평 확장 전 분산 락 Spec 선행.
  *                  수정주가 미보정(raw) — 분할·합병 구간 반응 왜곡 가능(Spec 확정: 초기 raw).
  */
@@ -46,7 +46,7 @@ public class PriceBackfillService {
 
     private static final Logger log = LoggerFactory.getLogger(PriceBackfillService.class);
     private static final int BACKFILL_YEARS = 3;
-    /** 안전망 — 최근 평일 이만큼 시도 후 성공(비어있지 않은 응답) 0건이면 KRX/GitHub 장애로 판정하고 throw. */
+    /** 안전망 — 연속 평일 이만큼 빈 응답이면 중단: datesOk>0 → PARTIAL 정상 종료(가용 이력 끝), ==0 → 장애 판정 throw(FAILED). */
     private static final int EARLY_ABORT_THRESHOLD = 20;
     /** 진행률 flush 주기(평일) — 매 날짜 커밋 대신 배치 커밋. 크래시 시 최대 이만큼 재처리(멱등). */
     private static final int PROGRESS_FLUSH_EVERY = 20;
@@ -129,8 +129,10 @@ public class PriceBackfillService {
         long totalRows = 0;
         // 진행률 flush 배치 — 매 날짜 REQUIRES_NEW 커밋 대신 PROGRESS_FLUSH_EVERY 평일마다 1회(커밋 20배 절감).
         int pendingOk = 0, pendingEmpty = 0;
-        // M2: 마지막 성공 날짜 추적 — PARTIAL flush 시 빈 응답 날짜 대신 정확한 재개 포인트 기록.
-        // 재실행 시 lastSuccessDate 이전부터 이어가 EARLY_ABORT_THRESHOLD 20일을 낭비하지 않음.
+        // M2: 마지막 성공 날짜 추적 — PARTIAL 종료 시 커서를 빈 응답 날짜가 아닌 실제 마지막 성공 날짜로 기록.
+        // 주의: PARTIAL 잡은 resolveResumePoint 재개 대상이 아님(stale RUNNING만) — 커서는 운영 확인용 기록.
+        //       재실행은 어제부터 새로 시작(upsert 멱등이라 안전). lastSuccessDate에서 과거로 이어가면
+        //       빈 응답 구간에 재진입해 datesOk==0 → FAILED 오판이 되므로 의도적으로 자동 재개하지 않음.
         LocalDate lastSuccessDate = null;
 
         while (!cursor.isBefore(lowerBound)) {
@@ -162,15 +164,15 @@ public class PriceBackfillService {
                 // 안전망 — 연속 20 평일 빈 응답: datesOk>0이면 가용 이력 경계(PARTIAL), ==0이면 소스 장애(FAILED).
                 // [이유] 무료 KRX/GitHub 소스는 과거 특정 시점까지만 데이터를 제공 — 경계 도달은 정상 완료.
                 //        datesOk==0(처음부터 빈 응답)은 진짜 소스 장애. 두 케이스를 구분해 상태 정확성 확보.
-                // [사이드 임팩트] PARTIAL 잡: lastProcessedDate 커서 보존 → 재실행 시 해당 시점부터 이어감(멱등).
+                // [사이드 임팩트] PARTIAL 잡: lastProcessedDate=마지막 성공 날짜 기록(운영 확인용). 재실행은 어제부터(멱등).
                 if (consecutiveEmpty >= EARLY_ABORT_THRESHOLD) {
                     if (datesOk > 0) {
-                        // M2: flush를 마지막 성공 날짜로 기록 — 빈 응답 구간(cursor)이 아닌 실제 재개 포인트.
-                        // 재실행 시 lastSuccessDate 이전부터 이어가 EARLY_ABORT_THRESHOLD 20일을 낭비하지 않음.
-                        if (pendingOk > 0 || pendingEmpty > 0) {
-                            stateService.recordProgress(jobId, pendingOk, pendingEmpty, lastSuccessDate);
-                            pendingOk = 0; pendingEmpty = 0;
-                        }
+                        // M2: 커서를 마지막 성공 날짜로 기록 — 빈 응답 구간(cursor)이 아닌 실제 성공 지점.
+                        // 무조건 호출(pending 가드 없음): 직전 정기 flush가 pending을 리셋한 경계 정렬 케이스
+                        // (빈 응답 스트릭 시작이 PROGRESS_FLUSH_EVERY 배수 직후)에서도 커서가
+                        // 빈 응답 날짜로 남지 않도록 델타 0이어도 lastSuccessDate로 보정.
+                        stateService.recordProgress(jobId, pendingOk, pendingEmpty, lastSuccessDate);
+                        pendingOk = 0; pendingEmpty = 0;
                         String reason = "가용 이력 끝 또는 소스 중단 — 연속 평일 " + EARLY_ABORT_THRESHOLD
                                 + "일 빈 응답(lastSuccess=" + lastSuccessDate + "), 적재 성공 " + datesOk + "일";
                         // M1: partialJob 실패(DB 오류 등) 시 명시적 로깅 후 rethrow — catch가 FAILED로 덮어쓰더라도 추적 가능.

@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-02
 updated: 2026-07-05
 ---
 
 # 주가 백필 PARTIAL 상태 도입 Spec
 
-> 상태: Draft → **Approved** (2026-07-05, dc-tech-review 승인 — 코드베이스 실측으로 V29·참조파일·안전망 정합 확인, 1 wave)
+> 상태: Draft → Approved → **Done** (2026-07-05, 구현 커밋 4a988ad + 2차 리뷰 P2 3건 수정 — IT 5/5 통과, dc-review-code 게이트 통과 A-)
 
 ## 배경 / 목적
 
@@ -24,11 +24,11 @@ updated: 2026-07-05
 
 ## 요구사항
 
-- [ ] `PriceBackfillJob.Status`에 `PARTIAL` 추가 (부분 완료 — 가용 이력 끝 또는 중간 소스 중단이나 일부 적재 성공)
-- [ ] 안전망 트리거 시 분기: `datesOk>0` → `PARTIAL`(예외 아님, 정상 종료), `datesOk==0` → `FAILED`(장애, 예외)
-- [ ] Flyway V29 — `price_backfill_jobs.status` CHECK 제약에 `'PARTIAL'` 추가
-- [ ] PARTIAL 잡도 `lastProcessedDate`·`processed`·`failed`가 정확히 기록되어 재개(resume) 가능 유지
-- [ ] Testcontainers IT: 일부 적재 후 연속 빈응답 → PARTIAL / 전건 빈응답 → FAILED
+- [x] `PriceBackfillJob.Status`에 `PARTIAL` 추가 (부분 완료 — 가용 이력 끝 또는 중간 소스 중단이나 일부 적재 성공)
+- [x] 안전망 트리거 시 분기: `datesOk>0` → `PARTIAL`(예외 아님, 정상 종료), `datesOk==0` → `FAILED`(장애, 예외)
+- [x] Flyway V29 — `price_backfill_jobs.status` CHECK 제약에 `'PARTIAL'` 추가
+- [x] PARTIAL 잡도 `lastProcessedDate`·`processed`·`failed`가 정확히 기록 (2차 리뷰 P2-1 수정: flush 경계 정렬 시에도 커서=마지막 성공 날짜 보장). 단, 자동 재개는 stale RUNNING 한정 — PARTIAL 재실행은 어제부터 새로 시작(멱등, 의도된 설계: 커서에서 과거로 이어가면 빈 응답 재진입 → FAILED 오판)
+- [x] Testcontainers IT: 일부 적재 후 연속 빈응답 → PARTIAL / 전건 빈응답 → FAILED (+ 커서=마지막 성공 날짜 단언, 5/5 통과)
 
 ## 영향 범위 (조사 결과)
 
