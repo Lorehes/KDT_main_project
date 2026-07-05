@@ -11,6 +11,25 @@ updated: 2026-07-05
 
 ---
 
+## 2026-07-05 | dc-doc-sync — Vault 무결성 점검·갱신
+
+**요청**: /dc-doc-sync 전체 점검.
+
+**점검 결과**: 문서 105개 스캔 — Spec 폴더↔frontmatter 62/62 일치, CLAUDE.md §9 경로 8/8 실존, wikilink 423개 중 실결함 15건.
+
+**갱신**:
+- HOME.md 이슈 링크 6건 `docs/issues/` → `docs/ideas/issues/` 경로 수정(커밋 4cd8b19 이동 미반영이었음) + 섹션 제목·updated 갱신
+- 통합기획서에 frontmatter 4필드 추가(유일한 누락 문서, created=작성일 2026-05-27·updated=git 최종 변경일 2026-05-30)
+
+**리포트만 (자동 수정 안 함 — 사용자 판단 대기)**:
+- `[[통합기획서]]` ×2 — 별칭 표기(`[[DART공시통역_통합기획서|통합기획서]]`)로 바꾸면 해소
+- `[[feedback_data_protection]]` ×3, `[[reference_dart_api_quota]]` ×1 — Vault 밖 메모리 노트 참조
+- `[[fe-be-alignment]]` ×1 — 스펙 리네임 추정(현 be-api-alignment-mvp-r1)
+
+**미완료**: dev-log 경로 스테일 31건은 append-only 이력이라 미갱신(spec 이동 10·리네임 8·삭제/통합 13) — 조치 불요 판단.
+
+---
+
 ## 2026-07-05 | PARTIAL 2차 리뷰 P2 수정 + 스펙 Done 전환
 
 **요청**: price-backfill-partial-status 구현 상태 확인(dc-review-code) → 완료 시 Done 전환(dc-spec-move).

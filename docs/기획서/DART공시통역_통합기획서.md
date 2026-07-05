@@ -1,3 +1,10 @@
+---
+type: doc
+status: active
+created: 2026-05-27
+updated: 2026-05-30
+---
+
 # DART 공시 통역 — 통합 기획서
 
 > **개인 투자자를 위한 AI 기반 공시 해석 & 실시간 알림 플랫폼**

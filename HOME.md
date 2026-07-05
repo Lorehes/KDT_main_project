@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-06-22
+updated: 2026-07-05
 ---
 
 # DART 공시 통역 (DartCommons) — HOME
@@ -42,14 +42,14 @@ updated: 2026-06-22
 - [[docs/ideas/README|아이디어/피드백]] — `docs/ideas/`
 - [[docs/git-history/README|Git 히스토리]] — `docs/git-history/`
 
-## 이슈 (`docs/issues/`)
+## 이슈 (`docs/ideas/issues/`)
 
-- [[docs/issues/portfolio-add-switch-overflow|Switch 오버플로 false-positive]] — P3 · /portfolios/add 토글 행 scrollWidth 11px (after 터치 영역 확장)
-- [[docs/issues/portfolio-csv-upload|CSV 업로드 미구현]] — P2 · /portfolios/new 증권사 거래내역 업로드 (기획서 1순위)
-- [[docs/issues/topbar-settings-frontend-tech-debt|TopBar·Settings 기술 부채]] — P2 · TIER_LABEL 중복·Zustand 셀렉터·AppShell 이중 마운트
-- [[docs/issues/topbar-global-search|TopBar 글로벌 검색]] — 미구현
-- [[docs/issues/public-navbar-aria-labels|PublicNavbar aria-labels]] — 접근성
-- [[docs/issues/public-layout-dynamic-rendering-perf|PublicLayout 동적 렌더링 성능]] — SSR 최적화
+- [[docs/ideas/issues/portfolio-add-switch-overflow|Switch 오버플로 false-positive]] — P3 · /portfolios/add 토글 행 scrollWidth 11px (after 터치 영역 확장)
+- [[docs/ideas/issues/portfolio-csv-upload|CSV 업로드 미구현]] — P2 · /portfolios/new 증권사 거래내역 업로드 (기획서 1순위)
+- [[docs/ideas/issues/topbar-settings-frontend-tech-debt|TopBar·Settings 기술 부채]] — P2 · TIER_LABEL 중복·Zustand 셀렉터·AppShell 이중 마운트
+- [[docs/ideas/issues/topbar-global-search|TopBar 글로벌 검색]] — 미구현
+- [[docs/ideas/issues/public-navbar-aria-labels|PublicNavbar aria-labels]] — 접근성
+- [[docs/ideas/issues/public-layout-dynamic-rendering-perf|PublicLayout 동적 렌더링 성능]] — SSR 최적화
 
 ---
 
