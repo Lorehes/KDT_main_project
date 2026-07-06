@@ -153,7 +153,7 @@ updated: 2026-07-05
 | 2026-07-06 | Jin | b2fc4ec | test(frontend): E2E keyboard-nav 레이스 수정 — 옵션 렌더 대기 추가 [3/8 S] | Frontend | 3 | 8 | S | E2E keyboard-nav 레이스 수정 |
 | 2026-07-06 | Jin | bac91b6 | fix(infra): OpenRouter Claude 마크다운 코드블록 JSON 파싱 수정 [8/8 S] | Infra (외부 API) | 8 | 8 | S | Claude 코드블록 스트리핑 3곳 |
 | 2026-07-06 | Jin | b29d5ac | fix(analysis): Stage3 RAG contentText null 폴백 — 실시간 공시 Stage3/4 활성화 [8/7 S] | Analysis (LLM 분석) | 8 | 7 | S | Stage3 RAG contentText null 폴백 |
-| 2026-07-06 | Jin | b643092 | chore(frontend): 대시보드 통계 카드 레이아웃 개선 + 검색창 제거 [3/7 S] | Frontend | 3 | 7 | S | 통계카드 레이아웃 개선+검색창 제거 |
+| 2026-07-06 | Jin | e6f410e | chore(frontend): 대시보드 통계 카드 레이아웃 개선 + 검색창 제거 [3/7 S] | Frontend | 3 | 7 | S | 통계카드 레이아웃 개선+검색창 제거 |
 <!-- SCORES -->
 
 ## 기간별 집계
