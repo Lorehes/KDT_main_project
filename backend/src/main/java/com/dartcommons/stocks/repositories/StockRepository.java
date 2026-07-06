@@ -32,6 +32,10 @@ public interface StockRepository extends JpaRepository<Stock, String> {
     @Query("SELECT s.stockCode FROM Stock s")
     Set<String> findAllStockCodes();
 
+    /** Stage 5 재무 수집용 corp_code 전체 조회 — Stock 엔티티 풀로드 없이 scalar만. */
+    @Query("SELECT s.corpCode FROM Stock s WHERE s.corpCode IS NOT NULL")
+    List<String> findAllCorpCodes();
+
     /** 단건 멱등 체크 — 커버 종목 추가 등 단발 조회용. */
     boolean existsByStockCode(String stockCode);
 

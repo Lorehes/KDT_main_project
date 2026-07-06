@@ -1,5 +1,6 @@
 package com.dartcommons.analysis.services;
 
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.analysis.entities.AnalysisJob;
 import com.dartcommons.analysis.repositories.AnalysisJobRepository;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
@@ -68,7 +69,7 @@ public class Stage4BackfillService {
     @Transactional
     public AnalysisJob createJob() {
         // stage=4로 잡 생성 — analysis_jobs.stage 컬럼 재사용(AnalysisJob.create 시그니처 답습)
-        AnalysisJob job = jobRepo.save(AnalysisJob.create((short) 4, null, null, CHUNK_SIZE));
+        AnalysisJob job = jobRepo.save(AnalysisJob.create(AnalysisStage.LLM_FINAL, null, null, CHUNK_SIZE));
         log.info("Stage4BackfillJob created: jobId={}", job.getJobId());
         return job;
     }

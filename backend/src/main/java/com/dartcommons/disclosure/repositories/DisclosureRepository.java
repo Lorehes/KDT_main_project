@@ -86,6 +86,10 @@ public interface DisclosureRepository extends JpaRepository<Disclosure, Long> {
     @Query("SELECT d.stockCode FROM Disclosure d WHERE d.id = :id")
     Optional<String> findStockCodeById(@Param("id") Long id);
 
+    /** Stage5Analyzer에서 재무 스냅샷 조회용 corp_code 역조회 — read-only. */
+    @Query("SELECT d.corpCode FROM Disclosure d WHERE d.id = :id")
+    String findCorpCodeByDisclosureId(@Param("id") Long id);
+
     /**
      * 포트폴리오 종목 필터 조회 (scope=portfolio).
      * stockCodes 리스트가 비어있으면 호출하지 말 것 — 서비스 계층에서 사전 가드.

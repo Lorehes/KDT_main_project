@@ -11,6 +11,43 @@ updated: 2026-07-06
 
 ---
 
+## 2026-07-06 | Stage 5 재무/업황 분석 Wave 1+2 — DART 수집·StageDetailEnvelope·Stage5Analyzer
+
+### 완료
+
+**Wave 1 (수집 인프라)**
+- `fnlttSinglAcnt.json` 실 API 실측(삼성전자 2024 사업보고서): status=000/013, CFS/OFS 폴백, 콤마금액 문자열, 금융업 자산총계 매칭 실패 시 skip 확인.
+- `DartFinancialClient` + `DartFinancialResponse` dto — DartClient 패턴 답습(@Retryable, HostWhitelist, status 분기).
+- `V31__create_financial_snapshots.sql` + `FinancialSnapshot` 엔티티/리포지토리 (UNIQUE(corp_code,bsns_year,reprt_code)).
+- `FinancialSyncService`(throttle 재사용·멱등·CFS우선/OFS폴백) + `FinancialSyncJob`(분기 cron) + `FinancialSyncController`(**비동기 202** — nginx 60s 타임아웃 회피).
+
+**Wave 2 (분석 파이프라인)**
+- `AnalysisStage` 상수(`RULE/LLM_CLASSIFY/RAG/LLM_FINAL/FINANCIAL`) + 기존 리터럴 치환 (Stage4 리뷰 M-2 이월 이행).
+- `StageDetailEnvelope` 래퍼(stage2/stage5 JSONB 병합) + `parseDetail` 하위호환 폴백(평면 Stage2Detail → stage2=null guard → 재파싱).
+- `Stage5Output` + `LlmClient.classifyStage5` 3종(Ollama/OpenRouter/Mock) 파서.
+- `Stage5PromptBuilder` — 룰 산출 수치(당기·전기·증감률·부채비율) 주입, "없는 수치 추측 금지", L1 자본시장법 가드. confidence 요청 제거(미사용).
+- `Stage5Analyzer` — skip 6게이트(분석없음·withheld·stage<4·stage≥5·corpCode불명·스냅샷없음), PromptGuard L2, `mergeStage5`(래퍼+폴백), `applyStage5`.
+- `AnalysisOrchestrator` Stage5 트리거(실패 격리) + `AnalysisQueryService` financial_context 조립(PREMIUM) + `AnalysisResponse` TODO 교체.
+- `AnalysisWave1IntegrationTest` StageDetailEnvelope 래퍼 포맷으로 갱신. 86/86 통과.
+
+**dc-review-code 반영**:
+- (High) `mergeStage5` Stage2Detail 소실 버그: `FAIL_ON_UNKNOWN_PROPERTIES=false`로 래퍼 파싱 성공해도 stage2=null → catch 미도달 → 기존 key_points/요인 영구 소실. `stage2==null` guard 추가 후 평면 폴백 재시도.
+- (High) `FinancialSyncController` 동기 블로킹 → 비동기 202.
+- (Med) `FinancialSyncService.getCorpCodes()` findAll() → `findAllCorpCodes()` scalar 쿼리.
+- (Med) `resolveCorpCode` 예외 무음 → log.warn 추가.
+- (Low) skip throttle 제거, capText '?' 추가, reprtCode 허용값 검증, industryContext ponytail 주석, 미사용 confidence 프롬프트 제거.
+
+### 결정
+- **syncQuarter/seedBackfill 비동기 fire-and-forget**: nginx proxy_read_timeout=60s 제약. jobId 패턴은 1회성 운영 작업에 오버엔지니어링.
+- **mergeStage5 하위호환 guard**: 래퍼 파싱 성공해도 `stage2==null`이면 평면 폴백 재시도 — JACKSON 기본값으로 예외 없이 null 생성되는 점이 함정.
+- **업황(industryContext) 후속 분리 유지**: `null` 고정, ponytail 앵커 주석, StageDetailEnvelope에 필드 예약.
+
+### 미완료 → 다음 세션
+- **Wave 3 (카드 #11~12)**: Stage5 백필 서비스/컨트롤러(stage=4 대상) + Stage5Analyzer 단위 테스트 + AnalysisResponseTest PREMIUM 분기 갱신(null→non-null).
+- **시드 백필 실행**: `POST /admin/financial/seed-backfill` (서버에서 8년치, ~2,728 DART 콜, throttle 500ms → 비동기 실행).
+- **PREMIUM 계정 실데이터 확인**: 브라우저에서 financial_context(financialImpact/riskAssessment) 렌더 확인.
+- **업황 후속 Spec**: data.go.kr API 선정 리서치 → industryContext 채움.
+
 ## 2026-07-06 | Stage 4 LLM 최종 판단 — expected_reaction·rationale 산출 (Wave 1+2)
 
 ### 완료

@@ -2,6 +2,7 @@ package com.dartcommons.infrastructure.llm;
 
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.dto.Stage4Output;
+import com.dartcommons.analysis.dto.Stage5Output;
 
 /*
  * [목적] LLM provider 추상화 — Stage 2/4 분류 호출의 표준 인터페이스.
@@ -31,4 +32,13 @@ public interface LlmClient {
      * @return 파싱된 record(expectedReaction/rationale/confidence). 실패 시 RuntimeException throw.
      */
     Stage4Output classifyStage4(String prompt);
+
+    /**
+     * Stage 5 LLM 재무/업황 분석 호출.
+     * Stage 4 결과 + 재무 스냅샷(서버 계산 수치 주입)을 프롬프트로 재무 영향·리스크 서술 산출.
+     *
+     * @param prompt Stage5PromptBuilder가 생성한 통합 프롬프트
+     * @return 파싱된 record(financialImpact/riskAssessment/confidence). 실패 시 RuntimeException throw.
+     */
+    Stage5Output classifyStage5(String prompt);
 }

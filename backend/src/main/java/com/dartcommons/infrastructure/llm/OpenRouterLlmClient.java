@@ -2,6 +2,7 @@ package com.dartcommons.infrastructure.llm;
 
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.dto.Stage4Output;
+import com.dartcommons.analysis.dto.Stage5Output;
 import com.dartcommons.analysis.entities.AnalysisResult.ExpectedReaction;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.shared.util.HostWhitelist;
@@ -175,6 +176,57 @@ public class OpenRouterLlmClient implements LlmClient {
             String preview = content.length() > 500 ? content.substring(0, 500) + "…" : content;
             log.warn("OpenRouter Stage4 JSON 파싱 실패 — content={}, error={}", preview, e.getMessage());
             throw new RestClientException("OpenRouter Stage4 JSON 파싱 실패: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Retryable(
+            retryFor = RestClientException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 8_000)
+    )
+    public Stage5Output classifyStage5(String prompt) {
+        Map<String, Object> body = Map.of(
+                "model", props.model(),
+                "messages", List.of(Map.of("role", "user", "content", prompt)),
+                "response_format", Map.of("type", "json_object"),
+                "temperature", 0.2,
+                "max_tokens", 500
+        );
+        OpenRouterResponse res = restClient.post()
+                .uri("/chat/completions")
+                .body(body)
+                .retrieve()
+                .body(OpenRouterResponse.class);
+        if (res == null || res.choices() == null || res.choices().isEmpty()) {
+            throw new RestClientException("OpenRouter Stage5 빈 응답 — choices 없음");
+        }
+        String content = res.choices().get(0).message().content();
+        if (content == null || content.isBlank()) {
+            throw new RestClientException("OpenRouter Stage5 choices[0].message.content 빈 값");
+        }
+        try {
+            Stage5OutputRaw raw = MAPPER.readValue(content, Stage5OutputRaw.class);
+            return raw.toStage5Output();
+        } catch (Exception e) {
+            String preview = content.length() > 500 ? content.substring(0, 500) + "…" : content;
+            log.warn("OpenRouter Stage5 JSON 파싱 실패 — content={}, error={}", preview, e.getMessage());
+            throw new RestClientException("OpenRouter Stage5 JSON 파싱 실패: " + e.getMessage());
+        }
+    }
+
+    private record Stage5OutputRaw(
+            @com.fasterxml.jackson.annotation.JsonProperty("financial_impact")  String financialImpact,
+            @com.fasterxml.jackson.annotation.JsonProperty("risk_assessment")   String riskAssessment,
+            @com.fasterxml.jackson.annotation.JsonProperty("industry_context")  String industryContext,
+            BigDecimal confidence
+    ) {
+        Stage5Output toStage5Output() {
+            String fi = financialImpact == null ? "" : financialImpact.trim();
+            String ra = riskAssessment == null ? "" : riskAssessment.trim();
+            BigDecimal c = confidence == null ? new BigDecimal("0.500")
+                    : confidence.max(BigDecimal.ZERO).min(BigDecimal.ONE).setScale(3, java.math.RoundingMode.HALF_UP);
+            return new Stage5Output(fi, ra, industryContext, c);
         }
     }
 

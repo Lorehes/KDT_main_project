@@ -1,7 +1,10 @@
 package com.dartcommons.analysis.services;
 
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.analysis.entities.AnalysisJob;
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.analysis.repositories.AnalysisJobRepository;
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +55,7 @@ public class AnalysisBackfillService {
         if (chunkSize <= 0 || chunkSize > 500) {
             throw new IllegalArgumentException("chunkSize must be 1~500 (recommended 100)");
         }
-        AnalysisJob job = jobRepo.save(AnalysisJob.create((short) 2, idFrom, idTo, chunkSize));
+        AnalysisJob job = jobRepo.save(AnalysisJob.create(AnalysisStage.LLM_CLASSIFY, idFrom, idTo, chunkSize));
         log.info("Analysis backfill job created: jobId={}, stage=2, idFrom={}, idTo={}, chunkSize={}",
                 job.getJobId(), idFrom, idTo, chunkSize);
         return job;

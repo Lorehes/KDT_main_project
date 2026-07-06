@@ -1,5 +1,6 @@
 package com.dartcommons.analysis.dto;
 
+import com.dartcommons.analysis.dto.StageDetailEnvelope.Stage5Detail;
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.analysis.entities.AnalysisResult.ExpectedReaction;
 import com.dartcommons.shared.enums.Sentiment;
@@ -83,11 +84,13 @@ public record AnalysisResponse(
      * [수정 시 고려사항] similar가 null이면 Free 응답과 동일(JSON 필드 미포함) — Chroma 비활성 시 AnalysisQueryService가 null 전달.
      *                  tier 필드 추가 시 AnalysisResponseTest.allTiers_alwaysIncludeDisclaimerAndReportPath() 도 갱신.
      */
+    /** Stage 5 포함 완전 응답 — AnalysisQueryService에서 호출. */
     public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar,
-                                        Stage2Detail detail, PriceReactionForecast forecast) {
+                                        Stage2Detail detail, PriceReactionForecast forecast,
+                                        Stage5Detail stage5Detail) {
         String reportPath = "/api/v1/analyses/" + ar.getId() + "/feedback";
-
         boolean proPlus = tier == Tier.PRO || tier == Tier.PREMIUM;
+        boolean isPremium = tier == Tier.PREMIUM;
 
         return new AnalysisResponse(
                 ar.getId(),
@@ -96,21 +99,15 @@ public record AnalysisResponse(
                 ar.getConfidence(),
                 ar.isWithheld(),
                 ar.getSummary(),
-
-                // Free(Stage 2) — 모든 티어 노출. 빈 리스트는 null로 접어 JSON 제외(하위 호환).
                 detail == null ? null : emptyToNull(detail.keyPoints()),
                 detail == null ? null : emptyToNull(detail.positiveFactors()),
                 detail == null ? null : emptyToNull(detail.negativeFactors()),
-
                 ar.getStageReached(),
-
                 proPlus ? ar.getExpectedReaction() : null,
                 proPlus ? ar.getRationale() : null,
-                proPlus ? similar : null,   // Stage 3 RAG — Chroma 비활성 시 similar=null → JSON 제외
-                proPlus ? forecast : null,  // Wave C 예측 — Free 제외, 표본 없으면 상위에서 null
-
-                null, // TODO Stage-5: financial_context — Stage 5 구현 시 premium ? ar.getFinancialContext() : null 로 교체
-
+                proPlus ? similar : null,
+                proPlus ? forecast : null,
+                isPremium ? stage5Detail : null,   // Stage 5 재무 분석 — PREMIUM 전용
                 DISCLAIMER,
                 reportPath,
                 ar.getCreatedAt()
@@ -119,18 +116,24 @@ public record AnalysisResponse(
 
     /** forecast=null 오버로드 — 예측 미산출(Stage 3 비활성·표본 없음). */
     public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar,
+                                        Stage2Detail detail, PriceReactionForecast forecast) {
+        return from(ar, tier, similar, detail, forecast, null);
+    }
+
+    /** Stage5 없는 오버로드 — 하위 호환. */
+    public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar,
                                         Stage2Detail detail) {
-        return from(ar, tier, similar, detail, null);
+        return from(ar, tier, similar, detail, null, null);
     }
 
     /** detail·forecast=null 오버로드 — stage_details 미보유(구버전 분석) 또는 상세 불필요 시. */
     public static AnalysisResponse from(AnalysisResult ar, Tier tier, List<SimilarDisclosureItem> similar) {
-        return from(ar, tier, similar, null, null);
+        return from(ar, tier, similar, null, null, null);
     }
 
     /** similar·detail·forecast=null 단축 오버로드 — Stage 3 비활성 환경(Free 조회 등)에서 사용. */
     public static AnalysisResponse from(AnalysisResult ar, Tier tier) {
-        return from(ar, tier, null, null, null);
+        return from(ar, tier, null, null, null, null);
     }
 
     /** 빈/ null 리스트를 null로 정규화 — @JsonInclude(NON_NULL)로 빈 배열 노출 방지. */

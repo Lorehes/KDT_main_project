@@ -1,5 +1,6 @@
 package com.dartcommons.analysis.entities;
 
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.shared.enums.Sentiment;
 import jakarta.persistence.*;
 import lombok.*;
@@ -94,6 +95,16 @@ public class AnalysisResult {
     public void applyStage4(ExpectedReaction reaction, String rationale) {
         this.expectedReaction = reaction;
         this.rationale = rationale;
-        this.stageReached = 4;
+        this.stageReached = AnalysisStage.LLM_FINAL;
+    }
+
+    /**
+     * Stage 5 재무/업황 분석 결과를 기존 레코드에 덮어씀.
+     * stage_details(JSONB)에 stage5 필드 병합 후 재직렬화, stage_reached=5 갱신.
+     * confidence·sentiment·summary 등은 Stage 2 값 보존(단일 신뢰도 소스 정책).
+     */
+    public void applyStage5(String mergedStageDetails) {
+        this.stageDetails = mergedStageDetails;
+        this.stageReached = AnalysisStage.FINANCIAL;
     }
 }

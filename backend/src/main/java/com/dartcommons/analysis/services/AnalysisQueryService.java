@@ -4,6 +4,7 @@ import com.dartcommons.analysis.dto.AnalysisResponse;
 import com.dartcommons.analysis.dto.PriceReactionForecast;
 import com.dartcommons.analysis.dto.SimilarDisclosureItem;
 import com.dartcommons.analysis.dto.Stage2Detail;
+import com.dartcommons.analysis.dto.StageDetailEnvelope;
 import com.dartcommons.shared.enums.Tier;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -57,25 +58,52 @@ public class AnalysisQueryService {
             similar = null;
         }
 
-        // Wave C 예측 차트 — 유사 공시들의 실측 D+1~D+5 평균 등락(방식 A). stock_prices 미적재/표본 없으면 null.
         PriceReactionForecast forecast = (similar != null)
                 ? forecastService.forecast(similar, FORECAST_DAYS).orElse(null)
                 : null;
 
-        return AnalysisResponse.from(result, tier, similar, parseDetail(result.getStageDetails()), forecast);
+        // Stage 5 재무 분석 — PREMIUM 전용. stage_details에서 stage5 필드 추출.
+        StageDetailEnvelope.Stage5Detail stage5Detail = (tier == Tier.PREMIUM)
+                ? parseStage5Detail(result.getStageDetails())
+                : null;
+
+        return AnalysisResponse.from(result, tier, similar, parseDetail(result.getStageDetails()), forecast, stage5Detail);
     }
 
     /*
-     * stage_details(JSONB 문자열)를 Stage2Detail로 역직렬화 — key_points/호재·악재 요인(Wave 2).
-     * null/공백(구버전 분석) 또는 파싱 실패 시 null 반환 → 신규 카드 미노출(FE 폴백). 조회를 막지 않음.
+     * stage_details(JSONB 문자열)를 Stage2Detail로 역직렬화.
+     * StageDetailEnvelope 래퍼 시도 → 실패 시 평면 Stage2Detail 폴백(기존 데이터 하위호환 — 카드 #6).
+     * null/공백(구버전 분석) 또는 양쪽 파싱 모두 실패 시 null 반환 → 신규 카드 미노출(FE 폴백).
      */
     private Stage2Detail parseDetail(String stageDetails) {
         if (stageDetails == null || stageDetails.isBlank()) return null;
         try {
+            // 1차: StageDetailEnvelope 래퍼 시도 (Stage5 이후 포맷)
+            StageDetailEnvelope envelope = objectMapper.readValue(stageDetails, StageDetailEnvelope.class);
+            if (envelope.getStage2() != null) return envelope.getStage2();
+            // 래퍼 파싱 성공이나 stage2 필드 없음 → 하위 평면 시도
+        } catch (Exception ignored) {
+            // 래퍼 파싱 실패 → 평면 Stage2Detail 폴백
+        }
+        try {
+            // 2차: 평면 Stage2Detail 폴백 (Stage5 이전 기존 데이터)
             return objectMapper.readValue(stageDetails, Stage2Detail.class);
         } catch (Exception e) {
-            // e.getMessage()는 Jackson이 소스 스니펫(=stage_details 원문)을 포함할 수 있어 로깅 금지(§11.1 유출 방지). 타입만 기록.
-            log.warn("stage_details 역직렬화 실패 — 상세 카드 생략 errType={}", e.getClass().getSimpleName());
+            log.warn("stage_details 역직렬화 실패(래퍼·평면 모두) — 상세 카드 생략 errType={}", e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    /*
+     * stage_details에서 Stage5Detail 추출 — Stage5Analyzer가 저장한 재무 분석 상세.
+     * PREMIUM 응답 조립(getByDisclosureId) 에서 사용. 없으면 null 반환.
+     */
+    StageDetailEnvelope.Stage5Detail parseStage5Detail(String stageDetails) {
+        if (stageDetails == null || stageDetails.isBlank()) return null;
+        try {
+            StageDetailEnvelope envelope = objectMapper.readValue(stageDetails, StageDetailEnvelope.class);
+            return envelope.stage5();
+        } catch (Exception e) {
             return null;
         }
     }

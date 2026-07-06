@@ -1,7 +1,10 @@
 package com.dartcommons.analysis.services;
 
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.analysis.entities.AnalysisJob;
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.analysis.repositories.AnalysisJobRepository;
+import com.dartcommons.shared.enums.AnalysisStage;
 import com.dartcommons.analysis.repositories.AnalysisResultRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +86,7 @@ public class ReanalysisService {
     @Transactional
     public AnalysisJob createJob(OffsetDateTime since, int chunkSize) {
         // stage=2, idFrom=null(전체 범위 — since 조건으로 대체), idTo=null
-        AnalysisJob job = jobRepo.save(AnalysisJob.create((short) 2, null, null, chunkSize));
+        AnalysisJob job = jobRepo.save(AnalysisJob.create(AnalysisStage.LLM_CLASSIFY, null, null, chunkSize));
         log.info("ReanalysisJob created: jobId={} since={} chunkSize={}", job.getJobId(), since, chunkSize);
         return job;
     }

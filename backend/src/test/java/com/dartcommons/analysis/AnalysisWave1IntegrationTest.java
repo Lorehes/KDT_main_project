@@ -4,6 +4,7 @@ import com.dartcommons.TestcontainersConfiguration;
 import com.dartcommons.analysis.dto.AnalysisResponse;
 import com.dartcommons.analysis.dto.Stage2Detail;
 import com.dartcommons.analysis.dto.Stage2Output;
+import com.dartcommons.analysis.dto.StageDetailEnvelope;
 import com.dartcommons.analysis.entities.AnalysisJob;
 import com.dartcommons.analysis.entities.AnalysisResult;
 import com.dartcommons.analysis.services.Stage2Analyzer;
@@ -172,7 +173,10 @@ class AnalysisWave1IntegrationTest {
         AnalysisResult reloaded = resultRepo.findByDisclosureId(d.getId()).orElseThrow();
         assertThat(reloaded.getStageDetails()).isNotNull();
 
-        Stage2Detail detail = objectMapper.readValue(reloaded.getStageDetails(), Stage2Detail.class);
+        // StageDetailEnvelope 래퍼 포맷(카드 #6) — stage2.key_points/요인 확인
+        StageDetailEnvelope envelope = objectMapper.readValue(reloaded.getStageDetails(), StageDetailEnvelope.class);
+        Stage2Detail detail = envelope.getStage2();
+        assertThat(detail).isNotNull();
         assertThat(detail.keyPoints()).isNotEmpty();
         assertThat(detail.negativeFactors()).isNotEmpty();
         assertThat(detail.positiveFactors()).isEmpty();  // 악재 시나리오는 호재 요인 없음

@@ -2,6 +2,7 @@ package com.dartcommons.infrastructure.llm;
 
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.dto.Stage4Output;
+import com.dartcommons.analysis.dto.Stage5Output;
 import com.dartcommons.analysis.entities.AnalysisResult.ExpectedReaction;
 import com.dartcommons.shared.enums.Sentiment;
 import com.dartcommons.shared.util.HostWhitelist;
@@ -175,6 +176,54 @@ public class OllamaLlmClient implements LlmClient {
             @JsonProperty("eval_count") Integer evalCount,
             @JsonProperty("prompt_eval_count") Integer promptEvalCount
     ) {
+    }
+
+    @Override
+    @Retryable(
+            retryFor = RestClientException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 8_000)
+    )
+    public Stage5Output classifyStage5(String prompt) {
+        Map<String, Object> body = Map.of(
+                "model", props.model(),
+                "prompt", prompt,
+                "format", "json",
+                "stream", false,
+                "think", false,
+                "options", Map.of("temperature", 0.2, "num_predict", 500, "num_ctx", 8192)
+        );
+        OllamaGenerateResponse res = restClient.post()
+                .uri("/api/generate")
+                .body(body)
+                .retrieve()
+                .body(OllamaGenerateResponse.class);
+        if (res == null || res.response() == null || res.response().isBlank()) {
+            throw new RestClientException("Ollama Stage5 빈 응답");
+        }
+        try {
+            Stage5OutputRaw raw = MAPPER.readValue(res.response(), Stage5OutputRaw.class);
+            return raw.toStage5Output();
+        } catch (Exception e) {
+            String preview = res.response().length() > 500 ? res.response().substring(0, 500) + "…" : res.response();
+            log.warn("Ollama Stage5 JSON 파싱 실패 — raw={}, error={}", preview, e.getMessage());
+            throw new RestClientException("Ollama Stage5 JSON 파싱 실패: " + e.getMessage());
+        }
+    }
+
+    private record Stage5OutputRaw(
+            @JsonProperty("financial_impact")  String financialImpact,
+            @JsonProperty("risk_assessment")   String riskAssessment,
+            @JsonProperty("industry_context")  String industryContext,
+            BigDecimal confidence
+    ) {
+        Stage5Output toStage5Output() {
+            String fi = financialImpact == null ? "" : financialImpact.trim();
+            String ra = riskAssessment == null ? "" : riskAssessment.trim();
+            BigDecimal c = confidence == null ? new BigDecimal("0.500")
+                    : confidence.max(BigDecimal.ZERO).min(BigDecimal.ONE).setScale(3, java.math.RoundingMode.HALF_UP);
+            return new Stage5Output(fi, ra, industryContext, c);
+        }
     }
 
     private record Stage4OutputRaw(

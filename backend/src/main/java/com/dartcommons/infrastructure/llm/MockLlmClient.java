@@ -2,6 +2,7 @@ package com.dartcommons.infrastructure.llm;
 
 import com.dartcommons.analysis.dto.Stage2Output;
 import com.dartcommons.analysis.dto.Stage4Output;
+import com.dartcommons.analysis.dto.Stage5Output;
 import com.dartcommons.analysis.entities.AnalysisResult.ExpectedReaction;
 import com.dartcommons.shared.enums.Sentiment;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -11,13 +12,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /*
- * [목적] 통합 테스트 + 로컬 개발용 결정론적 LLM 스텁 — Ollama/OpenRouter 없이도 Stage 2/4 검증 가능.
- *       프롬프트에 키워드(호재/악재/중립)가 보이면 그에 맞춰 결정론적 응답 — 테스트 시나리오 안정성.
+ * [목적] 통합 테스트 + 로컬 개발용 결정론적 LLM 스텁 — Stage 2/4/5 검증 가능.
+ *       프롬프트 키워드로 결정론적 응답 분기 — 테스트 시나리오 안정성.
  * [이유] CLAUDE.md §6-6: 통합 테스트는 Mock DB 금지지만, LLM은 안정성 이유로 Mock 권장.
  *       provider=mock 환경에서 활성화 — 운영은 provider=openrouter.
- * [사이드 임팩트] classifyStage4는 프롬프트 키워드로 UP/FLAT/DOWN 분기 — Stage4Analyzer 단위 테스트가 시나리오 유도.
- * [수정 시 고려사항] 키워드 분기 확장 시 테스트 의존도 증가 — 최소 케이스 유지.
- *                  실제 LLM 동작 시뮬레이션 의도가 아니라 "결정론적 스텁" — 환각/지연 등은 별도 테스트.
+ * [사이드 임팩트] classifyStage5: 프롬프트 키워드로 재무 긍정/부정 분기 — Stage5Analyzer 테스트 유도.
+ * [수정 시 고려사항] 키워드 분기 최소 케이스 유지 — 실제 LLM 동작 시뮬레이션이 아닌 결정론적 스텁.
  */
 @Component
 @ConditionalOnProperty(prefix = "dartcommons.llm", name = "provider", havingValue = "mock", matchIfMissing = false)
@@ -61,5 +61,19 @@ public class MockLlmClient implements LlmClient {
         }
         return new Stage4Output(ExpectedReaction.FLAT,
                 "과거 유사 공시 사례에서 뚜렷한 방향성이 나타나지 않습니다. 참고용 정보입니다.", HIGH_CONFIDENCE);
+    }
+
+    @Override
+    public Stage5Output classifyStage5(String prompt) {
+        if (prompt.contains("stage5재무악화")) {
+            return new Stage5Output(
+                    "영업이익이 전기 대비 감소 추세로 수익성 압박이 관찰됩니다. 참고용 정보입니다.",
+                    "부채비율 상승 경향으로 재무 안정성 모니터링이 필요합니다. 참고용 정보입니다.",
+                    null, LOW_CONFIDENCE);
+        }
+        return new Stage5Output(
+                "최근 분기 재무지표는 안정적인 수준을 유지하고 있습니다. 참고용 정보입니다.",
+                "뚜렷한 재무 리스크 신호는 확인되지 않습니다. 참고용 정보입니다.",
+                null, HIGH_CONFIDENCE);
     }
 }

@@ -2,7 +2,7 @@
 type: moc
 status: active
 created: 2026-05-28
-updated: 2026-07-06 (analysis-stage4-llm-final Approved 전환)
+updated: 2026-07-06 (analysis-stage5 Approved 전환)
 ---
 
 # Specs MOC
@@ -33,6 +33,7 @@ docs/specs/
 - [[be-api-alignment-mvp-r1]] — FE↔BE API 정합 R1: 알림 페이지네이션(P0) + rcept_dt 형식 수정(P1) + Stage 3/5 null 문서화 (2개 버그, DB 변경 없음)
 
 ### Approved
+- [[analysis-stage5-financial-industry]] — Stage 5 재무/업황 분석(Premium): DART fnlttSinglAcnt + V31 financial_snapshots + StageDetailEnvelope 래퍼 + Stage5Analyzer, 업황 후속 분리, 8분기 백필 (2026-07-06 Approved)
 - [[analysis-stage4-llm-final]] — Stage 4 LLM 2차 분석(최종 판단): expected_reaction/rationale 산출, 유사표본0 skip 예산가드(C), ReanalysisService 백필 재사용 — DB·FE 무변경 (2026-07-06 Approved)
 - [[telegram-notification-channel]] — 텔레그램 알림 채널 실발송: chat_id 딥링크 연동 + TelegramClient + ChannelSender 교체, 전 티어 무료 (2026-07-06 Approved)
 
