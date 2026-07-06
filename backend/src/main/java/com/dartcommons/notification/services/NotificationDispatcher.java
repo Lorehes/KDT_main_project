@@ -98,6 +98,31 @@ public class NotificationDispatcher {
         }
     }
 
+    /** 관리자 수동 발송 — 분석 결과가 있는 공시에 대해 즉시 발송 트리거. */
+    public void dispatchForDisclosure(Long disclosureId) {
+        AnalysisResult ar = analysisResultRepository.findByDisclosureId(disclosureId)
+                .orElseThrow(() -> new IllegalArgumentException("No analysis result for disclosure " + disclosureId));
+        if (ar.isWithheld()) throw new IllegalArgumentException("Analysis withheld for disclosure " + disclosureId);
+
+        Disclosure disclosure = disclosureRepository.findById(disclosureId)
+                .orElseThrow(() -> new IllegalArgumentException("Disclosure not found: " + disclosureId));
+        if (disclosure.getStockCode() == null) throw new IllegalArgumentException("Disclosure has no stock_code");
+
+        List<PortfolioEntity> portfolios = portfolioRepository.findByStockCode(disclosure.getStockCode());
+        String summary = ar.getSummary();
+        Set<Long> dispatched = new HashSet<>();
+        for (PortfolioEntity portfolio : portfolios) {
+            Long userId = portfolio.getUserId();
+            if (!dispatched.add(userId)) continue;
+            try {
+                dispatchForUser(userId, disclosure, ar.getSentiment(), ar.getConfidence(), summary);
+            } catch (Exception e) {
+                log.error("Manual dispatch error for user {}, disclosure {}: {}", userId, disclosureId, e.getMessage());
+            }
+        }
+        log.info("Manual dispatch done: disclosureId={} portfolioUsers={}", disclosureId, dispatched.size());
+    }
+
     /**
      * 단일 사용자에 대한 4단계 필터 + 채널 발송.
      * record 생성 시 body/subject 저장 → RetryJob 재발송 시 재조회 불필요.
