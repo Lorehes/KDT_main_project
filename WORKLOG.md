@@ -2904,6 +2904,13 @@ curl -u admin:<password> \
 - **후속 이슈(보류)**: 디스패처 직렬 발송 + 유저 N+1 (카카오와 동일한 기존 구조 — 발송 큐 스로틀 도입 시 함께), `maxRetries` dead property 전 클라이언트 일괄 정리.
 - **다음 기능**: `/dc-implement analysis-stage4-llm-final` (Stage 4 Approved 상태 대기 중).
 
+## 2026-07-07 | 예측 배지 블록 복구 — 라벨+이유 단일 컨테이너
+
+### 완료
+- `disclosures/[id]/page.tsx`: 이전 수정에서 `w-fit inline-flex`로 분리된 배지를 단일 `flex-col` 컨테이너로 복구. 색상 블록(`colorClass`)은 컨테이너 전체에 적용, 라벨 첫 줄(`font-bold`) + 이유 아래 줄(`font-normal text-muted-foreground`).
+
+---
+
 ## 2026-07-07 | 공시상세 예측 배지·이유 레이아웃 분리
 
 ### 완료

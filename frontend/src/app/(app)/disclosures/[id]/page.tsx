@@ -175,12 +175,10 @@ export default function DisclosureDetailPage() {
                 <>
                   <p className="text-[15px] leading-relaxed text-foreground">{analysis.summary}</p>
                   {reactionCfg && (
-                    <div className="mt-4 flex flex-col gap-2">
-                      <div className={`inline-flex w-fit items-center gap-1 rounded-lg px-3 py-2 text-sm font-bold ${reactionCfg.colorClass}`}>
-                        {reactionCfg.label}
-                      </div>
+                    <div className={`mt-4 flex flex-col gap-1 rounded-lg px-3 py-2 text-sm font-bold ${reactionCfg.colorClass}`}>
+                      <span>{reactionCfg.label}</span>
                       {analysis.rationale && (
-                        <p className="text-sm text-muted-foreground">{analysis.rationale}</p>
+                        <p className="font-normal text-muted-foreground">{analysis.rationale}</p>
                       )}
                     </div>
                   )}
