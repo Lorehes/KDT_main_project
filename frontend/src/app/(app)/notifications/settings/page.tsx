@@ -66,7 +66,7 @@ export default function NotificationSettingsPage() {
   }, [settings]);
 
   const handleSave = () => {
-    updateSettings({ channel, frequency, type_filter: typeFilter, off_hours_allowed: offHours });
+    updateSettings({ channel, enabled: true, frequency, type_filter: typeFilter, off_hours_allowed: offHours });
   };
 
   // 팝업 차단 회피: 클릭 제스처 안에서 창을 먼저 열고, 딥링크 수신 후 주소를 주입.
