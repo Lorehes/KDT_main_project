@@ -147,7 +147,7 @@ updated: 2026-07-05
 | 2026-07-06 | Jin | 6466246 | docs(ops): Stage 3 임베딩 백필 93,560건 완료 + 프로덕션 이관 기록 [3/8 S] | Docs | 3 | 8 | S | Stage3 백필·이관 완료 기록 |
 | 2026-07-06 | Jin | b0366d4 | feat(notification,infra): 텔레그램 알림 채널 실발송+계정연동 [8/9 L] | Notification/Infra/User/Shared/Frontend | 8 | 9 | L | 텔레그램 실발송+딥링크연동+리뷰P0 |
 | 2026-07-06 | Jin | 2750364 | feat(analysis): Stage 4 LLM 최종 판단(expected_reaction·rationale) + 백필 잡 [9/9 L] | Analysis/Infra(LLM)/Docs | 9 | 9 | L | Stage4 최종판단+백필잡+리뷰P0수정 |
-| 2026-07-06 | Jin | pending | feat(analysis,stocks): Stage 5 재무분석 Wave1+2 — DART수집+V31+Stage5Analyzer+래퍼 [9/9 L] | Analysis/Stocks/Infra/Shared/Docs | 9 | 9 | L | Stage5 재무수집+LLM+PREMIUM노출 |
+| 2026-07-06 | Jin | c129176 | feat(analysis,stocks): Stage 5 재무분석 Wave1+2 — DART수집+V31+Stage5Analyzer+래퍼 [9/9 L] | Analysis/Stocks/Infra/Shared/Docs | 9 | 9 | L | Stage5 재무수집+LLM+PREMIUM노출 |
 <!-- SCORES -->
 
 ## 기간별 집계
