@@ -2904,6 +2904,16 @@ curl -u admin:<password> \
 - **후속 이슈(보류)**: 디스패처 직렬 발송 + 유저 N+1 (카카오와 동일한 기존 구조 — 발송 큐 스로틀 도입 시 함께), `maxRetries` dead property 전 클라이언트 일괄 정리.
 - **다음 기능**: `/dc-implement analysis-stage4-llm-final` (Stage 4 Approved 상태 대기 중).
 
+## 2026-07-07 | disclosure-detail-pro-sidebar — 공시 상세 Pro 섹션 레이아웃 재배치
+
+### 완료
+- `disclosures/[id]/page.tsx`: "과거 유사 사례 5일 등락"·"과거 유사 공시" 두 섹션을 왼쪽 컬럼에서 제거, 오른쪽 사이드바(aside) 분석 정보 카드 하단으로 이동.
+- 모바일(`lg:hidden` 구간): 면책 고지 아래에 동일한 Pro 섹션 별도 노출. aria id 충돌 방지(-m 접미사).
+
+### 결정
+- **배치 이유**: Pro 콘텐츠(유사 공시·예측 차트)는 맥락 보조 정보 성격 → 분석 정보 카드와 같은 컬럼에 묶으면 스캔 흐름 자연스러움.
+- **모바일 중복 마크업**: aside가 `hidden lg:flex`라 불가피. 추후 컴포넌트 분리 시 해소 가능.
+
 ## 2026-07-06 | dashboard-statcard-ui-cleanup — 통계 카드 레이아웃 개선 + 검색창 제거
 
 ### 완료

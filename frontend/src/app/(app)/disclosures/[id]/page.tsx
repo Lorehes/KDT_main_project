@@ -225,50 +225,6 @@ export default function DisclosureDetailPage() {
             </section>
           )}
 
-          {/* Pro — 과거 유사 사례 5일 평균 등락(Wave C 예측 차트). 방식 A 실측, stock_prices 표본 있을 때만 */}
-          {isPro && (analysis?.price_reaction_forecast?.series.length ?? 0) > 0 && (
-            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm" aria-labelledby="forecast-heading">
-              <h2 id="forecast-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
-                과거 유사 사례 5일 등락
-                <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
-              </h2>
-              <PriceForecastChart forecast={analysis!.price_reaction_forecast!} />
-            </section>
-          )}
-
-          {/* Pro — 과거 유사 공시 (Stage 3 RAG 유사도) */}
-          <section aria-labelledby="pro-heading">
-            <h2 id="pro-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
-              과거 유사 공시
-              <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
-            </h2>
-            {isPro && analysis?.similar_disclosures?.length ? (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <ul className="divide-y divide-border" aria-label="유사 공시 목록">
-                  {analysis.similar_disclosures.map((s) => (
-                    <li key={s.rcept_no} className="py-3 first:pt-0 last:pb-0">
-                      <Link href={`/disclosures/${s.disclosure_id}`} className="group flex items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-foreground group-hover:underline">{s.corp_name}</p>
-                          <time className="font-mono text-xs text-muted-foreground" dateTime={s.rcept_dt}>{s.rcept_dt}</time>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
-                          유사도 {Math.round(s.similarity_score * 100)}%
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : !isPro ? (
-              <TierGate requiredTier="PRO">
-                <div className="h-40 rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground">과거 유사 공시 (Pro 전용)</div>
-              </TierGate>
-            ) : (
-              <p className="text-sm text-muted-foreground">유사 공시 데이터가 없습니다.</p>
-            )}
-          </section>
-
           {/* Premium — 재무 영향 + 업황. 미달 시 다크 네이비 CTA 카드(목업) */}
           <section aria-labelledby="premium-heading">
             <h2 id="premium-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
@@ -336,12 +292,94 @@ export default function DisclosureDetailPage() {
               </dl>
             </div>
           )}
+
+          {/* Pro — 과거 유사 사례 5일 평균 등락 */}
+          {isPro && (analysis?.price_reaction_forecast?.series.length ?? 0) > 0 && (
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm" aria-labelledby="forecast-heading">
+              <h2 id="forecast-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
+                과거 유사 사례 5일 등락
+                <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
+              </h2>
+              <PriceForecastChart forecast={analysis!.price_reaction_forecast!} />
+            </section>
+          )}
+
+          {/* Pro — 과거 유사 공시 (Stage 3 RAG 유사도) */}
+          <section aria-labelledby="pro-heading">
+            <h2 id="pro-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
+              과거 유사 공시
+              <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
+            </h2>
+            {isPro && analysis?.similar_disclosures?.length ? (
+              <ul className="divide-y divide-border rounded-2xl border border-border bg-card p-5 shadow-sm" aria-label="유사 공시 목록">
+                {analysis.similar_disclosures.map((s) => (
+                  <li key={s.rcept_no} className="py-3 first:pt-0 last:pb-0">
+                    <Link href={`/disclosures/${s.disclosure_id}`} className="group flex items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-foreground group-hover:underline">{s.corp_name}</p>
+                        <time className="font-mono text-xs text-muted-foreground" dateTime={s.rcept_dt}>{s.rcept_dt}</time>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+                        유사도 {Math.round(s.similarity_score * 100)}%
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : !isPro ? (
+              <TierGate requiredTier="PRO">
+                <div className="h-32 rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground">과거 유사 공시 (Pro 전용)</div>
+              </TierGate>
+            ) : (
+              <p className="text-sm text-muted-foreground">유사 공시 데이터가 없습니다.</p>
+            )}
+          </section>
         </aside>
       </div>
 
-      {/* 모바일 면책 고지 — analysis 없어도 신고 경로 표시(CLAUDE.md §6-6 신고 경로 동반 의무) */}
-      <div className="mt-6 lg:hidden">
+      {/* 모바일 — 면책 고지 + Pro 섹션 (aside가 hidden이므로 별도 노출) */}
+      <div className="mt-6 flex flex-col gap-4 lg:hidden">
         <DisclaimerNotice reportPath={analysis?.report_inaccuracy_path ?? `mailto:${SUPPORT_EMAIL}`} />
+
+        {isPro && (analysis?.price_reaction_forecast?.series.length ?? 0) > 0 && (
+          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm" aria-labelledby="forecast-heading-m">
+            <h2 id="forecast-heading-m" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
+              과거 유사 사례 5일 등락
+              <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
+            </h2>
+            <PriceForecastChart forecast={analysis!.price_reaction_forecast!} />
+          </section>
+        )}
+
+        <section aria-labelledby="pro-heading-m">
+          <h2 id="pro-heading-m" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
+            과거 유사 공시
+            <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Pro</span>
+          </h2>
+          {isPro && analysis?.similar_disclosures?.length ? (
+            <ul className="divide-y divide-border rounded-2xl border border-border bg-card p-5 shadow-sm" aria-label="유사 공시 목록">
+              {analysis.similar_disclosures.map((s) => (
+                <li key={s.rcept_no} className="py-3 first:pt-0 last:pb-0">
+                  <Link href={`/disclosures/${s.disclosure_id}`} className="group flex items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-foreground group-hover:underline">{s.corp_name}</p>
+                      <time className="font-mono text-xs text-muted-foreground" dateTime={s.rcept_dt}>{s.rcept_dt}</time>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+                      유사도 {Math.round(s.similarity_score * 100)}%
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : !isPro ? (
+            <TierGate requiredTier="PRO">
+              <div className="h-32 rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground">과거 유사 공시 (Pro 전용)</div>
+            </TierGate>
+          ) : (
+            <p className="text-sm text-muted-foreground">유사 공시 데이터가 없습니다.</p>
+          )}
+        </section>
       </div>
     </div>
   );
