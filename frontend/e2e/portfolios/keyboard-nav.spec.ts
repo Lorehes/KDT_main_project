@@ -61,6 +61,8 @@ test.describe("portfolios/new — 종목 검색 키보드 네비게이션", () =
     await input.fill("삼성");
 
     await expect(page.getByRole("listbox")).toBeVisible();
+    // 디바운스(300ms)+검색 완료 후 옵션 렌더까지 대기 — "검색 중..." 상태에서 ArrowDown은 no-op
+    await expect(page.getByRole("option").first()).toBeVisible();
 
     // ArrowDown → 첫 번째 옵션 active
     await input.press("ArrowDown");
@@ -83,6 +85,8 @@ test.describe("portfolios/new — 종목 검색 키보드 네비게이션", () =
     await expect(page.getByRole("listbox")).toBeVisible();
 
     const options = page.getByRole("option");
+    // 디바운스(300ms)+검색 완료 후 옵션 렌더까지 대기 — "검색 중..." 상태에서 ArrowDown은 no-op
+    await expect(options.first()).toBeVisible();
 
     // index 0 → 1 → wrap to 0 (MOCK_STOCKS 2건)
     await input.press("ArrowDown");

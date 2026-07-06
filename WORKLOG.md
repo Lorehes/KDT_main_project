@@ -11,6 +11,18 @@ updated: 2026-07-06
 
 ---
 
+## 2026-07-06 | 전체 파이프라인 검증 + E2E keyboard-nav 레이스 수정
+
+### 완료
+- 전체 파이프라인 설계 대비 구현 완성도 검증: Stage 1~5 전 구간, 티어 게이팅, 알림 3채널, FE 8페이지 모두 Done 스펙 기준 구현 완료 확인.
+- 백엔드 JUnit5+Testcontainers(PostgreSQL) BUILD SUCCESSFUL, 프론트 Vitest 78/78, Playwright E2E 12/12 전 통과.
+- E2E `keyboard-nav.spec.ts` (a)(b) 레이스 수정: `listbox` 가시성 후 곧바로 ArrowDown → `searchResults` 아직 없어 no-op 발생. `option.first()` 가시성 대기 1줄 추가로 결정적 해소. 제품 코드 무변경.
+
+### 결정
+- 알림 폴백 불일치 확인됨(기획서 문구 "카카오 1순위→폴백 텔레그램/이메일" vs 실구현 "유저 선택 단일채널+동일채널재시도"): 의도된 단순화로 합의, 기획서 문구 정정은 별도 작업으로 추적.
+
+---
+
 ## 2026-07-06 | 스펙 3건 Done 전환 — Stage4·Stage5·텔레그램
 
 ### 완료
