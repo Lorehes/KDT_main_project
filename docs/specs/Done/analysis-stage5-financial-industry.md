@@ -1,15 +1,15 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-06
 updated: 2026-07-06
 ---
 
 # analysis Stage 5 — 재무/업황 분석 (Premium) Spec
 
-> 상태: Draft → **Approved** (2026-07-06, dc-tech-review 승인 + 결정 4건 확정)
+> 상태: Approved → **Done** (2026-07-06, Wave 1~3 구현 완료 — 커밋 c129176·99c450e)
 > 마일스톤: Phase 1 최종 단계 — **Premium 티어 가치 완성** (Free 1~2 / Pro 1~4 / **Premium 1~5**)
-> 선행 의존: [[analysis-stage4-llm-final]] (Approved, 2026-07-06 구현 완료 — 커밋 2750364)
+> 선행 의존: [[analysis-stage4-llm-final]] (Done, 2026-07-06 구현 완료 — 커밋 2750364)
 
 ## 배경 / 목적
 

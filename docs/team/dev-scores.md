@@ -149,6 +149,7 @@ updated: 2026-07-05
 | 2026-07-06 | Jin | 2750364 | feat(analysis): Stage 4 LLM 최종 판단(expected_reaction·rationale) + 백필 잡 [9/9 L] | Analysis/Infra(LLM)/Docs | 9 | 9 | L | Stage4 최종판단+백필잡+리뷰P0수정 |
 | 2026-07-06 | Jin | c129176 | feat(analysis,stocks): Stage 5 재무분석 Wave1+2 — DART수집+V31+Stage5Analyzer+래퍼 [9/9 L] | Analysis/Stocks/Infra/Shared/Docs | 9 | 9 | L | Stage5 재무수집+LLM+PREMIUM노출 |
 | 2026-07-06 | Jin | 99c450e | feat(analysis): Stage 5 Wave3 — 백필잡+Stage5AnalyzerTest+PREMIUM게이팅+parseAmount테스트 [8/9 M] | Analysis/Infra/Docs | 8 | 9 | M | Stage5 백필잡+회귀테스트 122건 |
+| 2026-07-06 | Jin | d759053 | chore(spec): Stage4·Stage5·텔레그램 스펙 Done 전환 [2/8 S] | Docs | 2 | 8 | S | 스펙 3건 Done 전환 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -156,5 +157,5 @@ updated: 2026-07-05
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 5 | 42 | 130 | 8.4 | 6.5 |
+| Jin | 6 | 43 | 131 | 8.4 | 6.5 |
 <!-- SUMMARY:END -->

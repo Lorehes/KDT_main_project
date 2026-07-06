@@ -11,6 +11,16 @@ updated: 2026-07-06
 
 ---
 
+## 2026-07-06 | 스펙 3건 Done 전환 — Stage4·Stage5·텔레그램
+
+### 완료
+- **analysis-stage4-llm-final** → Done (커밋 2750364, 구현 검증: expected_reaction/rationale + 백필 잡)
+- **analysis-stage5-financial-industry** → Done (커밋 c129176·99c450e, Wave 1~3, 122 테스트)
+- **telegram-notification-channel** → Done (커밋 4ff1ae1, Wave 1~3, TelegramClient + 딥링크 연동)
+- `docs/specs/README.md` MOC 갱신 — Approved 섹션 비움, Done 상단 등재
+
+---
+
 ## 2026-07-06 | Stage 5 Wave 3 — 백필 잡 + 테스트 완성
 
 ### 완료

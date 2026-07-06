@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-05
 updated: 2026-07-06
 ---
 
 # 텔레그램 알림 채널 실발송 Spec (telegram-notification-channel)
 
-> 상태: Draft → **Approved** (2026-07-06, dc-tech-review 승인)
+> 상태: Approved → **Done** (2026-07-06, Wave 1~3 구현 완료 — 커밋 4ff1ae1)
 
 ## 배경 / 목적
 

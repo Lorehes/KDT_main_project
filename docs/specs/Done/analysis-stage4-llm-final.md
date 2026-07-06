@@ -1,13 +1,13 @@
 ---
 type: spec
-status: Approved
+status: Done
 created: 2026-07-06
 updated: 2026-07-06
 ---
 
 # analysis Stage 4 — LLM 2차 분석(최종 판단) Spec
 
-> 상태: Draft → **Approved** (2026-07-06, dc-tech-review 승인 + 결정 3건 확정)
+> 상태: Approved → **Done** (2026-07-06, 구현 완료 — 커밋 2750364, 백필 잡 포함)
 > 마일스톤: Phase 1 후행 — Pro 티어 가치 완성 (Free 1~2 / **Pro 1~4** / Premium 1~5)
 > 선행 의존: [[analysis-stage2-llm]] (Done) · [[analysis-stage3-rag-chroma]] (Done, 2026-07-06 프로덕션 가동 — 벡터 93,560건)
 
