@@ -11,6 +11,18 @@ updated: 2026-07-06
 
 ---
 
+## 2026-07-06 | Stage3 RAG contentText null 폴백 — 실시간 공시 Stage3/4 활성화
+
+### 완료
+- **Stage3/4 전체 스킵 원인 규명**: 실시간 폴링으로 수집된 공시는 DART `document.xml` API가 status=014("파일이 존재하지 않습니다") 반환 → `content_text` NULL + `content_fetched_at` 기록(permanent failure). Stage3 `findSimilar`가 contentText null guard에서 즉시 빈 리스트 반환 → Stage4가 "유사 공시 표본 0" skip.
+- **embedText() 폴백 추가**: `Stage3RagService`에 `embedText(Disclosure)` 헬퍼 추가. contentText가 있으면 그대로, 없으면 `corpName + disclosureType + reportNm` 단문 폴백으로 임베딩. `upsert`·`findSimilar` 양쪽에 적용.
+
+### 결정
+- 역사적 공시(백필 93,560건)는 DART 문서가 있어 contentText 충분. 당일 실시간 공시는 DART 문서 없는 케이스가 대부분 — 폴백 텍스트로 임베딩 품질은 낮지만 Stage3/4 활성화 우선.
+- contentText null 폴백 시 similarity 검색 품질은 낮음(단문 vs 장문 임베딩 불일치). 향후 DART 문서 지연 후 재수집(retry) 정책 검토 가능.
+
+---
+
 ## 2026-07-06 | OpenRouter Claude 마크다운 코드블록 JSON 파싱 수정
 
 ### 완료

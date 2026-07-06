@@ -59,12 +59,8 @@ public class Stage3RagService {
             return;
         }
         Disclosure d = opt.get();
-        if (d.getContentText() == null || d.getContentText().isBlank()) {
-            log.debug("Stage3.upsert skip — contentText 없음: rceptNo={}", d.getRceptNo());
-            return;
-        }
 
-        float[] vector = embeddingClient.embed(d.getContentText());
+        float[] vector = embeddingClient.embed(embedText(d));
         chromaClient.upsert(d.getRceptNo(), vector, buildMetadata(d));
         log.debug("Stage3.upsert OK: rceptNo={} corpCode={} type={}",
                 d.getRceptNo(), d.getCorpCode(), d.getDisclosureType());
@@ -73,18 +69,17 @@ public class Stage3RagService {
     /**
      * 이중 쿼리로 유사 공시 검색.
      * ① 동일 유형 max10 검색 → sameCorp max5 + otherCorp max5 파티셔닝 → 유사도 내림차순.
-     * contentText 없거나 Chroma 비활성이면 빈 리스트 반환.
+     * contentText 없으면 corpName+disclosureType+reportNm 폴백 텍스트로 임베딩.
      */
     public List<SimilarDisclosureItem> findSimilar(Long disclosureId) {
         Optional<Disclosure> opt = disclosureRepository.findById(disclosureId);
         if (opt.isEmpty()) return List.of();
 
         Disclosure d = opt.get();
-        if (d.getContentText() == null || d.getContentText().isBlank()) return List.of();
 
         float[] queryVector;
         try {
-            queryVector = embeddingClient.embed(d.getContentText());
+            queryVector = embeddingClient.embed(embedText(d));
         } catch (Exception e) {
             log.warn("Stage3.findSimilar embed 실패: disclosureId={} err={}", disclosureId, e.getMessage());
             return List.of();
@@ -143,6 +138,12 @@ public class Stage3RagService {
                 m.getOrDefault("rcept_dt", ""),
                 r.score()
         );
+    }
+
+    // ponytail: contentText 없으면 메타데이터 단문 폴백 — 품질은 낮지만 Stage3/4 활성화
+    private static String embedText(Disclosure d) {
+        if (d.getContentText() != null && !d.getContentText().isBlank()) return d.getContentText();
+        return d.getCorpName() + " " + d.getDisclosureType() + " " + d.getReportNm();
     }
 
     private static Map<String, String> buildMetadata(Disclosure d) {
