@@ -122,4 +122,24 @@ public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, 
     /** Stage 4 백필 대상 총 건수 (근사치, safetyCap 산출용). */
     @Query("SELECT COUNT(ar) FROM AnalysisResult ar WHERE ar.stageReached = 2 AND ar.withheld = false")
     long countStage4BackfillTargets();
+
+    /**
+     * Stage 5 백필 대상 — stage_reached=4(Stage 4 완료)이고 withheld=false인 분석 결과(커서 페이지네이션).
+     * 재무 스냅샷 없음 skip은 Stage5Analyzer 내부에서 처리(결정 C — Stage4 백필과 동일 구조).
+     */
+    @Query("""
+            SELECT ar.disclosureId FROM AnalysisResult ar
+            WHERE ar.stageReached = 4
+            AND ar.withheld = false
+            AND (:lastId IS NULL OR ar.disclosureId > :lastId)
+            ORDER BY ar.disclosureId ASC
+            """)
+    List<Long> findStage5BackfillTargets(
+            @Param("lastId") Long lastId,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    /** Stage 5 백필 대상 총 건수 (근사치, safetyCap 산출용). */
+    @Query("SELECT COUNT(ar) FROM AnalysisResult ar WHERE ar.stageReached = 4 AND ar.withheld = false")
+    long countStage5BackfillTargets();
 }

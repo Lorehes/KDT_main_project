@@ -95,15 +95,36 @@ class AnalysisResponseTest {
     }
 
     @Test
-    @DisplayName("PREMIUM 티어 — Pro+ 필드 포함, financial_context는 Stage 5 미구현으로 null")
+    @DisplayName("PREMIUM 티어 — Pro+ 필드 포함, stage5Detail 미전달 시 financial_context null")
     void from_premiumTier_includesProFieldsAndFinancialContextNull() {
         AnalysisResponse resp = AnalysisResponse.from(ar, Tier.PREMIUM);
 
         assertThat(resp.expectedReaction()).isEqualTo(AnalysisResult.ExpectedReaction.UP);
         assertThat(resp.rationale()).isNotNull();
-        // TODO Stage-5: 구현 후 non-null 검증으로 교체
         assertThat(resp.financialContext()).isNull();
         assertThat(resp.disclaimer()).isEqualTo(AnalysisResponse.DISCLAIMER);
+    }
+
+    @Test
+    @DisplayName("PREMIUM 티어 — Stage 5 완료 시 financial_context 노출, PRO 이하는 null (Stage 5 게이팅)")
+    void from_premiumTier_stage5FinancialContext() {
+        com.dartcommons.analysis.dto.StageDetailEnvelope.Stage5Detail stage5 =
+                new com.dartcommons.analysis.dto.StageDetailEnvelope.Stage5Detail(
+                        "매출 성장 흐름이 유지되고 있습니다. 참고용 정보입니다.",
+                        "재무 리스크 신호는 제한적입니다. 참고용 정보입니다.",
+                        null);
+
+        // PREMIUM → 노출
+        AnalysisResponse premium = AnalysisResponse.from(ar, Tier.PREMIUM, null, null, null, stage5);
+        assertThat(premium.financialContext()).isNotNull();
+
+        // PRO → 같은 stage5Detail을 전달해도 null (티어 게이팅)
+        AnalysisResponse pro = AnalysisResponse.from(ar, Tier.PRO, null, null, null, stage5);
+        assertThat(pro.financialContext()).isNull();
+
+        // FREE → null
+        AnalysisResponse free = AnalysisResponse.from(ar, Tier.FREE, null, null, null, stage5);
+        assertThat(free.financialContext()).isNull();
     }
 
     @Test

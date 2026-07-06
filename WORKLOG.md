@@ -11,6 +11,22 @@ updated: 2026-07-06
 
 ---
 
+## 2026-07-06 | Stage 5 Wave 3 — 백필 잡 + 테스트 완성
+
+### 완료
+- **Stage5BackfillService**: stage=4 대상 커서 백필(CHUNK_SIZE=50), 연속 LLM 예외 30건 조기중단(쿼터 보호, Stage4와 동일), stage_reached=4 필터 멱등 재개. `AnalysisJob.create(FINANCIAL,…)` — V13 CHECK(2~5) 확인.
+- **Stage5BackfillController**: `POST /admin/analysis/stage5-backfill`(202+jobId, 중복 409) + 진행률 GET.
+- **AnalysisResultRepository**: `findStage5BackfillTargets`(커서) + `countStage5BackfillTargets` 쿼리 추가.
+- **Stage5AnalyzerTest** 8건: skip 4게이트 + 골든 패스 + **평면 Stage2Detail 보존 회귀**(리뷰 High 버그 게이트) + 래퍼 보존 + PromptGuard skip. 모두 Testcontainers PostgreSQL.
+- **AnalysisResponseTest**: PREMIUM stage5 게이팅 신규 케이스 — 같은 Stage5Detail을 전달해도 PRO/FREE는 null.
+- **DartFinancialClientTest** 5건: parseAmount 경계값(콤마·음수·"-"·빈값·비숫자). 122/122 통과.
+
+### 미완료 → 다음 세션
+- **서버 운영**: V31 마이그레이션은 배포 시 Flyway 자동 적용. 순서: `seed-backfill`(재무) → `stage5-backfill`(분석).
+- **PREMIUM 실데이터 확인**: 브라우저에서 `financial_context`(financialImpact/riskAssessment) 렌더.
+- **Stage 5 Done 전환**: `/dc-spec-move analysis-stage5-financial-industry Done`.
+- **업황 후속 Spec**: data.go.kr API 선정 → industryContext 채움.
+
 ## 2026-07-06 | Stage 5 재무/업황 분석 Wave 1+2 — DART 수집·StageDetailEnvelope·Stage5Analyzer
 
 ### 완료
