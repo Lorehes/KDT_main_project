@@ -11,6 +11,17 @@ updated: 2026-07-06
 
 ---
 
+## 2026-07-06 | OpenRouter Claude 마크다운 코드블록 JSON 파싱 수정
+
+### 완료
+- **LLM 모델 교체**: `nvidia/nemotron-3-super-120b-a12b:free` → `anthropic/claude-sonnet-4-6`. 구 모델 글로벌 rate limit(429) 소진으로 Stage 2/4/5 분석 전면 중단.
+- **OpenRouterLlmClient 파싱 버그 수정**: Claude가 `response_format=json_object` 무시하고 ` ```json ... ``` ` 코드블록으로 응답 → `MAPPER.readValue` 백틱에서 실패. `stripMarkdownCodeBlock()` 헬퍼 1개 추가, Stage2/4/5 파싱 3곳에 적용.
+
+### 결정
+- `response_format=json_object`는 OpenAI 계열 모델에서만 신뢰 가능. Claude 계열은 코드블록 스트리핑 필수.
+
+---
+
 ## 2026-07-06 | 전체 파이프라인 검증 + E2E keyboard-nav 레이스 수정
 
 ### 완료

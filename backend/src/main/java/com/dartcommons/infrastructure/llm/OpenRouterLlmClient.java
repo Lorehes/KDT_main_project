@@ -131,7 +131,7 @@ public class OpenRouterLlmClient implements LlmClient {
         }
 
         try {
-            Stage2OutputRaw raw = MAPPER.readValue(content, Stage2OutputRaw.class);
+            Stage2OutputRaw raw = MAPPER.readValue(stripMarkdownCodeBlock(content), Stage2OutputRaw.class);
             return raw.toStage2Output();
         } catch (Exception e) {
             // 로그 볼륨 제어: LLM 응답이 길 수 있으므로 500자로 잘라 출력
@@ -170,7 +170,7 @@ public class OpenRouterLlmClient implements LlmClient {
             throw new RestClientException("OpenRouter Stage4 choices[0].message.content 빈 값");
         }
         try {
-            Stage4OutputRaw raw = MAPPER.readValue(content, Stage4OutputRaw.class);
+            Stage4OutputRaw raw = MAPPER.readValue(stripMarkdownCodeBlock(content), Stage4OutputRaw.class);
             return raw.toStage4Output();
         } catch (Exception e) {
             String preview = content.length() > 500 ? content.substring(0, 500) + "…" : content;
@@ -206,7 +206,7 @@ public class OpenRouterLlmClient implements LlmClient {
             throw new RestClientException("OpenRouter Stage5 choices[0].message.content 빈 값");
         }
         try {
-            Stage5OutputRaw raw = MAPPER.readValue(content, Stage5OutputRaw.class);
+            Stage5OutputRaw raw = MAPPER.readValue(stripMarkdownCodeBlock(content), Stage5OutputRaw.class);
             return raw.toStage5Output();
         } catch (Exception e) {
             String preview = content.length() > 500 ? content.substring(0, 500) + "…" : content;
@@ -243,6 +243,18 @@ public class OpenRouterLlmClient implements LlmClient {
                     : confidence.max(BigDecimal.ZERO).min(BigDecimal.ONE).setScale(3, java.math.RoundingMode.HALF_UP);
             return new Stage4Output(er, r, c);
         }
+    }
+
+    // Claude 등 일부 모델이 JSON을 ```json ... ``` 코드블록으로 감싸 응답하는 경우 제거
+    private static String stripMarkdownCodeBlock(String s) {
+        String t = s.strip();
+        if (!t.startsWith("```")) return s;
+        int nl = t.indexOf('\n');
+        if (nl == -1) return s;
+        t = t.substring(nl + 1);
+        int end = t.lastIndexOf("```");
+        if (end != -1) t = t.substring(0, end);
+        return t.strip();
     }
 
     // OpenAI Chat Completions 응답 구조 — OpenRouter가 동일 포맷 사용.

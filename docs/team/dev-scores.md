@@ -151,6 +151,7 @@ updated: 2026-07-05
 | 2026-07-06 | Jin | 99c450e | feat(analysis): Stage 5 Wave3 — 백필잡+Stage5AnalyzerTest+PREMIUM게이팅+parseAmount테스트 [8/9 M] | Analysis/Infra/Docs | 8 | 9 | M | Stage5 백필잡+회귀테스트 122건 |
 | 2026-07-06 | Jin | d759053 | chore(spec): Stage4·Stage5·텔레그램 스펙 Done 전환 [2/8 S] | Docs | 2 | 8 | S | 스펙 3건 Done 전환 |
 | 2026-07-06 | Jin | b2fc4ec | test(frontend): E2E keyboard-nav 레이스 수정 — 옵션 렌더 대기 추가 [3/8 S] | Frontend | 3 | 8 | S | E2E keyboard-nav 레이스 수정 |
+| 2026-07-06 | Jin | bac91b6 | fix(infra): OpenRouter Claude 마크다운 코드블록 JSON 파싱 수정 [8/8 S] | Infra (외부 API) | 8 | 8 | S | Claude 코드블록 스트리핑 3곳 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -158,5 +159,5 @@ updated: 2026-07-05
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 7 | 44 | 132 | 8.4 | 6.5 |
+| Jin | 8 | 45 | 133 | 8.4 | 6.5 |
 <!-- SUMMARY:END -->
