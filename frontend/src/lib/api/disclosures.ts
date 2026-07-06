@@ -109,11 +109,10 @@ export const EXPECTED_REACTION_CONFIG: Record<ExpectedReaction, { label: string;
 
 // ─── 훅 ─────────────────────────────────────────────────────────────────────
 
-export function useDisclosures(params: DisclosureListParams = {}) {
+export function useDisclosures(params: DisclosureListParams = {}, opts?: { enabled?: boolean }) {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
     if (v === undefined) return;
-    // 빈 문자열 q는 전송 생략 — BE에서도 isBlank() 처리하나 불필요한 param 제거
     if (k === "q" && String(v).trim() === "") return;
     query.set(k, String(v));
   });
@@ -122,6 +121,7 @@ export function useDisclosures(params: DisclosureListParams = {}) {
     queryKey: ["disclosures", params],
     queryFn: () => apiClient<DisclosurePage>(`/disclosures?${query}`),
     staleTime: 60_000,
+    enabled: opts?.enabled ?? true,
   });
 }
 

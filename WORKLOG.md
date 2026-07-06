@@ -2904,6 +2904,18 @@ curl -u admin:<password> \
 - **후속 이슈(보류)**: 디스패처 직렬 발송 + 유저 N+1 (카카오와 동일한 기존 구조 — 발송 큐 스로틀 도입 시 함께), `maxRetries` dead property 전 클라이언트 일괄 정리.
 - **다음 기능**: `/dc-implement analysis-stage4-llm-final` (Stage 4 Approved 상태 대기 중).
 
+## 2026-07-07 | disclosure-detail-layout-redesign — 공시상세 레이아웃 전면 개편
+
+### 완료
+- **레이아웃**: `max-w-4xl mx-auto` 제거 → AppShell `p-8` 기준 전폭. 그리드 `[1fr_340px]` → `[13fr_7fr]`(65/35).
+- **오른쪽 컬럼 재배치**: Premium CTA(재무·업황) 왼쪽 → 오른쪽 사이드바. 같은 회사 최근 공시 카드 신규 추가(현재 공시 제외 최대 4건, `useDisclosures({ stock_code, size:5 })`).
+- **피드백 섹션**: 그리드 밖 전폭 최하단 배치. 버튼 `flex-col p-6` → `flex-row px-5 py-3`(높이 절반, 가로 레이아웃).
+- **`useDisclosures`**: `opts.enabled` 옵션 추가(하위 호환).
+
+### 결정
+- **65/35 채택**: 왼쪽(긴 텍스트 분석 카드)에 더 많은 너비, 오른쪽(카드형 보조 정보)은 35%로 충분.
+- **같은 회사 공시를 오른쪽에**: 주요 분석 흐름을 방해하지 않으면서 관련 공시 탐색 경로 제공.
+
 ## 2026-07-07 | disclosure-detail-pro-sidebar — 공시 상세 Pro 섹션 레이아웃 재배치
 
 ### 완료

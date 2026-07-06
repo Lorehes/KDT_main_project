@@ -16,7 +16,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ExternalLink, ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
-import { useDisclosure, useDisclosureAnalysis, EXPECTED_REACTION_CONFIG } from "@/lib/api/disclosures";
+import { useDisclosure, useDisclosureAnalysis, useDisclosures, EXPECTED_REACTION_CONFIG } from "@/lib/api/disclosures";
 import { useTierCheck } from "@/lib/hooks/useTierCheck";
 import { useDelayedLoading } from "@/lib/hooks/useDelayedLoading";
 import { useUIStore } from "@/lib/stores/uiStore";
@@ -46,6 +46,13 @@ export default function DisclosureDetailPage() {
   // 매수가는 복호화된 금융 PII — 렌더만 하고 절대 로깅 금지(CLAUDE.md §7).
   const { data: portfolios } = usePortfolios();
   const holding = portfolios?.find((p) => p.stock_code === disclosure?.stock_code);
+
+  // 같은 회사 최근 공시 — disclosure 로드 후 활성, 현재 공시 제외 최대 4건
+  const { data: sameCorpPage } = useDisclosures(
+    { stock_code: disclosure?.stock_code, size: 5 },
+    { enabled: !!disclosure?.stock_code },
+  );
+  const sameCorpDisclosures = sameCorpPage?.content.filter((d) => d.id !== id).slice(0, 4) ?? [];
   // 매수가·현재가 둘 다 있고 매수가>0이어야 손익 계산 — 미입력(CSV 등록)·종가 미수집·매수가 0이면 박스 미노출(0 나눗셈 방지).
   const position =
     holding?.avg_buy_price != null && holding.avg_buy_price > 0 && holding.close_price != null
@@ -111,13 +118,13 @@ export default function DisclosureDetailPage() {
     : null;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <Link href="/disclosures" className="mb-5 inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
         <ArrowLeft className="size-4" aria-hidden />
         공시 피드
       </Link>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 lg:grid-cols-[13fr_7fr]">
         {/* ── 메인 컨텐츠 ── */}
         <div className="flex flex-col gap-5">
 
@@ -225,45 +232,6 @@ export default function DisclosureDetailPage() {
             </section>
           )}
 
-          {/* Premium — 재무 영향 + 업황. 미달 시 다크 네이비 CTA 카드(목업) */}
-          <section aria-labelledby="premium-heading">
-            <h2 id="premium-heading" className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">
-              재무·업황 심층 분석
-              <span className="rounded-md bg-[color:var(--color-sentiment-withheld)] px-1.5 py-0.5 text-[10px] text-[color:var(--color-sentiment-withheld-foreground)]">Premium</span>
-            </h2>
-            {isPremium && analysis?.financial_context ? (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                {/* Wave 2에서 구조화된 재무 테이블·업황 비교 UI로 교체 예정 */}
-                <pre className="whitespace-pre-wrap text-sm text-foreground">
-                  {JSON.stringify(analysis.financial_context, null, 2)}
-                </pre>
-              </div>
-            ) : !isPremium ? (
-              <div className="flex flex-col gap-3 rounded-2xl bg-[color:var(--color-brand-navy)] p-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-base font-extrabold text-white">재무·업황 보러가기</p>
-                  <p className="mt-1 text-sm text-white/70">과거 재무 추이·업황 비교 심층 분석은 {TIER_LABEL.PREMIUM} 플랜에서 제공됩니다.</p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => setUpsellModalOpen(true)}
-                  aria-label={`${TIER_LABEL.PREMIUM} 플랜으로 업그레이드`}
-                >
-                  {TIER_LABEL.PREMIUM} 업그레이드하기 →
-                </Button>
-              </div>
-            ) : null}
-          </section>
-
-          {/* 피드백 — 모든 공시 상세에 상시 노출 의무 (CLAUDE.md §6-6) */}
-          {analysis && (
-            <section className="rounded-2xl border border-border bg-card p-6 shadow-sm" aria-labelledby="feedback-heading">
-              <h2 id="feedback-heading" className="mb-4 text-[11px] font-extrabold uppercase tracking-widest text-primary">분석 피드백</h2>
-              <FeedbackPrompt analysisId={analysis.analysis_id} />
-            </section>
-          )}
         </div>
 
         {/* ── 사이드바 (웹 전용) ── */}
@@ -290,6 +258,58 @@ export default function DisclosureDetailPage() {
                 <div className="flex justify-between"><dt>분석 단계</dt><dd className="font-bold text-foreground">Stage {analysis.stage_reached}</dd></div>
                 <div className="flex justify-between"><dt>분석 시각</dt><dd className="font-bold text-foreground">{new Date(analysis.created_at).toLocaleString("ko-KR")}</dd></div>
               </dl>
+            </div>
+          )}
+
+          {/* Premium — 재무·업황 심층 분석 */}
+          {isPremium && analysis?.financial_context ? (
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-primary">재무·업황 심층 분석</p>
+              <pre className="whitespace-pre-wrap text-xs text-foreground">
+                {JSON.stringify(analysis.financial_context, null, 2)}
+              </pre>
+            </div>
+          ) : !isPremium ? (
+            <div className="flex flex-col gap-3 rounded-2xl bg-[color:var(--color-brand-navy)] p-5">
+              <div>
+                <p className="text-sm font-extrabold text-white">재무·업황 심층 분석</p>
+                <p className="mt-1 text-xs text-white/70">재무 추이·업황 비교는 {TIER_LABEL.PREMIUM} 플랜에서.</p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                onClick={() => setUpsellModalOpen(true)}
+                aria-label={`${TIER_LABEL.PREMIUM} 플랜으로 업그레이드`}
+              >
+                {TIER_LABEL.PREMIUM} 업그레이드 →
+              </Button>
+            </div>
+          ) : null}
+
+          {/* 같은 회사 최근 공시 */}
+          {disclosure && sameCorpDisclosures.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-primary">
+                {disclosure.corp_name} 최근 공시
+              </p>
+              <ul className="divide-y divide-border" aria-label={`${disclosure.corp_name} 최근 공시 목록`}>
+                {sameCorpDisclosures.map((d) => (
+                  <li key={d.id} className="py-2.5 first:pt-0 last:pb-0">
+                    <Link
+                      href={`/disclosures/${d.id}`}
+                      className="group flex flex-col gap-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <p className="line-clamp-2 text-xs font-bold leading-snug text-foreground group-hover:underline">
+                        {d.report_nm}
+                      </p>
+                      <time className="font-mono text-[10px] text-muted-foreground" dateTime={d.rcept_dt}>
+                        {d.rcept_dt}
+                      </time>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -336,6 +356,14 @@ export default function DisclosureDetailPage() {
           </section>
         </aside>
       </div>
+
+      {/* 분석 피드백 — 양 컬럼 통합 전폭, 최하단 (CLAUDE.md §6-6 상시 노출 의무) */}
+      {analysis && (
+        <section className="mt-2 rounded-2xl border border-border bg-card p-6 shadow-sm" aria-labelledby="feedback-heading">
+          <h2 id="feedback-heading" className="mb-4 text-[11px] font-extrabold uppercase tracking-widest text-primary">분석 피드백</h2>
+          <FeedbackPrompt analysisId={analysis.analysis_id} />
+        </section>
+      )}
 
       {/* 모바일 — 면책 고지 + Pro 섹션 (aside가 hidden이므로 별도 노출) */}
       <div className="mt-6 flex flex-col gap-4 lg:hidden">

@@ -63,7 +63,7 @@ export function FeedbackPrompt({ analysisId, className }: FeedbackPromptProps) {
             type="button"
             onClick={() => setVerdict(v)}
             className={cn(
-              "flex flex-1 flex-col items-center gap-2.5 rounded-2xl border-[1.5px] p-6 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "flex flex-1 items-center justify-center gap-2 rounded-xl border-[1.5px] px-5 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               verdict === v && v === "USEFUL" && "border-[color:var(--color-sentiment-positive)] bg-[color:var(--color-sentiment-positive)]/10",
               verdict === v && v === "INACCURATE" && "border-destructive bg-destructive/10",
               verdict !== v && "border-border bg-card",
@@ -71,11 +71,11 @@ export function FeedbackPrompt({ analysisId, className }: FeedbackPromptProps) {
             aria-pressed={verdict === v}
           >
             {v === "USEFUL" ? (
-              <ThumbsUp className="size-7 text-[color:var(--color-sentiment-positive)]" aria-hidden />
+              <ThumbsUp className="size-5 text-[color:var(--color-sentiment-positive)]" aria-hidden />
             ) : (
-              <ThumbsDown className="size-7 text-destructive" aria-hidden />
+              <ThumbsDown className="size-5 text-destructive" aria-hidden />
             )}
-            <span className="text-base font-extrabold text-foreground">
+            <span className="text-sm font-extrabold text-foreground">
               {v === "USEFUL" ? "도움됨" : "부정확"}
             </span>
           </button>

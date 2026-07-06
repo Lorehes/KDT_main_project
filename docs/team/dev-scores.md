@@ -155,6 +155,7 @@ updated: 2026-07-05
 | 2026-07-06 | Jin | b29d5ac | fix(analysis): Stage3 RAG contentText null 폴백 — 실시간 공시 Stage3/4 활성화 [8/7 S] | Analysis (LLM 분석) | 8 | 7 | S | Stage3 RAG contentText null 폴백 |
 | 2026-07-06 | Jin | e6f410e | chore(frontend): 대시보드 통계 카드 레이아웃 개선 + 검색창 제거 [3/7 S] | Frontend | 3 | 7 | S | 통계카드 레이아웃 개선+검색창 제거 |
 | 2026-07-07 | Jin | 1c190e1 | refactor(frontend): 공시상세 Pro섹션 우측 사이드바 하단으로 재배치 [4/7 S] | Frontend | 4 | 7 | S | 공시상세 Pro섹션 우측컬럼 재배치 |
+| 2026-07-07 | Jin | 20c1acb | feat(frontend): 공시상세 65/35 레이아웃 + 동사 공시 카드 + 피드백 전폭 하단 [5/8 S] | Frontend | 5 | 8 | S | 공시상세 65/35 레이아웃+동사 공시카드 |
 <!-- SCORES -->
 
 ## 기간별 집계
@@ -162,5 +163,5 @@ updated: 2026-07-05
 <!-- SUMMARY:START -->
 | 멤버 | 오늘 커밋 | 7일 커밋 | 30일 커밋 | 평균 품질 | 평균 중요도 |
 |------|-----------|----------|-----------|----------|------------|
-| Jin | 1 | 11 | 136 | 8.3 | 6.4 |
+| Jin | 2 | 12 | 137 | 8.3 | 6.4 |
 <!-- SUMMARY:END -->
