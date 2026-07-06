@@ -22,15 +22,15 @@ type StatCardProps = {
 
 export function StatCard({ label, value, unit, note, muted }: StatCardProps) {
   return (
-    <li className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <li className="flex flex-col rounded-2xl border border-border bg-card px-5 py-2.5 shadow-sm">
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p
-        className={`mt-2.5 text-3xl font-extrabold leading-none ${muted ? "text-muted-foreground/60" : "text-foreground"}`}
-      >
-        {value}
-        {unit && <small className="ml-1 text-sm font-semibold text-muted-foreground">{unit}</small>}
-      </p>
-      {note && <p className="mt-1.5 text-xs font-medium text-muted-foreground">{note}</p>}
+      <div className="flex flex-1 items-center justify-center pt-2">
+        <p className={`text-4xl font-extrabold leading-none ${muted ? "text-muted-foreground/60" : "text-foreground"}`}>
+          {value}
+          {unit && <small className="ml-1.5 text-base font-semibold text-muted-foreground">{unit}</small>}
+        </p>
+        {note && <p className="mt-1 text-xs font-medium text-muted-foreground">{note}</p>}
+      </div>
     </li>
   );
 }
@@ -96,33 +96,40 @@ export function PnlStatCard({ pnl, pnlRate, asOf, unpricedCount }: PnlStatCardPr
     : null;
 
   return (
-    <li className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <li className="flex flex-col rounded-2xl border border-border bg-card px-5 py-2.5 shadow-sm">
       <p className="text-xs font-semibold text-muted-foreground">평가 손익</p>
-      {hasData ? (
-        <>
-          <p className={`mt-2.5 text-3xl font-extrabold leading-none ${pnlColorClass}`} aria-label={`평가 손익 ${isProfit ? "수익" : isLoss ? "손실" : "없음"}`}>
-            {icon && <span aria-hidden className="mr-0.5 text-2xl">{icon}</span>}
-            {formattedPnl!.value}
-            <small className="ml-1 text-sm font-semibold text-muted-foreground">{formattedPnl!.unit}</small>
-          </p>
-          {formattedRate && (
-            <p className={`mt-1 text-xs font-bold ${pnlColorClass}`} aria-label={`수익률 ${formattedRate}`}>
-              {formattedRate}
+      <div className="flex flex-1 items-center justify-center pt-2">
+        {hasData ? (
+          <div className="flex flex-col items-center gap-1">
+            <p
+              className={`flex items-baseline gap-2 text-4xl font-extrabold leading-none ${pnlColorClass}`}
+              aria-label={`평가 손익 ${isProfit ? "수익" : isLoss ? "손실" : "없음"}`}
+            >
+              <span>
+                {icon && <span aria-hidden className="mr-0.5 text-2xl">{icon}</span>}
+                {formattedPnl!.value}
+                <small className="ml-1 text-sm font-semibold text-muted-foreground">{formattedPnl!.unit}</small>
+              </span>
+              {formattedRate && (
+                <span className={`text-sm font-bold ${pnlColorClass}`} aria-label={`수익률 ${formattedRate}`}>
+                  {formattedRate}
+                </span>
+              )}
             </p>
-          )}
-          {asOf && (
-            <p className="mt-1.5 text-xs font-medium text-muted-foreground">{asOf} 종가 기준</p>
-          )}
-          {unpricedCount > 0 && (
-            <p className="mt-0.5 text-xs text-muted-foreground">{unpricedCount}개 종목 종가 미수집</p>
-          )}
-        </>
-      ) : (
-        <p className="mt-2.5 text-3xl font-extrabold leading-none text-muted-foreground/60" aria-label="평가 손익 미수집">
-          —
-          <span className="ml-2 text-xs font-semibold text-muted-foreground/60">종가 수집 중</span>
-        </p>
-      )}
+            {asOf && (
+              <p className="text-xs font-medium text-muted-foreground">{asOf} 종가 기준</p>
+            )}
+            {unpricedCount > 0 && (
+              <p className="text-xs text-muted-foreground">{unpricedCount}개 종목 종가 미수집</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-3xl font-extrabold leading-none text-muted-foreground/60" aria-label="평가 손익 미수집">
+            —
+            <span className="ml-2 text-xs font-semibold text-muted-foreground/60">종가 수집 중</span>
+          </p>
+        )}
+      </div>
     </li>
   );
 }
@@ -138,15 +145,17 @@ export function SentimentStatCard({ positive, neutral, negative, withheld }: Sen
   ];
 
   return (
-    <li className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <li className="flex flex-col rounded-2xl border border-border bg-card px-5 py-2.5 shadow-sm">
       <p className="text-xs font-semibold text-muted-foreground">호재 · 중립 · 악재 · 보류</p>
-      <div className="mt-2.5 grid grid-cols-4 divide-x divide-border">
-        {segments.map(({ key, label, value, tone }) => (
-          <div key={key} className="flex flex-col items-center gap-1 px-0.5">
-            <span className={`text-xl font-extrabold leading-none ${tone}`}>{value}</span>
-            <span className={`text-[10px] font-bold tracking-tight ${tone}`}>{label}</span>
-          </div>
-        ))}
+      <div className="flex flex-1 items-center justify-center pt-2">
+        <div className="grid grid-cols-4 divide-x divide-border">
+          {segments.map(({ key, label, value, tone }) => (
+            <div key={key} className="flex flex-col items-center gap-1 px-3">
+              <span className={`text-2xl font-extrabold leading-none ${tone}`}>{value}</span>
+              <span className={`text-[11px] font-bold tracking-tight ${tone}`}>{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </li>
   );

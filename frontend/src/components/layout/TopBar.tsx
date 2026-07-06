@@ -9,15 +9,11 @@
 //   base-ui Popover는 내부 Link 클릭 시 dismiss 이벤트를 발생시키지 않으므로 useEffect로 보완.
 // [수정 시 고려사항] WebSocket 도입 시 useUnreadCount 폴링 → 서버 푸시 구독으로 교체.
 //   TIER_LABEL·NAV_ITEMS는 현재 로컬 상수 — docs/issues/topbar-settings-frontend-tech-debt.md #1·#2 참조.
-//   검색창(searchQ) state는 TopBar 로컬 — URL 동기화 없음. Enter 시 router.push로 q param 전달.
-//   모바일(md 미만) 검색창 숨김 — 모바일 검색은 후속 Spec에서 BottomTabBar 또는 검색 전용 페이지로 구현 예정.
-//   form[role=search]의 submit 기본 동작은 handleSearch의 Enter key 처리로 대체 — onSubmit 연결 불필요(Enter가 form submit 트리거).
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Bell, User, CreditCard, Info, LogOut, ChevronRight, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { usePathname } from "next/navigation";
+import { Bell, User, CreditCard, Info, LogOut, ChevronRight } from "lucide-react";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { useUnreadCount } from "@/lib/api/notifications";
@@ -37,7 +33,6 @@ const PROFILE_MENU_ITEMS = [
 
 export function TopBar() {
   const pathname = usePathname();
-  const router   = useRouter();
   // 셀렉터 단위 구독 — 불필요한 리렌더 방지 (authStore 전체 구독 → 필드별 분리)
   const user             = useAuthStore(s => s.user);
   const isLoading        = useAuthStore(s => s.isLoading);
@@ -50,14 +45,6 @@ export function TopBar() {
   // Popover controlled state — pathname 변경(클라이언트 라우팅) 시 자동 닫힘
   const [popoverOpen, setPopoverOpen] = useState(false);
   useEffect(() => { setPopoverOpen(false); }, [pathname]);
-
-  // 검색창 상태 — Enter 시 /disclosures?q=... 라우팅 후 초기화
-  const [searchQ, setSearchQ] = useState("");
-  const handleSearch = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter" || !searchQ.trim()) return;
-    router.push(`/disclosures?q=${encodeURIComponent(searchQ.trim())}`);
-    setSearchQ("");
-  }, [searchQ, router]);
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-6">
@@ -89,22 +76,6 @@ export function TopBar() {
           ))}
         </nav>
       </div>
-
-      {/* 중앙: 글로벌 검색창 — 모바일(md 미만) 숨김 */}
-      <form role="search" className="hidden md:flex flex-1 max-w-xs mx-4" onSubmit={e => e.preventDefault()}>
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" aria-hidden />
-          <Input
-            type="search"
-            value={searchQ}
-            onChange={e => setSearchQ(e.target.value)}
-            onKeyDown={handleSearch}
-            placeholder="공시·종목명 검색"
-            aria-label="공시·종목명 검색"
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
-      </form>
 
       {/* 우측: 알림 + 프로필 */}
       <div className="flex items-center gap-4">

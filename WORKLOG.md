@@ -2904,6 +2904,16 @@ curl -u admin:<password> \
 - **후속 이슈(보류)**: 디스패처 직렬 발송 + 유저 N+1 (카카오와 동일한 기존 구조 — 발송 큐 스로틀 도입 시 함께), `maxRetries` dead property 전 클라이언트 일괄 정리.
 - **다음 기능**: `/dc-implement analysis-stage4-llm-final` (Stage 4 Approved 상태 대기 중).
 
+## 2026-07-06 | dashboard-statcard-ui-cleanup — 통계 카드 레이아웃 개선 + 검색창 제거
+
+### 완료
+- `TopBar.tsx`: 미구현 글로벌 검색창 제거(Search·Input·useRouter·useCallback·searchQ state·form 전량 삭제).
+- `StatCards.tsx`: 3개 카드(StatCard·PnlStatCard·SentimentStatCard) 레이아웃 통일 — 라벨 좌상단, 값 flex 수직·수평 중앙(flex-1 items-center justify-center), py-2.5, 숫자 text-4xl 확대.
+- `PnlStatCard`: 수익률(formattedRate)을 손익 금액 오른쪽에 인라인 표시(기존 별도 줄 → items-baseline gap-2 한 줄).
+
+### 결정
+- **검색창 제거**: 구현 없이 UI만 존재하던 데드코드. 필요 시 공시피드(/disclosures?q=) 자체 검색으로 커버.
+
 ## 2026-07-03 | promptguard-legal-term-false-positive (카드 1~2) — 오탐 개선
 
 ### 완료
