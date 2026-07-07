@@ -59,7 +59,7 @@ public class NotificationDispatcher {
      * LLM 분석 완료 이벤트 수신 — 분석 TX commit 이후 별도 스레드에서 실행.
      * withheld=true(판단 보류)면 즉시 반환.
      */
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Async("notificationExecutor")
     public void onAnalysisCompleted(AnalysisCompletedEvent event) {
         if (event.withheld()) {
