@@ -2,12 +2,25 @@
 type: worklog
 status: active
 created: 2026-06-02
-updated: 2026-07-06
+updated: 2026-07-08
 ---
 
 # WORKLOG
 
 > 세션 단위 작업 기록. dc-push가 자동 갱신. dc-handoff의 데이터 소스.
+
+---
+
+## 2026-07-08 | 포트폴리오 문서 재작성 + 프로젝트 리포트 커밋 + .mailmap 저자 통합
+
+### 완료
+- **PORTFOLIO.md / PORTFOLIO_요약.md 전면 재작성**: 기존 AI/LLM 전용·6/23 기준 문서를 직무 무관(8개 직무 바로가기) 버전으로 재작성. 수치 전부 레포 실측값으로 교정(커밋 309, BE 17.3K/테스트 8.7K/FE 11.3K LOC, BE 테스트 344건, Flyway V1~V31·V19 결번). mermaid 아키텍처 다이어그램(§2-0), STAR 문제해결 사례 4건(§4), AI 협업 개발 프로세스(§3-9) 추가. 배포 URL은 문서에서 제거하고 "별도 공유"로 통일.
+- **`.mailmap` 추가**: Jin(263)/Lorehes(46) 저자 표기를 Jin 단일로 통합 — `git shortlog` 기준 309커밋 단일 저자 확인. 히스토리 rewrite 없음.
+- **프로젝트 종합 리포트 커밋**: `docs/DartCommons_프로젝트_리포트_2026-07-07.md` (발표자료 기반 전 과정·한계·로드맵).
+
+### 결정
+- **PORTFOLIO*.md는 `.gitignore`(121행) 유지** — 포트폴리오는 개인 취업용 문서로 레포 외부에서 별도 관리. 커밋 범위는 .mailmap + 리포트 문서로 한정 (사용자 확정).
+- GitHub Contributors 그래프는 .mailmap 미적용 — 공개 후 2인으로 보이면 GitHub 계정 이메일 설정으로 해결.
 
 ---
 
